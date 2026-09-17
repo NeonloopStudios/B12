@@ -254,11 +254,13 @@ value derived from one.
 
 ## 5. Status
 
-Stages 1–7 implemented and run for all 4 candidates (`config.py`,
-`xfoil_runtime.py`, `run_cruise_polars.py`, `run_landing_polars.py`,
-`mcrit_sweep.py`, `build_scorecard.py`, plus supporting modules
-`polar_analysis.py`, `geometry.py`, `compressibility.py`). Stages 8–9
-(`make_plots.py`, `run_all.py`) not yet built.
+**All 9 stages implemented and run for all 4 candidates.** `run_all.py`
+(Stage 9) runs the full pipeline (Stages 3-8) in one command in ~20s and
+was verified to reproduce byte-identical results to the individually-run
+stages. `config.py`, `xfoil_runtime.py`, `run_cruise_polars.py`,
+`run_landing_polars.py`, `mcrit_sweep.py`, `build_scorecard.py`,
+`make_plots.py`, `run_all.py`, plus supporting modules `polar_analysis.py`,
+`geometry.py`, `compressibility.py`.
 
 Stage 5 results (M_n=0.7033 cruise): **all four candidates currently have
 M_crit below cruise M_n** (0.525–0.555 vs. 0.703) — every cruise Cd in the
