@@ -1,0 +1,16 @@
+# .gitignore
+books/
+venv/
+tools/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+*.dll
+*.pyd
+.env
+output/
+*.log
+pages_book/
