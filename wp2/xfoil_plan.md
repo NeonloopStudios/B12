@@ -69,22 +69,39 @@ prose, so Stage 7 reads it instead of re-typing it.
 
 ### Stage 2 — `xfoil_runtime.py`
 Thin wrapper around the compiled `xfoil` Python package:
-- Calls `os.add_dll_directory(...)` for the MinGW runtime **before** `import xfoil`
-  (see README — required on Python ≥3.8/Windows, PATH alone is not enough).
-- `load_airfoil(path) -> Airfoil` (handles both headerless Selig-format files and
-  files with a name header line, since the current set mixes both).
-- `run_alpha_sweep(airfoil, M, Re, Ncrit, alphas) -> DataFrame` — iterates alpha
-  one point at a time (not XFoil's built-in ASeq) so each point's convergence can
-  be checked and recorded individually instead of silently skipped.
-- Every result row carries a `converged: bool` and, on failure, the reason XFoil
-  reported (BL calculation failed to converge, max iterations hit, etc.) — this is
-  what makes "where it breaks and why" a data column instead of a footnote.
+- Calls `os.add_dll_directory(...)` for the MinGW runtime, and fixes a ctypes
+  `FreeLibrary` argtypes bug that leaked a handle + temp file per `XFoil()`
+  instance — both **before** `import xfoil` (see README — required on Python
+  ≥3.8/Windows, PATH alone is not enough for the first; the second is a
+  vendored-package bug hit directly in this environment).
+- `load_airfoil_dat(path) -> Airfoil` — handles a name header line, the
+  single-loop Selig format, and the two-block Lednicer format (blank-line
+  separated upper/lower surfaces, merged into one continuous TE→LE→TE loop);
+  validates the assembled geometry actually closes into a loop before
+  returning it.
+- `run_alpha_sweep(xf, alphas, stop_after_n_nonconverged) -> DataFrame` —
+  iterates alpha one point at a time (not XFoil's built-in `aseq`) so each
+  point's convergence is checked and recorded individually, with an early
+  stop after N consecutive failures. Columns include `diverged`/`rms_bl` from
+  the `externals/xfoil-python` Fortran patch (real solver state: NaN-abort
+  vs. simply ran out of iterations, and the actual residual) — not XFoil's
+  own printed diagnostic text, which is not capturable via Python (verified;
+  see README).
+- `run_two_leg_polar(airfoil, ..., alpha_low_deg, alpha_high_deg) -> DataFrame`
+  — two independent `run_alpha_sweep` calls warm-started from α=0 (one up, one
+  down), each its own fresh session, merged. Added when Stage 3's naive
+  single-direction cold sweep came back completely empty (see Stage 3);
+  shared by every polar-generating stage from Stage 3 onward.
 
 ### Stage 3 — `run_cruise_polars.py`
-For each airfoil: alpha sweep at `M_n`, `Re_n`, `Ncrit` from `CRUISE`, from a few
-degrees below zero-lift through well past stall (sweep continues even after
-convergence starts failing, to record *how* it breaks, then stops after N
-consecutive non-converged points). Writes
+For each airfoil: `xfoil_runtime.run_two_leg_polar` at `M_n`, `Re_n`, `Ncrit`
+from `CRUISE` — two independent sweeps warm-started from α=0 (one up, one
+down), not a single cold pass from one extreme. A cold start directly at a
+harsh angle at this Mach reliably diverges for several consecutive points
+before `reset_bls()` recovers it — verified directly: at this sweep's 0.25°
+resolution that burns the whole non-convergence budget before ever reaching a
+point that would actually converge, so a naive single-direction sweep came
+back completely empty for every airfoil until this was fixed. Writes
 `wp2/results/data/<airfoil>_cruise_polar.csv` with columns
 `alpha, cl, cd, cm, cp_min, converged, diverged, rms_bl, note` (Stage 2's
 `run_alpha_sweep` output as-is — no `Cdp` column: the compiled binding only
@@ -93,14 +110,33 @@ claims one).
 
 From this polar, directly extract: zero-angle Cl, stall angle & Cl_max (cruise
 Re/M), and — by finding α where Cl(α) = Cl_n — the cruise operating point (α, Cl,
-Cd, Cm, Cl/Cd) that feeds the scorecard.
+Cd, Cm, Cl/Cd) that feeds the scorecard. At cruise Mach the sweep's own
+non-convergence is the real stall signal (transonic breakdown genuinely stops
+the BL solver, verified: NACA 25112 converges to exactly 5.00°, not further)
+— unlike Stage 4 below, `polar_analysis.find_cl_max`'s extra stall-onset
+detection is not needed here.
 
 ### Stage 4 — `run_landing_polars.py`
-Same mechanics as Stage 3, at the `LANDING` condition (§1), clean (flaps-up,
-since no flap geometry is defined yet). Writes
+Same mechanics as Stage 3 (`run_two_leg_polar`), at the `LANDING` condition
+(§1), clean (flaps-up, since no flap geometry is defined yet), swept wider
+(−8° to 25°, vs. cruise's −6° to 20°) since low-speed stall angles run
+noticeably higher than the transonic cruise polar's. Writes
 `wp2/results/data/<airfoil>_landing_polar.csv`. Cl_max from this run is the
 "Cl max landing" scorecard entry — it is deliberately a separate run from cruise
 because Cl_max depends on Re/M, not just the airfoil.
+
+**Cl_max here is not `converged['cl'].max()`.** Verified directly: at this
+project's landing condition (M_n≈0.18, Re_n≈10.3M — nearly incompressible, no
+transonic breakdown mechanism), XFoil's BL solver keeps numerically converging
+all the way to α=40°, with Cl dropping from a real peak (1.80 at 17.25° for
+NACA 25112) down to a non-physical plateau (~0.75) and *staying* converged
+there — a known XFoil limitation, not something the `converged` flag catches.
+`wp2/scripts/polar_analysis.find_cl_max` (pulled forward from Stage 7 out of
+necessity — Stage 4's own sanity check needed it to report a trustworthy
+number, not a hypothetical future one) detects the first *sustained* drop in
+Cl(α) while sweeping upward from α=0 and reports the peak up to that point,
+instead of trusting convergence alone. Stage 7 must reuse this same function
+for its own Cl_max_landing extraction, not re-derive it.
 
 ### Stage 5 — `mcrit_sweep.py`
 The actual "Mach Critical" deliverable, and the standard, legitimate use of a
