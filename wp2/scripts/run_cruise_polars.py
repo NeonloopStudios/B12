@@ -15,63 +15,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from scripts import config, xfoil_runtime
 
 ALPHA_LOW_DEG = -6.0
 ALPHA_HIGH_DEG = 20.0
-ALPHA_STEP_DEG = 0.25
-
-
-def upper_leg_alphas() -> np.ndarray:
-    """0 deg up through well past stall. Starts at 0, not the extreme end:
-    cold-starting XFoil's BL solve directly at a harsh angle at this Mach
-    (M_n~0.70) reliably diverges for several consecutive points before
-    reset_bls() recovers it -- verified directly, and at this sweep's 0.25
-    deg resolution that eats the whole non-convergence budget before ever
-    reaching a point that would actually converge, so the polar comes back
-    empty. Warm-starting from a known-good 0 deg point and marching outward
-    avoids the cold start entirely; the eventual non-convergence run this
-    hits *is* the real stall, not an artifact (verified: NACA 25112 here
-    converges cleanly up to ~5 deg before legitimately breaking down).
-    """
-    return np.arange(0.0, ALPHA_HIGH_DEG + ALPHA_STEP_DEG, ALPHA_STEP_DEG)
-
-
-def lower_leg_alphas() -> np.ndarray:
-    """0 deg down through below zero-lift, same warm-start rationale as
-    upper_leg_alphas (mirrored direction).
-    """
-    return np.arange(0.0, ALPHA_LOW_DEG - ALPHA_STEP_DEG, -ALPHA_STEP_DEG)
 
 
 def run_cruise_polar(airfoil_path: Path) -> pd.DataFrame:
     """Run the cruise alpha sweep for one airfoil and return its polar.
 
-    Two independent legs, each its own fresh XFoil session starting from
-    alpha=0 (see upper_leg_alphas docstring for why): one sweeping up, one
-    down. Separate sessions rather than one session run twice, so a bad
-    excursion at one extreme (e.g. deep stall on the upper leg) can't leave
-    corrupted BL state that taints the other leg's results. The two legs'
-    alpha=0 point is identical by construction (same airfoil/condition);
-    the lower leg's copy is dropped as a duplicate before merging.
+    Uses xfoil_runtime.run_two_leg_polar (warm-started from alpha=0 in
+    both directions) rather than a single cold sweep from ALPHA_LOW_DEG --
+    see that function's docstring for why a cold start reliably fails at
+    this Mach.
     """
     airfoil = xfoil_runtime.load_airfoil_dat(airfoil_path)
-    mach = config.CRUISE.mach_normal
-    reynolds = config.CRUISE.reynolds_normal
-    ncrit = config.CRUISE.ncrit
-
-    with xfoil_runtime.xfoil_session(airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit) as xf:
-        upper = xfoil_runtime.run_alpha_sweep(xf, upper_leg_alphas())
-
-    with xfoil_runtime.xfoil_session(airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit) as xf:
-        lower = xfoil_runtime.run_alpha_sweep(xf, lower_leg_alphas())
-    lower = lower[lower["alpha"] != 0.0]
-
-    polar = pd.concat([lower, upper], ignore_index=True)
-    return polar.sort_values("alpha").reset_index(drop=True)
+    return xfoil_runtime.run_two_leg_polar(
+        airfoil,
+        mach=config.CRUISE.mach_normal,
+        reynolds=config.CRUISE.reynolds_normal,
+        ncrit=config.CRUISE.ncrit,
+        alpha_low_deg=ALPHA_LOW_DEG,
+        alpha_high_deg=ALPHA_HIGH_DEG,
+    )
 
 
 def _sanity_check(airfoil_stem: str, polar: pd.DataFrame) -> None:

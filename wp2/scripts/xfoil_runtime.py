@@ -295,6 +295,50 @@ def run_alpha_sweep(
     return pd.DataFrame(rows)
 
 
+def run_two_leg_polar(
+    airfoil: Airfoil,
+    *,
+    mach: float,
+    reynolds: float,
+    ncrit: float,
+    alpha_low_deg: float,
+    alpha_high_deg: float,
+    alpha_step_deg: float = 0.25,
+    stop_after_n_nonconverged: int = 8,
+) -> pd.DataFrame:
+    """Build a full polar as two independent warm-started sweeps from
+    alpha=0, one up to alpha_high_deg, one down to alpha_low_deg, merged.
+
+    Cold-starting XFoil's BL solve directly at a harsh angle reliably
+    diverges for several consecutive points before reset_bls() recovers
+    it -- verified directly (Stage 3, cruise polars) -- and at a fine
+    alpha_step_deg that can burn the whole non-convergence budget before
+    ever reaching a point that would actually converge, so a naive single-
+    direction sweep from one extreme can come back completely empty.
+    Warm-starting from a known-good 0 deg point and marching outward in
+    each direction avoids the cold start; the eventual non-convergence
+    each leg hits is the real stall/breakdown, not an artifact.
+
+    Each leg gets its own fresh XFoil session (not one session run twice)
+    so a bad excursion at one extreme (e.g. deep stall on the upper leg)
+    can't leave corrupted BL state that taints the other leg's results.
+    The two legs' alpha=0 point is identical by construction; the lower
+    leg's copy is dropped before merging.
+    """
+    upper_alphas = np.arange(0.0, alpha_high_deg + alpha_step_deg, alpha_step_deg)
+    lower_alphas = np.arange(0.0, alpha_low_deg - alpha_step_deg, -alpha_step_deg)
+
+    with xfoil_session(airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit) as xf:
+        upper = run_alpha_sweep(xf, upper_alphas, stop_after_n_nonconverged=stop_after_n_nonconverged)
+
+    with xfoil_session(airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit) as xf:
+        lower = run_alpha_sweep(xf, lower_alphas, stop_after_n_nonconverged=stop_after_n_nonconverged)
+    lower = lower[lower["alpha"] != 0.0]
+
+    polar = pd.concat([lower, upper], ignore_index=True)
+    return polar.sort_values("alpha").reset_index(drop=True)
+
+
 def cp_distribution(xf: Any) -> pd.DataFrame:
     """Full Cp(x) distribution from the airfoil's last converged analysis
     (thin wrapper around XFoil.get_cp_distribution for Stage 6 plotting).
