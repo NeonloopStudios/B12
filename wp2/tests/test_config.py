@@ -3,10 +3,10 @@
 # Created: 2026-09-17
 """Tests for wp2/scripts/config.py.
 
-The ISA atmosphere and sweep-theory checks are cross-checked against the
-hand-derived numbers in wp2/xfoil_plan.md Sec. 1 -- these are not just
-"does it run" tests, they verify the physics matches the documented
-derivation within reasonable rounding tolerance.
+The ISA atmosphere and sweep-theory checks are cross-checked against
+hand-derived reference numbers -- these are not just "does it run" tests,
+they verify the physics matches the expected derivation within reasonable
+rounding tolerance.
 """
 from __future__ import annotations
 
@@ -24,9 +24,8 @@ def test_isa_sea_level_matches_standard_values() -> None:
     assert rho == pytest.approx(1.225, abs=0.001)
 
 
-def test_isa_at_35000ft_matches_plan_derivation() -> None:
-    # wp2/xfoil_plan.md Sec. 1: 35,000 ft -> T ~ 218.8 K, a ~ 296.5 m/s,
-    # rho ~ 0.380 kg/m^3
+def test_isa_at_35000ft_matches_hand_derivation() -> None:
+    # 35,000 ft -> T ~ 218.8 K, a ~ 296.5 m/s, rho ~ 0.380 kg/m^3
     altitude_m = 35_000 * config.FT_TO_M
     t, a, rho = config.isa_atmosphere(altitude_m)
     assert t == pytest.approx(218.8, abs=0.05)
@@ -41,17 +40,17 @@ def test_isa_rejects_out_of_range_altitude() -> None:
         config.isa_atmosphere(25_000.0)
 
 
-def test_cruise_mach_normal_matches_plan_derivation() -> None:
-    # wp2/xfoil_plan.md Sec. 1: M_n = M_inf * cos(Lambda) ~ 0.703
+def test_cruise_mach_normal_matches_hand_derivation() -> None:
+    # M_n = M_inf * cos(Lambda) ~ 0.703
     assert config.CRUISE.mach_normal == pytest.approx(0.703, abs=0.001)
 
 
-def test_cruise_v_freestream_matches_plan_derivation() -> None:
-    # wp2/xfoil_plan.md Sec. 1: V_inf = M * a ~ 228.4 m/s
+def test_cruise_v_freestream_matches_hand_derivation() -> None:
+    # V_inf = M * a ~ 228.4 m/s
     assert config.CRUISE.v_freestream == pytest.approx(228.4, abs=0.1)
 
 
-def test_sweep_angle_matches_plan_value() -> None:
+def test_sweep_angle_matches_expected_value() -> None:
     assert math.degrees(config.SWEEP_RAD) == pytest.approx(24.02, abs=0.01)
 
 
@@ -117,7 +116,7 @@ def test_scoring_weights_sum_to_one() -> None:
 
 
 def test_landing_mach_derived_from_given_speed() -> None:
-    # confirmed: 65 m/s at sea level, not a placeholder Mach guess anymore
+    # landing is 65 m/s at sea level
     sea_level_a = config.isa_atmosphere(0.0)[1]
     assert config.LANDING.mach_freestream == pytest.approx(65.0 / sea_level_a)
     assert config.LANDING.v_freestream == pytest.approx(65.0, abs=1e-6)

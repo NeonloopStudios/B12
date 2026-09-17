@@ -47,8 +47,9 @@ def _ensure_process_setup() -> None:
        directly in this environment: every `XFoil()` instance leaked its
        library handle and its temp .dll file until FreeLibrary's argtypes
        were corrected to `c_void_p`. Declaring the correct prototype here
-       fixes it for every XFoil instance in the process -- Stage 3 onward
-       creates one XFoil() per airfoil/condition, so this is not optional.
+       fixes it for every XFoil instance in the process -- the polar-
+       generation scripts create one XFoil() per airfoil/condition, so
+       this is not optional.
     """
     global _process_setup_done
     if _process_setup_done:
@@ -247,7 +248,7 @@ def run_alpha_sweep(
     Columns: alpha, cl, cd, cm, cp_min, converged, diverged, rms_bl, note.
 
     `cp_min` is the minimum pressure coefficient at that alpha -- XFoil's
-    `.a()` call returns it directly, and it is exactly what Stage 5's
+    `.a()` call returns it directly, and it is exactly what mcrit_sweep.py's
     Mach-critical sweep needs, so it is recorded here rather than
     recomputed later.
 
@@ -314,7 +315,7 @@ def run_two_leg_polar(
 
     Cold-starting XFoil's BL solve directly at a harsh angle reliably
     diverges for several consecutive points before reset_bls() recovers
-    it -- verified directly (Stage 3, cruise polars) -- and at a fine
+    it -- verified directly against real cruise polars -- and at a fine
     alpha_step_deg that can burn the whole non-convergence budget before
     ever reaching a point that would actually converge, so a naive single-
     direction sweep from one extreme can come back completely empty.
@@ -344,9 +345,9 @@ def run_two_leg_polar(
 
 def solve_at_cl(xf: Any, cl_target: float) -> dict[str, float | bool]:
     """Analyze at a fixed target Cl (XFoil's `.cl()`/`cl_` routine, not
-    `.a()`/`alfa_`) -- Stage 5 needs the Cp distribution at a specific
-    operating Cl regardless of what alpha that requires at the swept Mach,
-    which is exactly what fixed-Cl mode is for.
+    `.a()`/`alfa_`) -- mcrit_sweep.py needs the Cp distribution at a
+    specific operating Cl regardless of what alpha that requires at the
+    swept Mach, which is exactly what fixed-Cl mode is for.
 
     Unlike run_alpha_sweep, this does not get diverged/rms_bl: `cl_` was
     deliberately left unpatched when `alfa_` was (see the api.f90 commit
@@ -367,7 +368,7 @@ def solve_at_cl(xf: Any, cl_target: float) -> dict[str, float | bool]:
 
 def cp_distribution(xf: Any) -> pd.DataFrame:
     """Full Cp(x) distribution from the airfoil's last converged analysis
-    (thin wrapper around XFoil.get_cp_distribution for Stage 6 plotting).
+    (thin wrapper around XFoil.get_cp_distribution, used for plotting).
     """
     x, y, cp = xf.get_cp_distribution()
     return pd.DataFrame({"x": x, "y": y, "cp": cp})

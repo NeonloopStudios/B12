@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 Stage 7: build the weighted scorecard.
+"""WP2 build the weighted scorecard.
 
 Reads every results/data/*.csv (cruise polars, landing polars, mcrit
 summary), extracts the six scoring criteria per airfoil, normalizes each
@@ -12,7 +12,7 @@ summary), extracts the six scoring criteria per airfoil, normalizes each
   row) -- the exact deliverable shape this project started from.
 - wp2/results/scorecard_detail.csv: one row per airfoil with the raw,
   normalized, and weighted value for every criterion plus validity_notes
-  -- the fuller breakdown Stage 8's plots need and this stage's own
+  -- the fuller breakdown make_plots.py needs and this module's own
   transparency/verification record.
 """
 from __future__ import annotations
@@ -24,11 +24,11 @@ from scripts import config, polar_analysis
 
 # Direction each raw criterion is scored in. "max" = higher raw value is
 # better (normalize ascending). "min_abs" = smaller |value| is better
-# (normalize the absolute value, then invert) -- confirmed directly, not
-# assumed: pitching_moment is smaller-|Cm|-is-better (standard trim-drag
-# rationale), cl_zero_angle is higher-is-better. The other four criteria
-# (mach_critical, cl_cd_cruise, cl_max_landing, stall_margin) are
-# unambiguously higher-is-better on their own terms.
+# (normalize the absolute value, then invert): pitching_moment is
+# smaller-|Cm|-is-better (standard trim-drag rationale), cl_zero_angle is
+# higher-is-better. The other four criteria (mach_critical, cl_cd_cruise,
+# cl_max_landing, stall_margin) are unambiguously higher-is-better on
+# their own terms.
 CRITERION_DIRECTION: dict[str, str] = {
     "mach_critical": "max",
     "cl_cd_cruise": "max",
@@ -66,9 +66,9 @@ def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
 
     if np.isnan(m_crit):
         raise ValueError(
-            f"{airfoil_stem}: no M_crit found within the Stage 5 Mach sweep -- "
+            f"{airfoil_stem}: no M_crit found within mcrit_sweep.py's Mach sweep -- "
             "cannot score mach_critical for this airfoil. Widen mcrit_sweep.py's "
-            "MACH_GRID and rerun Stage 5; do not silently drop it from scoring."
+            "MACH_GRID and rerun it; do not silently drop it from scoring."
         )
 
     validity_notes: list[str] = []

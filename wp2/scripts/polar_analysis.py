@@ -5,11 +5,9 @@
 xfoil_runtime.run_alpha_sweep / run_two_leg_polar).
 
 Split out from xfoil_runtime.py because this is polar post-processing, not
-XFoil plumbing -- and because it's needed earlier than Stage 7
-(build_scorecard.py) was originally going to introduce it: Stage 4's own
-sanity check needs real stall detection to report a trustworthy
-Cl_max_landing, not a naive max() over every "converged" row. See
-find_cl_max's docstring for why.
+XFoil plumbing. run_landing_polars.py's own sanity check needs real stall
+detection to report a trustworthy Cl_max_landing, not a naive max() over
+every "converged" row -- see find_cl_max's docstring for why.
 """
 from __future__ import annotations
 
@@ -76,11 +74,12 @@ def interpolate_at_cl(polar: pd.DataFrame, cl_target: float) -> dict[str, float]
     converged polar (ascending alpha order, both signs), by finding the
     bracketing pair of points where Cl crosses cl_target.
 
-    Used by Stage 7 to locate the cruise operating point (Cl = Cl_n) on the
-    cruise polar for the cl_cd_cruise, pitching_moment, and stall_margin
-    scorecard criteria. Deliberately NOT restricted to alpha >= 0 (unlike
-    find_cl_max, where that restriction is correct -- stall is specifically
-    an upper-branch phenomenon): the cruise operating point can genuinely
+    Used by build_scorecard.py to locate the cruise operating point
+    (Cl = Cl_n) on the cruise polar for the cl_cd_cruise, pitching_moment,
+    and stall_margin scorecard criteria. Deliberately NOT restricted to
+    alpha >= 0 (unlike find_cl_max, where that restriction is correct --
+    stall is specifically an upper-branch phenomenon): the cruise operating
+    point can genuinely
     fall at a negative alpha for a heavily-cambered section. Verified
     directly -- NASA_SC(2)-0712's cruise Cl_n=0.5867 sits between
     alpha=-1.00 deg (Cl=0.585) and alpha=0.00 deg (Cl=0.791); restricting

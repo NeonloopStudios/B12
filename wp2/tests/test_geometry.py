@@ -6,8 +6,8 @@
 max_thickness_to_chord is validated against XFoil's own internally-computed
 "Max thickness" (printed at airfoil-load time with xf.print=True, not
 otherwise exposed by the Python bindings) for every current candidate
-airfoil -- not a synthetic fixture, the real numbers this project's Stage 5
-Korn equation will actually use.
+airfoil -- not a synthetic fixture, the real numbers mcrit_sweep.py's Korn
+equation actually uses.
 """
 from __future__ import annotations
 

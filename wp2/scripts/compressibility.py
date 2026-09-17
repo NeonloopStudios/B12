@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""Compressibility relations used by Stage 5 (mcrit_sweep.py): the
+"""Compressibility relations used by mcrit_sweep.py: the
 Karman-Tsien compressibility correction, the critical (sonic) pressure
 coefficient, and the Korn equation for drag-divergence Mach.
 

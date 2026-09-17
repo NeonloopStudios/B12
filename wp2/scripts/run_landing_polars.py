@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 Stage 4: landing polars for every candidate airfoil.
+"""WP2 landing polars for every candidate airfoil.
 
 For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
 LANDING flight condition (config.LANDING: M_n, Re_n, Ncrit) and writes the
@@ -10,12 +10,8 @@ full polar to wp2/results/data/<airfoil>_landing_polar.csv.
 Unlike cruise, landing needs no required-Cl (config.LANDING.cl_wing is
 intentionally unset -- see config.py): "Cl max landing" in the scorecard is
 simply the polar's Cl_max at the landing Re/M, a property of the airfoil at
-that condition, not a trim point to locate. This stage's sanity check
+that condition, not a trim point to locate. This module's sanity check
 reports that Cl_max directly.
-
-config.LANDING.altitude_m (sea level), mach_freestream (derived from a
-confirmed 65 m/s approach speed), and ncrit (confirmed at 8, same as
-cruise) are all confirmed -- no open placeholders left in this condition.
 """
 from __future__ import annotations
 

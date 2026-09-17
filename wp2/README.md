@@ -6,8 +6,8 @@ Created: 2026-09-17
 
 # WP2 — Airfoil Selection
 
-XFoil-based screening of candidate 2D airfoil sections. The analysis plan is in
-[`xfoil_plan.md`](xfoil_plan.md); this file only covers getting XFoil working.
+XFoil-based screening of candidate 2D airfoil sections. This file covers
+getting XFoil working and the repo layout.
 
 ## Layout
 
@@ -15,9 +15,8 @@ XFoil-based screening of candidate 2D airfoil sections. The analysis plan is in
 wp2/
   airfoils/     candidate .dat coordinate files (the set will change; any .dat
                 dropped here is picked up automatically by the scripts)
-  scripts/      the analysis pipeline (see xfoil_plan.md)
-  results/      generated CSVs and plots (see xfoil_plan.md §3)
-  xfoil_plan.md the stage-by-stage analysis plan
+  scripts/      the analysis pipeline
+  results/      generated CSVs and plots
 
 externals/
   xfoil-python/ vendored, tracked-in-repo source for XFoil's Python bindings

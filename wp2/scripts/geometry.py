@@ -4,8 +4,8 @@
 """Airfoil shape properties derived directly from parsed coordinates.
 
 Split out from xfoil_runtime.py because this is pure geometry (no XFoil
-calls involved) -- needed by Stage 5's Korn equation (M_dd needs t/c per
-airfoil).
+calls involved) -- needed by mcrit_sweep.py's Korn equation (M_dd needs
+t/c per airfoil).
 """
 from __future__ import annotations
 

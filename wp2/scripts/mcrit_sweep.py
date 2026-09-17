@@ -1,21 +1,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 Stage 5: Mach-critical determination for every candidate airfoil.
+"""WP2 Mach-critical determination for every candidate airfoil.
 
 For each airfoil: get the Cp(x) distribution at a safely subsonic baseline
 Mach (M=0.2) and the cruise-relevant Cl (Cl_n), Karman-Tsien-correct it
 across a Mach grid, and find where the corrected Cp_min first crosses the
 critical (sonic) Cp -- that's M_crit. Cross-check with the Korn equation for
-drag-divergence Mach, M_dd. See wp2/xfoil_plan.md Stage 5 for the method
-and why this is the standard, legitimate use of a panel method at
-transonic conditions (it flags an oncoming shock, it does not resolve one).
+drag-divergence Mach, M_dd. This is the standard, legitimate use of a panel
+method at transonic conditions (it flags an oncoming shock, it does not
+resolve one).
 
 Writes wp2/results/data/<airfoil>_mcrit.csv (mach, cp_min_corrected,
 cp_crit), wp2/results/data/<airfoil>_baseline_cp.csv (x, y, cp at the M=0.2/
-Cl_n baseline solve -- Stage 8's Cp-distribution plot reads this directly
-rather than re-invoking XFoil), and wp2/results/data/mcrit_summary.csv (one
-row per airfoil: m_crit, m_dd, margin, thickness_to_chord, cl_cruise,
+Cl_n baseline solve -- make_plots.py's Cp-distribution plot reads this
+directly rather than re-invoking XFoil), and wp2/results/data/mcrit_summary.csv
+(one row per airfoil: m_crit, m_dd, margin, thickness_to_chord, cl_cruise,
 kappa_a).
 """
 from __future__ import annotations

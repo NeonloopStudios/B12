@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 Stage 3: cruise polars for every candidate airfoil.
+"""WP2 cruise polars for every candidate airfoil.
 
 For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
 CRUISE flight condition (config.CRUISE: M_n, Re_n, Ncrit) and writes the
 full polar to wp2/results/data/<airfoil>_cruise_polar.csv.
 
-This stage only generates and saves the raw polar. Extracting the cruise
+This module only generates and saves the raw polar. Extracting the cruise
 operating point (matching Cl(alpha) = Cl_n), stall angle, Cl_max, and
-zero-angle Cl from it is Stage 7's job (build_scorecard.py) -- this module
-prints a lightweight sanity check (whether Cl_n was actually reached before
-the sweep broke down) so a bad run is caught immediately rather than three
-stages later.
+zero-angle Cl from it is build_scorecard.py's job -- this module prints a
+lightweight sanity check (whether Cl_n was actually reached before the
+sweep broke down) so a bad run is caught immediately rather than much
+later, downstream in the scorecard.
 """
 from __future__ import annotations
 

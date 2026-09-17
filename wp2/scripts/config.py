@@ -4,9 +4,9 @@
 """WP2 mission/aircraft constants and the sweep-theory reduction to 2D
 section conditions.
 
-Single source of truth for every other wp2/scripts module. Encodes
-wp2/xfoil_plan.md Stage 1 ("Flight conditions -> 2D section conditions") as
-data + a formula, not as numbers copy-pasted into each script.
+Single source of truth for every other wp2/scripts module: the sweep-theory
+reduction from flight conditions to 2D section conditions, as data + a
+formula, not as numbers copy-pasted into each script.
 """
 from __future__ import annotations
 
@@ -52,8 +52,8 @@ def isa_atmosphere(altitude_m: float) -> tuple[float, float, float]:
     """Return (temperature K, speed of sound m/s, density kg/m^3) at a given
     geopotential altitude, ISA standard atmosphere, valid 0-20 km.
 
-    Cross-checked against wp2/xfoil_plan.md Sec. 1 (35,000 ft -> T ~ 218.8 K,
-    a ~ 296.5 m/s, rho ~ 0.380 kg/m^3) in wp2/tests/test_config.py.
+    Cross-checked in wp2/tests/test_config.py against the hand-derived
+    values at 35,000 ft (T ~ 218.8 K, a ~ 296.5 m/s, rho ~ 0.380 kg/m^3).
     """
     if altitude_m < 0.0:
         raise ValueError(f"altitude_m must be >= 0, got {altitude_m}")
@@ -170,7 +170,7 @@ class FlightCondition:
         return self.density * self.v_normal * chord_normal / mu
 
 
-# --- Established mission constants (wp2/xfoil_plan.md Sec. 1) ---
+# --- Mission constants ---
 
 SWEEP_RAD = 0.419271315  # 24.02 deg, quarter-chord sweep
 
@@ -188,21 +188,21 @@ CRUISE = FlightCondition(
     # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
     # eq. 8.13), computed externally from WP1 cruise weight and wing area.
     # Locates the cruise operating point on the polar; used by cl_cd_cruise,
-    # stall_margin, pitching_moment, and the Stage 5 Mach-critical sweep.
+    # stall_margin, pitching_moment, and mcrit_sweep.py's Mach-critical sweep.
     cl_wing=0.489433403,
 )
 
-# Landing: confirmed sea level, confirmed approach speed 65 m/s. Mach is
-# derived (V / speed_of_sound at sea level), not a separately-given number,
-# so it stays consistent with isa_atmosphere by construction.
+# Landing: sea level, 65 m/s approach speed. Mach is derived (V / speed of
+# sound at sea level), not a separately-given number, so it stays
+# consistent with isa_atmosphere by construction.
 LANDING_SPEED_MS = 65.0
 
 LANDING = FlightCondition(
     name="landing",
-    altitude_m=0.0,  # confirmed: sea level
+    altitude_m=0.0,  # sea level
     mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
     sweep_rad=SWEEP_RAD,
-    ncrit=8.0,  # confirmed
+    ncrit=8.0,
     chord_m=CHORD_M,
     # cl_wing intentionally left unset and NOT required: "Cl max landing" in
     # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
@@ -210,7 +210,7 @@ LANDING = FlightCondition(
     cl_wing=None,
 )
 
-# --- Korn equation kappa_A per airfoil (Stage 5 input) ---
+# --- Korn equation kappa_A per airfoil (used by mcrit_sweep.py) ---
 #
 # M_dd + t/c + Cl/10 = kappa_A. kappa_A ~0.87 for a conventional section,
 # ~0.95 for a supercritical one -- a real design-category judgment call,
@@ -239,7 +239,7 @@ def kappa_a(airfoil_stem: str) -> float:
         raise ValueError(
             f"kappa_a: no conventional/supercritical classification recorded "
             f"for airfoil {airfoil_stem!r} -- add it to _KAPPA_A_BY_AIRFOIL "
-            "in config.py before running Stage 5 for this airfoil"
+            "in config.py before running mcrit_sweep.py for this airfoil"
         ) from None
 
 

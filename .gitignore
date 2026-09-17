@@ -1,5 +1,6 @@
 # .gitignore
 CLAUDE.md
+wp2/xfoil_plan.md
 books/
 venv/
 tools/

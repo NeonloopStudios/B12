@@ -1,28 +1,28 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 Stage 8: matplotlib figures for every candidate airfoil.
+"""WP2 matplotlib figures for every candidate airfoil.
 
-Reads only the CSVs Stages 3/4/5/7 already wrote (no XFoil calls here --
-plotting is a pure post-processing step over static data). Writes, per
-airfoil, into wp2/results/plots/<airfoil>/:
+Reads only the CSVs the polar/scorecard scripts already wrote (no XFoil
+calls here -- plotting is a pure post-processing step over static data).
+Writes, per airfoil, into wp2/results/plots/<airfoil>/:
 
-1. cl_vs_alpha_cruise.png    -- full cruise polar, stall + cruise-alpha marked,
-                                 non-converged tail shown distinctly
-2. cd_and_drag_polar.png     -- Cd vs alpha and the Cl-Cd drag polar, two
-                                 side-by-side panels (never a dual y-axis)
-3. cl_cd_vs_alpha.png        -- Cl/Cd vs alpha, cruise value annotated
-4. cm_vs_alpha.png           -- Cm vs alpha, cruise value annotated
-5. cp_distribution.png       -- Cp(x) at the M=0.2/Cl_n baseline solve
-6. mcrit_sweep.png           -- Cp_min(M) vs Cp_crit(M), M_crit crossing marked
-7. landing_cl_vs_alpha.png   -- landing polar, Cl_max_landing marked
+- cl_vs_alpha_cruise.png    -- full cruise polar, stall + cruise-alpha marked,
+                                non-converged tail shown distinctly
+- cd_and_drag_polar.png     -- Cd vs alpha and the Cl-Cd drag polar, two
+                                side-by-side panels (never a dual y-axis)
+- cl_cd_vs_alpha.png        -- Cl/Cd vs alpha, cruise value annotated
+- cm_vs_alpha.png           -- Cm vs alpha, cruise value annotated
+- cp_distribution.png       -- Cp(x) at the M=0.2/Cl_n baseline solve
+- mcrit_sweep.png           -- Cp_min(M) vs Cp_crit(M), M_crit crossing marked
+- landing_cl_vs_alpha.png   -- landing polar, Cl_max_landing marked
 
 and, into wp2/results/plots/comparison/:
 
-8. criteria_breakdown.png    -- grouped bar chart of the six weighted
-                                 criteria per airfoil (mirrors the original
-                                 screenshot table)
-9. total_score.png           -- total weighted score, ranked
+- criteria_breakdown.png    -- grouped bar chart of the six weighted
+                                criteria per airfoil (mirrors the original
+                                screenshot table)
+- total_score.png           -- total weighted score, ranked
 
 Color: a fixed categorical assignment (one hue per airfoil, in
 config.discover_airfoils() order -- not re-cycled per plot) drawn from the
