@@ -74,6 +74,104 @@ def test_load_airfoil_dat_rejects_too_few_points(tmp_path: Path) -> None:
         xfoil_runtime.load_airfoil_dat(tiny)
 
 
+# Two LE-to-TE runs (upper, blank line, lower) -- the Lednicer-style format
+# WORTMANN_FX_62-K-131.dat actually uses. Concatenating these two blocks
+# without reversing the first one (an earlier version of load_airfoil_dat
+# did exactly that) produces two overlapping x-sweeps 0->1, 0->1 instead of
+# one continuous TE->LE->TE loop -- a self-intersecting panel geometry that
+# silently fails to converge at every angle of attack. This was caught by
+# running the real Wortmann file through XFoil, not by inspection.
+_UPPER_LEG = (
+    "0.0 0.0\n0.05 0.02\n0.1 0.035\n0.2 0.05\n0.35 0.07\n0.5 0.08\n"
+    "0.65 0.06\n0.8 0.03\n0.9 0.015\n1.0 0.0\n"
+)
+_LOWER_LEG = (
+    "0.0 0.0\n0.05 -0.015\n0.1 -0.025\n0.2 -0.03\n0.35 -0.045\n0.5 -0.05\n"
+    "0.65 -0.04\n0.8 -0.02\n0.9 -0.01\n1.0 0.0\n"
+)
+
+
+def test_load_airfoil_dat_merges_lednicer_two_block_format(tmp_path: Path) -> None:
+    lednicer = tmp_path / "lednicer.dat"
+    lednicer.write_text(_UPPER_LEG + "\n" + _LOWER_LEG)
+    airfoil = xfoil_runtime.load_airfoil_dat(lednicer)
+
+    # 10 + 10 points, minus the duplicate LE point where the two blocks meet
+    assert airfoil.n_coords == 19
+    # must form one continuous TE -> LE -> TE loop, not two overlapping
+    # 0->1 sweeps
+    assert airfoil.x[0] == pytest.approx(1.0)
+    assert airfoil.x[-1] == pytest.approx(1.0)
+    assert airfoil.x.min() == pytest.approx(0.0)
+    # the LE point (0, 0) appears exactly once, not twice
+    at_le = [(x, y) for x, y in zip(airfoil.x, airfoil.y) if abs(x) < 1e-9]
+    assert len(at_le) == 1
+
+
+def test_load_airfoil_dat_rejects_lednicer_block_not_spanning_le_to_te(
+    tmp_path: Path,
+) -> None:
+    bad_block = "0.0 0.0\n0.2 0.05\n0.5 0.08\n0.7 0.03\n0.8 0.0\n"  # stops at x=0.8
+    bad = tmp_path / "bad_lednicer.dat"
+    bad.write_text(bad_block + "\n" + _LOWER_LEG)
+    with pytest.raises(ValueError, match="LE-to-TE surface run"):
+        xfoil_runtime.load_airfoil_dat(bad)
+
+
+def test_load_airfoil_dat_rejects_three_coordinate_blocks(tmp_path: Path) -> None:
+    three_blocks = tmp_path / "three_blocks.dat"
+    three_blocks.write_text(_UPPER_LEG + "\n" + _LOWER_LEG + "\n" + _UPPER_LEG)
+    with pytest.raises(ValueError, match="found 3 blank-line-separated"):
+        xfoil_runtime.load_airfoil_dat(three_blocks)
+
+
+def test_load_airfoil_dat_rejects_geometry_that_doesnt_close(tmp_path: Path) -> None:
+    # a single block that reaches the LE but never returns to the trailing
+    # edge (stops at x=0.8) -- enough points to clear the too-few-points
+    # check so this exercises the loop-closure check specifically
+    open_loop = tmp_path / "open_loop.dat"
+    open_loop.write_text(
+        "0.8 -0.02\n0.65 -0.04\n0.5 -0.05\n0.35 -0.045\n0.2 -0.03\n0.1 -0.025\n"
+        "0.05 -0.015\n0.0 0.0\n0.05 0.02\n0.1 0.035\n0.2 0.05\n0.35 0.07\n"
+        "0.5 0.08\n0.65 0.06\n0.8 0.03\n"
+    )
+    with pytest.raises(ValueError, match="don't form a TE"):
+        xfoil_runtime.load_airfoil_dat(open_loop)
+
+
+def test_wortmann_geometry_is_now_valid_but_still_fails_to_converge() -> None:
+    """Documents a real, investigated limitation rather than hiding it.
+
+    WORTMANN_FX_62-K-131.dat parses to a geometrically valid, correctly
+    wound TE->LE->TE loop after the Lednicer-format fix (this was verified
+    directly: XFoil itself reports "Counterclockwise ordering", a sane
+    thickness/camber, and a sharp trailing edge for it). It still fails to
+    converge at every angle of attack tried, across Mach 0.1-0.7 and
+    Reynolds 1e6-1.3e7, with and without repaneling -- XFoil's own runtime
+    diagnostic (`xf.print = True`) identifies the actual cause: "WARNING:
+    Poor input coordinate distribution ... Excessive panel angle 45.7 at
+    i=49 ... Repaneling with PANE and/or PPAR suggested". This is a
+    genuine data-quality defect in the source file (97 points vs. 121-152
+    for the other three candidates, sparse enough to leave a numerically
+    difficult kink XFoil's own repaneling can't fully smooth out), not a
+    bug in this codebase. If a cleaner coordinate file is substituted, this
+    test should start failing -- that's the point of asserting the current
+    behavior instead of skip-marking it.
+    """
+    airfoil = xfoil_runtime.load_airfoil_dat(config.AIRFOILS_DIR / "WORTMANN_FX_62-K-131.dat")
+    assert airfoil.x[0] == pytest.approx(1.0, abs=1e-6)
+    assert airfoil.x.min() == pytest.approx(0.0, abs=1e-3)
+
+    with xfoil_runtime.xfoil_session(
+        airfoil,
+        mach=config.CRUISE.mach_normal,
+        reynolds=config.CRUISE.reynolds_normal,
+        ncrit=config.CRUISE.ncrit,
+    ) as xf:
+        result = xfoil_runtime.run_alpha_sweep(xf, [0.0])
+    assert not result["converged"].iloc[0]
+
+
 def test_naca_25112_converges_near_zero_alpha_at_cruise() -> None:
     path = config.AIRFOILS_DIR / "NACA_25112.dat"
     airfoil = xfoil_runtime.load_airfoil_dat(path)

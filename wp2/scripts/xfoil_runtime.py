@@ -76,15 +76,75 @@ def _looks_like_float(token: str) -> bool:
     return True
 
 
-def load_airfoil_dat(path: Path) -> Airfoil:
-    """Parse a Selig-format .dat airfoil coordinate file.
+def _split_into_coordinate_blocks(
+    lines: list[str], path: Path, line_offset: int
+) -> list[tuple[list[float], list[float]]]:
+    """Split lines into blank-line-separated (xs, ys) coordinate blocks."""
+    blocks: list[tuple[list[float], list[float]]] = []
+    xs: list[float] = []
+    ys: list[float] = []
+    for line_no, line in enumerate(lines, start=line_offset):
+        stripped = line.strip()
+        if not stripped:
+            if xs:
+                blocks.append((xs, ys))
+                xs, ys = [], []
+            continue
+        parts = stripped.split()
+        if len(parts) != 2:
+            raise ValueError(f"{path}:{line_no}: expected 'x y', got {line!r}")
+        xs.append(float(parts[0]))
+        ys.append(float(parts[1]))
+    if xs:
+        blocks.append((xs, ys))
+    return blocks
 
-    Handles both the headerless files and the ones with a name header line
-    as the first row (both forms exist in wp2/airfoils/, e.g.
-    lockheed_c5a_bl758.dat has a header, WORTMANN_FX_62-K-131.dat does not).
-    Coordinate order from the file is preserved as-is (XFoil's panel method
-    needs a continuous loop: TE -> upper surface -> LE -> lower surface ->
-    TE), not re-sorted or de-duplicated.
+
+def _merge_lednicer_blocks(
+    block_a: tuple[list[float], list[float]],
+    block_b: tuple[list[float], list[float]],
+    path: Path,
+) -> tuple[list[float], list[float]]:
+    """Merge two LE-to-TE coordinate runs (Lednicer-style: one surface per
+    block, blank-line separated, each starting near x=0 and ending near
+    x=1) into the single continuous TE -> ... -> LE -> ... -> TE loop
+    XFoil's panel method needs. Which block is geometrically "upper" vs
+    "lower" doesn't matter for this -- only that each is one LE-to-TE run;
+    reversing the first and appending the second (minus its duplicate
+    leading-edge point) always produces a consistent continuous contour.
+    """
+    for label, (xs, _ys) in (("first", block_a), ("second", block_b)):
+        if not (xs[0] < 0.05 and xs[-1] > 0.95):
+            raise ValueError(
+                f"{path}: {label} blank-line-separated block doesn't look "
+                f"like a single LE-to-TE surface run (x from {xs[0]} to "
+                f"{xs[-1]}) -- cannot assume Lednicer upper/lower format"
+            )
+    xs_a, ys_a = block_a
+    xs_b, ys_b = block_b
+    xs = list(reversed(xs_a)) + xs_b[1:]
+    ys = list(reversed(ys_a)) + ys_b[1:]
+    return xs, ys
+
+
+def load_airfoil_dat(path: Path) -> Airfoil:
+    """Parse a .dat airfoil coordinate file, either format:
+
+    - Selig: one continuous loop, TE -> upper surface -> LE -> lower
+      surface -> TE (e.g. NACA_25112.dat, lockheed_c5a_bl758.dat).
+    - Lednicer: two blank-line-separated blocks, each one LE-to-TE surface
+      run (e.g. WORTMANN_FX_62-K-131.dat) -- merged into a single
+      continuous loop via _merge_lednicer_blocks, since XFoil's panel
+      method needs one continuous contour, not two separate runs.
+      Concatenating the two blocks as-is (an earlier version of this
+      function did exactly that) produces a self-intersecting, invalid
+      panel geometry that silently fails to converge at every angle of
+      attack -- verified directly: WORTMANN_FX_62-K-131 didn't converge at
+      a single point, including easy, safely-subsonic cases, until this
+      was fixed.
+
+    Also handles a name header line as the first row, before either format
+    (e.g. lockheed_c5a_bl758.dat has one, WORTMANN_FX_62-K-131.dat doesn't).
     """
     lines = path.read_text().splitlines()
     if not lines:
@@ -95,22 +155,28 @@ def load_airfoil_dat(path: Path) -> Airfoil:
     if len(first_tokens) != 2 or not _looks_like_float(first_tokens[0]):
         start = 1  # first line is a name header, skip it
 
-    xs: list[float] = []
-    ys: list[float] = []
-    for line_no, line in enumerate(lines[start:], start=start + 1):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        parts = stripped.split()
-        if len(parts) != 2:
-            raise ValueError(f"{path}:{line_no}: expected 'x y', got {line!r}")
-        xs.append(float(parts[0]))
-        ys.append(float(parts[1]))
+    blocks = _split_into_coordinate_blocks(lines[start:], path, line_offset=start + 1)
+
+    if len(blocks) == 1:
+        xs, ys = blocks[0]
+    elif len(blocks) == 2:
+        xs, ys = _merge_lednicer_blocks(blocks[0], blocks[1], path)
+    else:
+        raise ValueError(
+            f"{path}: found {len(blocks)} blank-line-separated coordinate "
+            "blocks, expected 1 (Selig) or 2 (Lednicer upper/lower)"
+        )
 
     if len(xs) < 10:
         raise ValueError(
             f"{path}: only {len(xs)} coordinate points parsed -- suspiciously "
             "few for an airfoil section, check the file format"
+        )
+    if not (xs[0] > 0.95 and xs[-1] > 0.95 and min(xs) < 0.05):
+        raise ValueError(
+            f"{path}: assembled coordinates don't form a TE->...->LE->...->TE "
+            f"loop (x starts at {xs[0]}, ends at {xs[-1]}, min {min(xs)}) -- "
+            "panel geometry would be invalid"
         )
 
     return Airfoil(np.array(xs, dtype=float), np.array(ys, dtype=float))
