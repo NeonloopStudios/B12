@@ -71,6 +71,20 @@ def isa_atmosphere(altitude_m: float) -> tuple[float, float, float]:
     return t, a, rho
 
 
+def level_flight_cl(
+    weight_n: float, density_kg_m3: float, velocity_m_s: float, wing_area_m2: float
+) -> float:
+    """Steady level-flight trim lift coefficient: L = W => Cl = 2W / (rho V^2 S).
+
+    First-order by construction: assumes steady 1g flight at a single
+    representative weight (not integrated over the mission segment's fuel
+    burn-off) and ignores tail-trim download. This is the standard
+    "lift equals weight" relation used to size the required wing Cl at a
+    given flight condition (e.g. textbook eq. 8.13).
+    """
+    return 2.0 * weight_n / (density_kg_m3 * velocity_m_s**2 * wing_area_m2)
+
+
 def sutherland_viscosity(temperature_k: float) -> float:
     """Dynamic viscosity of air (Pa s) via Sutherland's law, for Reynolds
     number. Constants are the standard values for air (mu0 at T0=273.15 K).
@@ -157,14 +171,23 @@ class FlightCondition:
 
 SWEEP_RAD = 0.419271315  # 24.02 deg, quarter-chord sweep
 
+CHORD_M = 2.649904207  # streamwise chord at the analysis station (WP1 sizing);
+# fixed wing geometry -- same value for cruise and landing, only V/rho/sweep
+# effects differ between flight conditions.
+
 CRUISE = FlightCondition(
     name="cruise",
     altitude_m=35_000 * FT_TO_M,
     mach_freestream=0.77,
     sweep_rad=SWEEP_RAD,
     ncrit=9.0,  # TODO: confirm against assumed surface finish / free-stream turbulence
-    chord_m=None,  # TODO(WP1 sizing): streamwise chord at the analysis station
-    cl_wing=None,  # TODO(WP1 sizing/performance): required 3D wing Cl at cruise (from W, S, q)
+    chord_m=CHORD_M,
+    # cl_wing: required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight
+    # trim, e.g. textbook eq. 8.13) -- still unset, needs cruise weight W and
+    # wing reference area S from WP1 sizing. Locates the cruise operating
+    # point on the polar; used by cl_cd_cruise, stall_margin, pitching_moment,
+    # and the Stage 5 Mach-critical sweep.
+    cl_wing=None,  # TODO(WP1 sizing/performance): W_cruise and S -> Cl = 2W/(rho V^2 S)
 )
 
 LANDING = FlightCondition(
@@ -173,8 +196,11 @@ LANDING = FlightCondition(
     mach_freestream=0.2,  # TODO(WP performance): replace with actual approach Mach
     sweep_rad=SWEEP_RAD,
     ncrit=9.0,
-    chord_m=None,  # TODO(WP1 sizing)
-    cl_wing=None,  # TODO(WP performance): required Cl at approach, clean/flaps-up
+    chord_m=CHORD_M,
+    # cl_wing intentionally left unset and NOT required: "Cl max landing" in
+    # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
+    # point -- none of the 6 scoring criteria need a required-Cl at landing.
+    cl_wing=None,
 )
 
 # --- WP2 scoring matrix (selection criteria and their weights) ---

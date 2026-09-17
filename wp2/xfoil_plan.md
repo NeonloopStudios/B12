@@ -181,10 +181,19 @@ wp2/results/
     comparison/ (figures 8-9)
 ```
 
-## 4. Open inputs needed before Stage 4/7 can run for real
+## 4. Open inputs needed before Stage 3/5/7 can run for real
 
-- Landing condition: approach speed, altitude, wing MAC (→ Re_landing) — from the
-  performance/sizing WP, not assumed here.
+- Chord (`config.CHORD_M = 2.649904207 m`) is set — same physical wing station
+  for cruise and landing.
+- **Cruise required Cl (`CRUISE.cl_wing`)** — still open. `config.level_flight_cl`
+  implements `Cl = 2W/(ρV²S)` (level-flight trim, first-order); needs cruise
+  weight `W` and wing reference area `S` from WP1 sizing. This is the one value
+  Stage 3 (locating the cruise operating point on the polar) and Stage 5
+  (Mach-critical sweep reference Cl) are blocked on.
+- Landing does **not** need a required-Cl — "Cl max landing" is the polar's
+  Cl_max at the landing Re/M, not a trim point. Landing's remaining open item is
+  the approach Mach/altitude (`LANDING.mach_freestream`/`altitude_m` are still
+  placeholders) — needed for Re_n, not for any required-Cl.
 - Ncrit (turbulence/surface quality assumption) for cruise vs. landing — a
   placeholder value is set in `config.py`, to be confirmed against the assumed
   manufacturing/surface finish quality.

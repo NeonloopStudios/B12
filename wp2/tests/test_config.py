@@ -70,6 +70,32 @@ def test_reynolds_normal_raises_without_chord() -> None:
         _ = cond.reynolds_normal
 
 
+def test_cruise_and_landing_reynolds_normal_now_computable() -> None:
+    # chord_m is set (WP1 sizing); Re_n should compute without raising and
+    # land in a physically sane range for a ~2.6 m chord jet wing.
+    assert 5e6 < config.CRUISE.reynolds_normal < 5e7
+    assert config.LANDING.reynolds_normal > 0.0
+
+
+def test_cruise_cl_wing_still_unset() -> None:
+    # cl_wing is the one input still missing -- must keep raising until
+    # weight/wing-area are supplied, never silently default to a guess.
+    with pytest.raises(ValueError, match="cl_wing is not set"):
+        _ = config.CRUISE.cl_normal
+
+
+def test_level_flight_cl_matches_lift_equals_weight() -> None:
+    # L = W => Cl = 2W / (rho V^2 S); sanity-check with round numbers where
+    # dynamic pressure * S is trivially invertible.
+    weight_n = 100_000.0
+    rho = 1.0
+    v = 100.0
+    wing_area_m2 = 20.0
+    q = 0.5 * rho * v**2
+    expected = weight_n / (q * wing_area_m2)
+    assert config.level_flight_cl(weight_n, rho, v, wing_area_m2) == pytest.approx(expected)
+
+
 def test_cl_normal_and_reynolds_normal_when_set() -> None:
     cond = config.FlightCondition(
         name="test", altitude_m=0.0, mach_freestream=0.2,
