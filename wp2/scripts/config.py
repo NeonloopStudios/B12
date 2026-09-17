@@ -199,7 +199,7 @@ LANDING = FlightCondition(
     altitude_m=0.0,  # confirmed: sea level
     mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
     sweep_rad=SWEEP_RAD,
-    ncrit=9.0,  # TODO: not yet confirmed for landing specifically (cruise Ncrit=8 was given; this wasn't)
+    ncrit=8.0,  # confirmed
     chord_m=CHORD_M,
     # cl_wing intentionally left unset and NOT required: "Cl max landing" in
     # the scorecard is the polar's Cl_max at the landing Re/M, not a trim

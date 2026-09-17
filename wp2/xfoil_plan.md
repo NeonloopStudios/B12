@@ -233,16 +233,15 @@ Resolved:
 - **Landing condition** — confirmed sea level, confirmed 65 m/s approach speed
   (`config.LANDING_SPEED_MS`); `LANDING.mach_freestream` is derived from it
   (`65 / a(sea level)`), not a separate guess.
-- **`CRUISE.ncrit = 8`** — confirmed.
+- **`CRUISE.ncrit = 8`, `LANDING.ncrit = 8`** — both confirmed.
 - **Korn equation κ_A per airfoil** (`config.kappa_a`) — confirmed:
   NASA_SC(2)-0712 (supercritical, by design) → 0.95; the other three
   (conventional) → 0.87. Raises if a future airfoil swap adds an unmapped
   candidate, rather than silently assuming "conventional".
 
-Still open:
-- **`LANDING.ncrit`** — still at the old default (9), not separately confirmed
-  for landing the way `CRUISE.ncrit` was. `run_landing_polars.py` flags this
-  in its own printed output every run.
+No open placeholders remain in `config.py` as of this writing — every
+`FlightCondition` field on `CRUISE` and `LANDING` is a confirmed value or a
+value derived from one.
 
 ## 5. Status
 
