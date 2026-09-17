@@ -156,3 +156,16 @@ Should print an `<xfoil.xfoil.XFoil object at ...>` with no traceback.
 - `wp2/requirements.txt` covers the analysis dependencies (`numpy`, `matplotlib`,
   `pandas`, `scipy`) — it deliberately does **not** include `xfoil`, since that
   install is the multi-step process above, not a single pip line.
+
+## Development
+
+`wp2/requirements-dev.txt` adds `pytest` and `mypy`. Config lives in the repo
+root `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.mypy]`); tests belong
+in `wp2/tests/`, type-checked source is `wp2/scripts/`.
+
+```
+pip install -r wp2/requirements.txt -r wp2/requirements-dev.txt
+pytest
+mypy
+```
+

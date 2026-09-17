@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+testpaths = ["wp2/tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.13"
+files = ["wp2/scripts"]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
