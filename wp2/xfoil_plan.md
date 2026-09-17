@@ -245,7 +245,19 @@ value derived from one.
 
 ## 5. Status
 
-Environment verified working (see `wp2/README.md`): XFoil's Python bindings are
-compiled and load correctly, including the Windows DLL-loading fix. Stages 1–9
-above are the implementation plan; `wp2/scripts/` will be built out stage by
-stage against this document.
+Stages 1–5 implemented and run for all 4 candidates (`config.py`,
+`xfoil_runtime.py`, `run_cruise_polars.py`, `run_landing_polars.py`,
+`mcrit_sweep.py`, plus supporting modules `polar_analysis.py`, `geometry.py`,
+`compressibility.py`). Stages 6–9 (validity flagging applied in the
+scorecard, `build_scorecard.py`, `make_plots.py`, `run_all.py`) not yet
+built.
+
+Stage 5 results (M_n=0.7033 cruise): **all four candidates currently have
+M_crit below cruise M_n** (0.525–0.555 vs. 0.703) — every cruise Cd in the
+Stage 3 polars is in the "not physically trustworthy" territory Stage 6
+already anticipates, and the Korn-derived margin (M_dd − M_n) is the number
+to actually rank on. Only NASA_SC(2)-0712 (the supercritical section) has a
+positive margin (+0.068); the three conventional sections are all
+essentially at or just past their drag-divergence Mach at this cruise
+condition (margins −0.002 to −0.012) — consistent with what a supercritical
+section is specifically designed to do, not a coincidence in the numbers.

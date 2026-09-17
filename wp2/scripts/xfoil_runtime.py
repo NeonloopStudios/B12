@@ -339,6 +339,29 @@ def run_two_leg_polar(
     return polar.sort_values("alpha").reset_index(drop=True)
 
 
+def solve_at_cl(xf: Any, cl_target: float) -> dict[str, float | bool]:
+    """Analyze at a fixed target Cl (XFoil's `.cl()`/`cl_` routine, not
+    `.a()`/`alfa_`) -- Stage 5 needs the Cp distribution at a specific
+    operating Cl regardless of what alpha that requires at the swept Mach,
+    which is exactly what fixed-Cl mode is for.
+
+    Unlike run_alpha_sweep, this does not get diverged/rms_bl: `cl_` was
+    deliberately left unpatched when `alfa_` was (see the api.f90 commit
+    history) since this project doesn't otherwise use fixed-Cl mode, so
+    only a converged: bool (via XFoil's own NaN-masking) is available here.
+    """
+    alpha, cd, cm, cp_min = xf.cl(cl_target)
+    converged = not np.isnan(alpha)
+    return {
+        "alpha": float(alpha),
+        "cl": cl_target if converged else float("nan"),
+        "cd": float(cd),
+        "cm": float(cm),
+        "cp_min": float(cp_min),
+        "converged": converged,
+    }
+
+
 def cp_distribution(xf: Any) -> pd.DataFrame:
     """Full Cp(x) distribution from the airfoil's last converged analysis
     (thin wrapper around XFoil.get_cp_distribution for Stage 6 plotting).
