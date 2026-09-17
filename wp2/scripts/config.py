@@ -180,7 +180,7 @@ CRUISE = FlightCondition(
     altitude_m=35_000 * FT_TO_M,
     mach_freestream=0.77,
     sweep_rad=SWEEP_RAD,
-    ncrit=9.0,  # TODO: confirm against assumed surface finish / free-stream turbulence
+    ncrit=8.0,
     chord_m=CHORD_M,
     # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
     # eq. 8.13), computed externally from WP1 cruise weight and wing area.
@@ -189,18 +189,56 @@ CRUISE = FlightCondition(
     cl_wing=0.489433403,
 )
 
+# Landing: confirmed sea level, confirmed approach speed 65 m/s. Mach is
+# derived (V / speed_of_sound at sea level), not a separately-given number,
+# so it stays consistent with isa_atmosphere by construction.
+LANDING_SPEED_MS = 65.0
+
 LANDING = FlightCondition(
     name="landing",
-    altitude_m=0.0,  # TODO: confirm landing field altitude (sea level assumed)
-    mach_freestream=0.2,  # TODO(WP performance): replace with actual approach Mach
+    altitude_m=0.0,  # confirmed: sea level
+    mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
     sweep_rad=SWEEP_RAD,
-    ncrit=9.0,
+    ncrit=9.0,  # TODO: not yet confirmed for landing specifically (cruise Ncrit=8 was given; this wasn't)
     chord_m=CHORD_M,
     # cl_wing intentionally left unset and NOT required: "Cl max landing" in
     # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
     # point -- none of the 6 scoring criteria need a required-Cl at landing.
     cl_wing=None,
 )
+
+# --- Korn equation kappa_A per airfoil (Stage 5 input) ---
+#
+# M_dd + t/c + Cl/10 = kappa_A. kappa_A ~0.87 for a conventional section,
+# ~0.95 for a supercritical one -- a real design-category judgment call,
+# not something derivable from the .dat coordinates, so it's recorded here
+# as an explicit per-airfoil decision rather than defaulted. NASA_SC(2)-0712
+# is a NASA supercritical section (SC(2) series) by design; the other three
+# candidates are conventional. If the candidate set changes again, this
+# mapping must be updated too -- kappa_a() raises rather than silently
+# assuming "conventional" for an unmapped airfoil.
+KAPPA_A_CONVENTIONAL = 0.87
+KAPPA_A_SUPERCRITICAL = 0.95
+
+_KAPPA_A_BY_AIRFOIL: dict[str, float] = {
+    "NACA_25112": KAPPA_A_CONVENTIONAL,
+    "NACA_64212": KAPPA_A_CONVENTIONAL,
+    "lockheed_c5a_bl758": KAPPA_A_CONVENTIONAL,
+    "NASA_SC(2)-0712": KAPPA_A_SUPERCRITICAL,
+}
+
+
+def kappa_a(airfoil_stem: str) -> float:
+    """Korn equation kappa_A for a given airfoil (by its .dat filename stem)."""
+    try:
+        return _KAPPA_A_BY_AIRFOIL[airfoil_stem]
+    except KeyError:
+        raise ValueError(
+            f"kappa_a: no conventional/supercritical classification recorded "
+            f"for airfoil {airfoil_stem!r} -- add it to _KAPPA_A_BY_AIRFOIL "
+            "in config.py before running Stage 5 for this airfoil"
+        ) from None
+
 
 # --- WP2 scoring matrix (selection criteria and their weights) ---
 

@@ -113,6 +113,24 @@ def test_scoring_weights_sum_to_one() -> None:
     assert sum(config.SCORING_WEIGHTS.values()) == pytest.approx(1.0)
 
 
+def test_landing_mach_derived_from_given_speed() -> None:
+    # confirmed: 65 m/s at sea level, not a placeholder Mach guess anymore
+    sea_level_a = config.isa_atmosphere(0.0)[1]
+    assert config.LANDING.mach_freestream == pytest.approx(65.0 / sea_level_a)
+    assert config.LANDING.v_freestream == pytest.approx(65.0, abs=1e-6)
+
+
+def test_kappa_a_matches_given_classification() -> None:
+    assert config.kappa_a("NASA_SC(2)-0712") == pytest.approx(0.95)
+    for conventional in ("NACA_25112", "NACA_64212", "lockheed_c5a_bl758"):
+        assert config.kappa_a(conventional) == pytest.approx(0.87)
+
+
+def test_kappa_a_rejects_unmapped_airfoil() -> None:
+    with pytest.raises(ValueError, match="no conventional/supercritical classification"):
+        config.kappa_a("some_new_airfoil")
+
+
 def test_discover_airfoils_finds_final_candidate_set() -> None:
     # WORTMANN_FX_62-K-131 was cut (unfixable source-data defect, see
     # test_xfoil_runtime.py's history); NASA_SC(2)-0712 replaced it.

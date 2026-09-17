@@ -10,9 +10,10 @@ simply the polar's Cl_max at the landing Re/M, a property of the airfoil at
 that condition, not a trim point to locate. This stage's sanity check
 reports that Cl_max directly.
 
-config.LANDING.mach_freestream and altitude_m are still placeholders
-(M=0.2, sea level) pending real approach numbers from the performance WP --
-flagged again here, not silently treated as final.
+config.LANDING.altitude_m (sea level) and mach_freestream (derived from a
+confirmed 65 m/s approach speed) are both confirmed. config.LANDING.ncrit is
+still a placeholder (reused cruise's old default, not separately confirmed
+for landing) -- flagged in this stage's own output, not silently final.
 """
 from __future__ import annotations
 
@@ -73,7 +74,8 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"Landing condition (PLACEHOLDER Mach/altitude, see config.py): "
+        f"Landing condition (sea level, V={config.LANDING_SPEED_MS} m/s, "
+        f"Ncrit still PLACEHOLDER -- see config.py): "
         f"M_n={config.LANDING.mach_normal:.4f}, "
         f"Re_n={config.LANDING.reynolds_normal:,.0f}, Ncrit={config.LANDING.ncrit}"
     )

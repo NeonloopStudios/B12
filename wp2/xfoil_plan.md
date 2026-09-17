@@ -220,22 +220,29 @@ wp2/results/
     comparison/ (figures 8-9)
 ```
 
-## 4. Open inputs needed before Stage 3/5/7 can run for real
+## 4. Open inputs
 
-- Chord (`config.CHORD_M = 2.649904207 m`) is set — same physical wing station
-  for cruise and landing.
-- **Cruise required Cl (`CRUISE.cl_wing = 0.489433403`)** — set, from WP1's
+Resolved:
+- Chord (`config.CHORD_M = 2.649904207 m`) — same physical wing station for
+  cruise and landing.
+- **Cruise required Cl (`CRUISE.cl_wing = 0.489433403`)** — from WP1's
   level-flight trim calc (`Cl = 2W/(ρV²S)`, eq. 8.13). `Cl_n` (the sweep-corrected
   section Cl XFoil's polar is matched against) is `cl_wing / cos²Λ ≈ 0.587`.
-- Landing does **not** need a required-Cl — "Cl max landing" is the polar's
-  Cl_max at the landing Re/M, not a trim point. Landing's remaining open item is
-  the approach Mach/altitude (`LANDING.mach_freestream`/`altitude_m` are still
-  placeholders) — needed for Re_n, not for any required-Cl.
-- Ncrit (turbulence/surface quality assumption) for cruise vs. landing — a
-  placeholder value is set in `config.py`, to be confirmed against the assumed
-  manufacturing/surface finish quality.
-- κ_A in the Korn equation (conventional vs. supercritical) per airfoil, if the
-  candidate set includes a supercritical section.
+  Landing needs no equivalent — "Cl max landing" is the polar's Cl_max at the
+  landing Re/M, not a trim point.
+- **Landing condition** — confirmed sea level, confirmed 65 m/s approach speed
+  (`config.LANDING_SPEED_MS`); `LANDING.mach_freestream` is derived from it
+  (`65 / a(sea level)`), not a separate guess.
+- **`CRUISE.ncrit = 8`** — confirmed.
+- **Korn equation κ_A per airfoil** (`config.kappa_a`) — confirmed:
+  NASA_SC(2)-0712 (supercritical, by design) → 0.95; the other three
+  (conventional) → 0.87. Raises if a future airfoil swap adds an unmapped
+  candidate, rather than silently assuming "conventional".
+
+Still open:
+- **`LANDING.ncrit`** — still at the old default (9), not separately confirmed
+  for landing the way `CRUISE.ncrit` was. `run_landing_polars.py` flags this
+  in its own printed output every run.
 
 ## 5. Status
 
