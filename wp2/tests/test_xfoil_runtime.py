@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """Tests for wp2/scripts/xfoil_runtime.py.
 
 Parsing tests run against every real file in wp2/airfoils/ (no synthetic

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """Physical quantities extracted from a polar DataFrame (the output of
 xfoil_runtime.run_alpha_sweep / run_two_leg_polar).
 

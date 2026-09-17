@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """Tests for wp2/scripts/config.py.
 
 The ISA atmosphere and sweep-theory checks are cross-checked against the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """XFoil runtime wrapper: Windows DLL-loading fix, airfoil-file loading, and
 a single-point-at-a-time alpha sweep that records convergence per point.
 

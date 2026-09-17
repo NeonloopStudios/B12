@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """WP2 mission/aircraft constants and the sweep-theory reduction to 2D
 section conditions.
 

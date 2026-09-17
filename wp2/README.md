@@ -1,3 +1,9 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Kajetan R. Gulaj
+Created: 2026-09-17
+-->
+
 # WP2 — Airfoil Selection
 
 XFoil-based screening of candidate 2D airfoil sections. The analysis plan is in

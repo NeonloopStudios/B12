@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """WP2 Stage 5: Mach-critical determination for every candidate airfoil.
 
 For each airfoil: get the Cp(x) distribution at a safely subsonic baseline

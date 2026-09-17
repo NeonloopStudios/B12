@@ -1,3 +1,9 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Kajetan R. Gulaj
+Created: 2026-09-17
+-->
+
 # WP2 — Airfoil Selection: XFoil Analysis Plan
 
 Goal: score the candidate 2D airfoil sections against the WP2 selection matrix (Mach

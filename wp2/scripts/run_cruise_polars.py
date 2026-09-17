@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """WP2 Stage 3: cruise polars for every candidate airfoil.
 
 For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the

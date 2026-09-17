@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kajetan R. Gulaj
+# Created: 2026-09-17
 """Airfoil shape properties derived directly from parsed coordinates.
 
 Split out from xfoil_runtime.py because this is pure geometry (no XFoil
