@@ -35,6 +35,7 @@ from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 matplotlib.use("Agg")  # headless: this script only ever saves PNGs
@@ -79,6 +80,37 @@ def _cruise_operating_point(stem: str) -> dict[str, float]:
     return polar_analysis.interpolate_at_cl(cruise, config.CRUISE.cl_normal)
 
 
+def _plot_nonconverged_markers(
+    ax: "plt.Axes", polar: pd.DataFrame, converged: pd.DataFrame
+) -> None:
+    """Mark every non-converged alpha with an 'x', at a y-position that
+    honestly reflects where it sits relative to the converged curve.
+
+    Not a single fixed height: the two-leg sweep can leave non-converged
+    points both in genuine tail-breakdown regions (past either end of the
+    converged range) AND as isolated single-point misses scattered inside
+    an otherwise-converged region (a numerical hiccup, not a real aero
+    break -- verified directly: NACA_64212's cruise polar has isolated
+    non-converged points at alpha=-3.25, -2.50, -1.00, -0.75, 0.50, mixed
+    in with converged neighbors on both sides). np.interp handles both
+    cases in one call: it linearly interpolates a point's y from its
+    converged neighbors when it falls inside their alpha range, and
+    clamps to the nearest endpoint's y when it falls outside it (the
+    tail case) -- so an isolated miss lands naturally on the curve's own
+    trajectory instead of being yanked to a distant tail height, and a
+    real tail lands at that end's Cl instead of being extrapolated.
+    """
+    nonconverged = polar[~polar["converged"]]
+    if nonconverged.empty or converged.empty:
+        return
+    y = np.interp(nonconverged["alpha"], converged["alpha"], converged["cl"])
+    ax.scatter(
+        nonconverged["alpha"], y,
+        marker="x", s=40, color=_NONCONVERGED_COLOR,
+        label="did not converge (breakdown)", zorder=4,
+    )
+
+
 def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
     cruise = _read_polar(stem, "cruise")
     cl_max, stall_alpha = polar_analysis.find_cl_max(cruise)
@@ -91,24 +123,7 @@ def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
         converged["alpha"], converged["cl"], color=color, linewidth=2,
         marker="o", markersize=4, label="converged", zorder=3,
     )
-    # Non-converged tail: two separate breakdown regions (the two-leg sweep
-    # stops independently at the low-alpha end and the high-alpha end), so
-    # each tail is plotted at the Cl of the curve's own nearest end, not a
-    # single shared height -- a flat height for both sides would place the
-    # low-alpha breakdown points at the high-alpha Cl, misrepresenting
-    # where the curve actually broke down.
-    nonconverged = cruise[~cruise["converged"]]
-    if not nonconverged.empty and not converged.empty:
-        alpha_min, alpha_max = converged["alpha"].min(), converged["alpha"].max()
-        cl_at_min, cl_at_max = converged["cl"].iloc[0], converged["cl"].iloc[-1]
-        tail_y = nonconverged["alpha"].apply(
-            lambda a: cl_at_min if a < alpha_min else cl_at_max
-        )
-        ax.scatter(
-            nonconverged["alpha"], tail_y,
-            marker="x", s=40, color=_NONCONVERGED_COLOR,
-            label="did not converge (breakdown)", zorder=4,
-        )
+    _plot_nonconverged_markers(ax, cruise, converged)
 
     ax.axvline(op["alpha"], color="#555555", linestyle="--", linewidth=1, zorder=2)
     ax.annotate(
@@ -147,9 +162,13 @@ def plot_cd_and_drag_polar(stem: str, color: str, out_dir: Path) -> None:
 
     ax_cd.plot(converged["alpha"], converged["cd"], color=color, linewidth=2, marker="o", markersize=4)
     ax_cd.plot([op["alpha"]], [op["cd"]], marker="*", markersize=14, color="#D55E00", zorder=5)
+    # Centered above with real vertical clearance, not a small diagonal
+    # offset -- the cruise point usually sits near the flat bottom of the
+    # drag bucket, and a small rightward offset can run into the curve
+    # turning back up (verified directly on NASA_SC(2)-0712).
     ax_cd.annotate(
         f"cruise: Cd={op['cd']:.4f}", xy=(op["alpha"], op["cd"]),
-        xytext=(8, 8), textcoords="offset points", fontsize=9,
+        xytext=(0, 14), textcoords="offset points", fontsize=9, ha="center",
     )
     ax_cd.set_xlabel("Angle of attack α (deg)")
     ax_cd.set_ylabel("Cd")
@@ -182,9 +201,16 @@ def plot_cl_cd_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     _style_axes(ax)
     ax.plot(converged["alpha"], cl_over_cd, color=color, linewidth=2, marker="o", markersize=4)
     ax.plot([op["alpha"]], [op_cl_cd], marker="*", markersize=14, color="#D55E00", zorder=5)
+    # Centered directly above the point rather than a small diagonal
+    # offset: Cl/Cd vs alpha is rising through the cruise point for every
+    # current candidate, so a label that extends rightward at nearly the
+    # same height as the curve (a small (8, 8) offset did this) runs
+    # straight into the curve's own continuation -- verified directly on
+    # NASA_SC(2)-0712. A center-anchored label with real vertical
+    # clearance stays above the curve on both sides of the point.
     ax.annotate(
         f"cruise: Cl/Cd={op_cl_cd:.1f}", xy=(op["alpha"], op_cl_cd),
-        xytext=(8, 8), textcoords="offset points", fontsize=9,
+        xytext=(0, 20), textcoords="offset points", fontsize=9, ha="center",
     )
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl / Cd")
@@ -203,9 +229,12 @@ def plot_cm_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     _style_axes(ax)
     ax.plot(converged["alpha"], converged["cm"], color=color, linewidth=2, marker="o", markersize=4)
     ax.plot([op["alpha"]], [op["cm"]], marker="*", markersize=14, color="#D55E00", zorder=5)
+    # Centered above with real vertical clearance -- Cm vs alpha is rising
+    # through the cruise point for every current candidate, same rationale
+    # as the Cl/Cd and Cd plots above.
     ax.annotate(
         f"cruise: Cm={op['cm']:.4f}", xy=(op["alpha"], op["cm"]),
-        xytext=(8, 8), textcoords="offset points", fontsize=9,
+        xytext=(0, 16), textcoords="offset points", fontsize=9, ha="center",
     )
     ax.axhline(0.0, color="#999999", linewidth=1, linestyle=":", zorder=1)
     ax.set_xlabel("Angle of attack α (deg)")
@@ -273,16 +302,27 @@ def plot_landing_cl_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(8, 6))
     _style_axes(ax)
-    ax.plot(converged["alpha"], converged["cl"], color=color, linewidth=2, marker="o", markersize=3)
+    ax.plot(
+        converged["alpha"], converged["cl"], color=color, linewidth=2,
+        marker="o", markersize=3, label="converged", zorder=3,
+    )
+    _plot_nonconverged_markers(ax, landing, converged)
     ax.plot([stall_alpha], [cl_max], marker="*", markersize=14, color="#D55E00", zorder=5)
+    # The star marks the curve's global Cl peak, so placing the label
+    # above it is always clear of the data -- nothing on the curve is
+    # ever higher. A downward/sideways offset risked colliding with the
+    # curve itself or with an isolated non-converged 'x' sitting on it
+    # (verified directly: NACA_64212's landing polar has one at alpha~14,
+    # right where a left-and-down label used to land).
     ax.annotate(
         f"Cl_max_landing={cl_max:.3f}\nα={stall_alpha:.2f}°",
-        xy=(stall_alpha, cl_max), xytext=(-110, -35), textcoords="offset points", fontsize=9,
+        xy=(stall_alpha, cl_max), xytext=(-60, 14), textcoords="offset points", fontsize=9,
     )
     ax.margins(y=0.15)
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl")
     ax.set_title(f"{stem} — landing polar (M_n={config.LANDING.mach_normal:.3f})")
+    ax.legend(loc="lower right", frameon=False)
     fig.tight_layout()
     fig.savefig(out_dir / "landing_cl_vs_alpha.png", dpi=150)
     plt.close(fig)
