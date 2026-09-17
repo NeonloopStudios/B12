@@ -12,8 +12,11 @@ and why this is the standard, legitimate use of a panel method at
 transonic conditions (it flags an oncoming shock, it does not resolve one).
 
 Writes wp2/results/data/<airfoil>_mcrit.csv (mach, cp_min_corrected,
-cp_crit) and wp2/results/data/mcrit_summary.csv (one row per airfoil:
-m_crit, m_dd, margin, thickness_to_chord, cl_cruise, kappa_a).
+cp_crit), wp2/results/data/<airfoil>_baseline_cp.csv (x, y, cp at the M=0.2/
+Cl_n baseline solve -- Stage 8's Cp-distribution plot reads this directly
+rather than re-invoking XFoil), and wp2/results/data/mcrit_summary.csv (one
+row per airfoil: m_crit, m_dd, margin, thickness_to_chord, cl_cruise,
+kappa_a).
 """
 from __future__ import annotations
 
@@ -28,8 +31,12 @@ BASELINE_MACH = 0.2
 MACH_GRID = np.arange(0.30, 0.951, 0.005)
 
 
-def run_mcrit_analysis(airfoil_path: Path) -> tuple[float | None, pd.DataFrame, dict[str, float]]:
-    """Return (M_crit, mach-sweep DataFrame, summary dict) for one airfoil."""
+def run_mcrit_analysis(
+    airfoil_path: Path,
+) -> tuple[float | None, pd.DataFrame, pd.DataFrame, dict[str, float]]:
+    """Return (M_crit, mach-sweep DataFrame, baseline Cp(x) DataFrame,
+    summary dict) for one airfoil.
+    """
     airfoil = xfoil_runtime.load_airfoil_dat(airfoil_path)
     cl_n = config.CRUISE.cl_normal
     thickness_to_chord = geometry.max_thickness_to_chord(airfoil)
@@ -54,10 +61,13 @@ def run_mcrit_analysis(airfoil_path: Path) -> tuple[float | None, pd.DataFrame, 
                 "cl_cruise": cl_n,
                 "kappa_a": kappa_a,
             }
-            return None, pd.DataFrame(columns=["mach", "cp_min_corrected", "cp_crit"]), summary
+            empty_sweep = pd.DataFrame(columns=["mach", "cp_min_corrected", "cp_crit"])
+            empty_cp = pd.DataFrame(columns=["x", "y", "cp"])
+            return None, empty_sweep, empty_cp, summary
 
-        cp0 = xfoil_runtime.cp_distribution(xf)["cp"].to_numpy()
+        baseline_cp = xfoil_runtime.cp_distribution(xf)
 
+    cp0 = baseline_cp["cp"].to_numpy()
     m_crit, sweep = compressibility.find_mcrit(cp0, MACH_GRID)
     summary = {
         "m_crit": float("nan") if m_crit is None else m_crit,
@@ -67,7 +77,7 @@ def run_mcrit_analysis(airfoil_path: Path) -> tuple[float | None, pd.DataFrame, 
         "cl_cruise": cl_n,
         "kappa_a": kappa_a,
     }
-    return m_crit, sweep, summary
+    return m_crit, sweep, baseline_cp, summary
 
 
 def main() -> None:
@@ -82,10 +92,12 @@ def main() -> None:
     summary_rows: list[dict[str, float | str]] = []
     for airfoil_path in config.discover_airfoils():
         stem = airfoil_path.stem
-        m_crit, sweep, summary = run_mcrit_analysis(airfoil_path)
+        m_crit, sweep, baseline_cp, summary = run_mcrit_analysis(airfoil_path)
 
         sweep_path = out_dir / f"{stem}_mcrit.csv"
         sweep.to_csv(sweep_path, index=False)
+        cp_path = out_dir / f"{stem}_baseline_cp.csv"
+        baseline_cp.to_csv(cp_path, index=False)
 
         if m_crit is None:
             print(f"  [WARN] {stem}: baseline Cl={config.CRUISE.cl_normal:.4f} solve at "
@@ -100,6 +112,7 @@ def main() -> None:
                 f"margin(M_dd-M_n)={summary['margin_m_dd_minus_m_n']:+.3f}"
             )
         print(f"    -> {sweep_path}")
+        print(f"    -> {cp_path}")
 
         summary_rows.append({"airfoil": stem, **summary})
 
