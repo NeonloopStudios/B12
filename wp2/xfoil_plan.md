@@ -86,7 +86,10 @@ degrees below zero-lift through well past stall (sweep continues even after
 convergence starts failing, to record *how* it breaks, then stops after N
 consecutive non-converged points). Writes
 `wp2/results/data/<airfoil>_cruise_polar.csv` with columns
-`alpha, Cl, Cd, Cdp, Cm, converged, note`.
+`alpha, cl, cd, cm, cp_min, converged, diverged, rms_bl, note` (Stage 2's
+`run_alpha_sweep` output as-is — no `Cdp` column: the compiled binding only
+exposes total `cd`, not the pressure/friction split, so this plan no longer
+claims one).
 
 From this polar, directly extract: zero-angle Cl, stall angle & Cl_max (cruise
 Re/M), and — by finding α where Cl(α) = Cl_n — the cruise operating point (α, Cl,
