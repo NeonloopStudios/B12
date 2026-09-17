@@ -63,7 +63,9 @@ def airfoil_colors() -> dict[str, str]:
     return dict(zip(stems, _PALETTE))
 
 
-def _style_axes(ax: "plt.Axes", *, zero_lines: bool = True) -> None:
+def _style_axes(
+    ax: "plt.Axes", *, zero_lines: bool = True, horizontal_zero: bool = True, vertical_zero: bool = True,
+) -> None:
     """Recessive gridlines behind the data, no chart-junk spines, and an
     emphasized reference line at x=0/y=0 wherever that value falls within
     the plotted range -- a plain gridline at zero reads identically to
@@ -78,13 +80,20 @@ def _style_axes(ax: "plt.Axes", *, zero_lines: bool = True) -> None:
     quantity), so an "x=0" reference line is meaningless there -- verified
     directly, it rendered as a stray vertical line poking through the
     first bar group.
+
+    horizontal_zero/vertical_zero independently drop just the y=0 or x=0
+    line: a quantity that never crosses zero (e.g. Cd) shouldn't pull that
+    value into the autoscaled view just to draw a reference line for it --
+    axhline/axvline count toward autoscale, so drawing one at 0 when the
+    data never gets near 0 pads the axis with dead space.
     """
     ax.grid(True, color="#cccccc", linewidth=0.6, alpha=0.7, zorder=0)
     ax.set_axisbelow(True)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    if zero_lines:
+    if zero_lines and horizontal_zero:
         ax.axhline(0, color="#888888", linewidth=1.1, zorder=1)
+    if zero_lines and vertical_zero:
         ax.axvline(0, color="#888888", linewidth=1.1, zorder=1)
 
 
@@ -128,10 +137,26 @@ def _plot_nonconverged_markers(
     )
 
 
+# Per-stem label placement, tuned by eye against each airfoil's own curve
+# shape (stall Cl, non-converged marker clusters, etc.). Keyed as
+# stem -> (cruise-label data xy, stall-label absolute data xy). A stem not
+# listed here falls back to _CRUISE_ALPHA_LABEL_DEFAULT_XYTEXT for the
+# cruise label and (stall_alpha, cl_max + 0.1) for the stall label.
+_CRUISE_ALPHA_LABEL_OVERRIDES: dict[str, tuple[tuple[float, float], tuple[float, float]]] = {
+    "NACA_25112": ((3.1, 0.25), (6.70, 1.626)),
+    "NACA_64212": ((3, 0.25), (4.8, 1.175)),
+    "NASA_SC(2)-0712": ((-2, 1), (2.25, 1.35)),
+}
+_CRUISE_ALPHA_LABEL_DEFAULT_XYTEXT: tuple[float, float] = (3, 0.25)
+
+
 def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
     cruise = _read_polar(stem, "cruise")
     cl_max, stall_alpha = polar_analysis.find_cl_max(cruise)
     op = _cruise_operating_point(stem)
+    cruise_xytext, stall_xy = _CRUISE_ALPHA_LABEL_OVERRIDES.get(
+        stem, (_CRUISE_ALPHA_LABEL_DEFAULT_XYTEXT, (stall_alpha, cl_max + 0.1))
+    )
 
     fig, ax = plt.subplots(figsize=(8, 6))
     _style_axes(ax)
@@ -143,16 +168,12 @@ def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
     _plot_nonconverged_markers(ax, cruise, converged)
 
     ax.axvline(op["alpha"], color="#555555", linestyle="--", linewidth=1, zorder=2)
-    # Up and to the left, right-aligned: the curve is rising through this
-    # point (so "up" alone isn't enough -- a small offset to the right
-    # runs into the curve catching back up, verified directly), and the
-    # dashed vertical cruise-alpha line passes through this exact x, so
-    # centering on it would put the line through the text. Left is where
-    # the rising curve is furthest below the label and clear of the line.
+    # Fixed data-coordinate placement, centered: an open region of the axes
+    # clear of both the rising curve and the dashed cruise-alpha line.
     ax.annotate(
         f"cruise α={op['alpha']:.2f}°\nCl={config.CRUISE.cl_normal:.3f}",
-        xy=(op["alpha"], config.CRUISE.cl_normal), xytext=(-15, 20),
-        textcoords="offset points", fontsize=9, ha="right",
+        xy=(op["alpha"], config.CRUISE.cl_normal), xytext=cruise_xytext,
+        textcoords="data", fontsize=9, ha="center", va="center",
     )
     ax.plot([stall_alpha], [cl_max], marker="*", markersize=14, color="#D55E00", zorder=5)
     # always label below the marker: it sits at the curve's Cl peak, which
@@ -160,7 +181,7 @@ def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
     # collides with the title
     ax.annotate(
         f"stall α={stall_alpha:.2f}°\nCl_max={cl_max:.3f}",
-        xy=(stall_alpha, cl_max), xytext=(-90, -30), textcoords="offset points", fontsize=9,
+        xy=stall_xy, xytext=(-90, -30), textcoords="offset points", fontsize=9,
     )
 
     ax.set_xlabel("Angle of attack α (deg)")
@@ -180,8 +201,12 @@ def plot_cd_and_drag_polar(stem: str, color: str, out_dir: Path) -> None:
 
     # two side-by-side panels, never a shared dual y-axis
     fig, (ax_cd, ax_polar) = plt.subplots(1, 2, figsize=(12, 5.5))
-    for ax in (ax_cd, ax_polar):
-        _style_axes(ax)
+    # Cd is always positive on both panels -- forcing its zero line into
+    # view just pads the axis with dead space, so each panel only draws
+    # the zero line for the axis that actually crosses zero (alpha on the
+    # left, Cl on the right).
+    _style_axes(ax_cd, horizontal_zero=False)
+    _style_axes(ax_polar, vertical_zero=False)
 
     ax_cd.plot(converged["alpha"], converged["cd"], color=color, linewidth=2, marker="o", markersize=4)
     ax_cd.plot([op["alpha"]], [op["cd"]], marker="*", markersize=14, color="#D55E00", zorder=5)
@@ -224,16 +249,15 @@ def plot_cl_cd_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     _style_axes(ax)
     ax.plot(converged["alpha"], cl_over_cd, color=color, linewidth=2, marker="o", markersize=4)
     ax.plot([op["alpha"]], [op_cl_cd], marker="*", markersize=14, color="#D55E00", zorder=5)
-    # Centered directly above the point rather than a small diagonal
-    # offset: Cl/Cd vs alpha is rising through the cruise point for every
-    # current candidate, so a label that extends rightward at nearly the
-    # same height as the curve (a small (8, 8) offset did this) runs
-    # straight into the curve's own continuation -- verified directly on
-    # NASA_SC(2)-0712. A center-anchored label with real vertical
-    # clearance stays above the curve on both sides of the point.
+    # Up and to the left, right-aligned: Cl/Cd vs alpha is rising through
+    # the cruise point for every current candidate, so a center-anchored
+    # label's right half can still reach the curve as it climbs back up
+    # further right (verified directly on lockheed_c5a_bl758). Right-
+    # aligning the text at a leftward offset keeps the whole label to the
+    # left of the point, where the curve is lower.
     ax.annotate(
-        f"cruise: Cl/Cd={op_cl_cd:.1f}", xy=(op["alpha"], op_cl_cd),
-        xytext=(0, 20), textcoords="offset points", fontsize=9, ha="center",
+        f"cruise: Cl/Cd={op_cl_cd:.1f}", xy=(op["alpha"] - 0.25, op_cl_cd - 15),
+        xytext=(2, 20), textcoords="offset points", fontsize=9, ha="right",
     )
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl / Cd")
@@ -243,10 +267,19 @@ def plot_cl_cd_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     plt.close(fig)
 
 
+# Per-stem horizontal nudge for the cruise-label anchor (alpha units),
+# tuned by eye against each airfoil's own Cm curve shape.
+_CM_LABEL_ALPHA_DELTA: dict[str, float] = {
+    "NACA_25112": -0.7,
+}
+_CM_LABEL_ALPHA_DELTA_DEFAULT = -0.2
+
+
 def plot_cm_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     cruise = _read_polar(stem, "cruise")
     op = _cruise_operating_point(stem)
     converged = cruise[cruise["converged"]].sort_values("alpha")
+    alpha_delta = _CM_LABEL_ALPHA_DELTA.get(stem, _CM_LABEL_ALPHA_DELTA_DEFAULT)
 
     fig, ax = plt.subplots(figsize=(8, 6))
     _style_axes(ax)
@@ -256,7 +289,7 @@ def plot_cm_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     # through the cruise point for every current candidate, same rationale
     # as the Cl/Cd and Cd plots above.
     ax.annotate(
-        f"cruise: Cm={op['cm']:.4f}", xy=(op["alpha"], op["cm"]),
+        f"cruise: Cm={op['cm']:.4f}", xy=(op["alpha"] + alpha_delta, op["cm"]),
         xytext=(0, 16), textcoords="offset points", fontsize=9, ha="center",
     )
     ax.set_xlabel("Angle of attack α (deg)")
@@ -315,7 +348,12 @@ def plot_mcrit_sweep(stem: str, color: str, out_dir: Path) -> None:
     # low-Mach end (Cp_crit around -7, Cp_min around -1.5), so that corner
     # is consistently empty -- lower left sits right where the descending
     # Cp_crit dashed curve passes through, verified directly.
-    ax.legend(loc="upper left", frameon=False, fontsize=8)
+    legend_x = ax.get_xlim()[0] + 0.05
+    legend_y = ax.get_ylim()[1] - 0.5
+    ax.legend(
+        loc="upper left", bbox_to_anchor=(legend_x, legend_y), bbox_transform=ax.transData,
+        frameon=False, fontsize=8,
+    )
     fig.tight_layout()
     fig.savefig(out_dir / "mcrit_sweep.png", dpi=150)
     plt.close(fig)
