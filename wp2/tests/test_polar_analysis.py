@@ -62,3 +62,77 @@ def test_find_cl_max_raises_on_no_converged_points() -> None:
     df = pd.DataFrame({"alpha": [0.0, 2.0], "cl": [0.2, 0.4], "converged": [False, False]})
     with pytest.raises(ValueError, match="no converged points"):
         polar_analysis.find_cl_max(df)
+
+
+def _full_polar(alphas: list[float], cls: list[float], cds: list[float], cms: list[float]) -> pd.DataFrame:
+    return pd.DataFrame(
+        {"alpha": alphas, "cl": cls, "cd": cds, "cm": cms, "converged": [True] * len(alphas)}
+    )
+
+
+def test_interpolate_at_cl_finds_bracketing_pair() -> None:
+    polar = _full_polar(
+        alphas=[0.0, 2.0, 4.0],
+        cls=[0.2, 0.5, 0.8],
+        cds=[0.01, 0.015, 0.02],
+        cms=[-0.05, -0.06, -0.07],
+    )
+    # target 0.5 is exactly on the alpha=2.0 point
+    result = polar_analysis.interpolate_at_cl(polar, 0.5)
+    assert result["alpha"] == pytest.approx(2.0)
+    assert result["cd"] == pytest.approx(0.015)
+    assert result["cm"] == pytest.approx(-0.06)
+    assert result["cl"] == pytest.approx(0.5)
+
+
+def test_interpolate_at_cl_interpolates_between_points() -> None:
+    polar = _full_polar(
+        alphas=[0.0, 2.0],
+        cls=[0.2, 0.6],
+        cds=[0.01, 0.02],
+        cms=[-0.05, -0.07],
+    )
+    # target 0.4 is 50% of the way from 0.2 to 0.6
+    result = polar_analysis.interpolate_at_cl(polar, 0.4)
+    assert result["alpha"] == pytest.approx(1.0)
+    assert result["cd"] == pytest.approx(0.015)
+    assert result["cm"] == pytest.approx(-0.06)
+
+
+def test_interpolate_at_cl_raises_when_not_bracketed() -> None:
+    polar = _full_polar(
+        alphas=[0.0, 2.0], cls=[0.2, 0.6], cds=[0.01, 0.02], cms=[-0.05, -0.07]
+    )
+    with pytest.raises(ValueError, match="not bracketed"):
+        polar_analysis.interpolate_at_cl(polar, 5.0)
+
+
+def test_interpolate_at_cl_finds_negative_alpha_operating_point() -> None:
+    # the exact shape of NASA_SC(2)-0712's cruise polar: a heavily-cambered
+    # section whose Cl already exceeds Cl_n before alpha reaches 0 -- the
+    # operating point is at a negative alpha. An earlier version of this
+    # function restricted the search to alpha >= 0 (copied from
+    # find_cl_max, where that's correct but here isn't) and raised a false
+    # "not bracketed" error on exactly this case.
+    polar = _full_polar(
+        alphas=[-1.0, 0.0, 1.0],
+        cls=[0.585, 0.791, 0.977],
+        cds=[0.01, 0.011, 0.012],
+        cms=[-0.08, -0.09, -0.10],
+    )
+    result = polar_analysis.interpolate_at_cl(polar, 0.5867)
+    assert -1.0 < result["alpha"] < 0.0
+    assert result["cl"] == pytest.approx(0.5867)
+
+
+def test_cl_at_zero_angle_reads_exact_row() -> None:
+    polar = _full_polar(
+        alphas=[-2.0, 0.0, 2.0], cls=[0.0, 0.3, 0.6], cds=[0.01, 0.01, 0.02], cms=[0.0, 0.0, 0.0]
+    )
+    assert polar_analysis.cl_at_zero_angle(polar) == pytest.approx(0.3)
+
+
+def test_cl_at_zero_angle_raises_when_missing() -> None:
+    polar = _full_polar(alphas=[-2.0, 2.0], cls=[0.0, 0.6], cds=[0.01, 0.02], cms=[0.0, 0.0])
+    with pytest.raises(ValueError, match="no converged alpha=0"):
+        polar_analysis.cl_at_zero_angle(polar)

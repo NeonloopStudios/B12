@@ -69,3 +69,64 @@ def find_cl_max(
                 return running_max, running_max_alpha
 
     return running_max, running_max_alpha
+
+
+def interpolate_at_cl(polar: pd.DataFrame, cl_target: float) -> dict[str, float]:
+    """Linearly interpolate alpha, cd, cm at a target Cl, from the full
+    converged polar (ascending alpha order, both signs), by finding the
+    bracketing pair of points where Cl crosses cl_target.
+
+    Used by Stage 7 to locate the cruise operating point (Cl = Cl_n) on the
+    cruise polar for the cl_cd_cruise, pitching_moment, and stall_margin
+    scorecard criteria. Deliberately NOT restricted to alpha >= 0 (unlike
+    find_cl_max, where that restriction is correct -- stall is specifically
+    an upper-branch phenomenon): the cruise operating point can genuinely
+    fall at a negative alpha for a heavily-cambered section. Verified
+    directly -- NASA_SC(2)-0712's cruise Cl_n=0.5867 sits between
+    alpha=-1.00 deg (Cl=0.585) and alpha=0.00 deg (Cl=0.791); restricting
+    to alpha >= 0 here (an earlier version of this function did, copying
+    find_cl_max's restriction without re-deriving whether it applied)
+    raised a false "not bracketed" error even though the converged data
+    covers it fine.
+
+    Scans pairs in alpha order (not a blind np.interp against a
+    Cl-sorted array) so it doesn't assume Cl(alpha) is globally monotonic,
+    only that it crosses cl_target somewhere in the swept range. Raises if
+    cl_target isn't bracketed by the converged range -- extrapolation is
+    not attempted, a genuine "can't locate this operating point" failure
+    should be visible, not guessed past.
+    """
+    up = polar[polar["converged"]].sort_values("alpha").reset_index(drop=True)
+    if len(up) < 2:
+        raise ValueError("interpolate_at_cl: fewer than 2 converged points in this polar")
+
+    for i in range(len(up) - 1):
+        cl_a, cl_b = float(up["cl"].iloc[i]), float(up["cl"].iloc[i + 1])
+        if (cl_a <= cl_target <= cl_b) or (cl_b <= cl_target <= cl_a):
+            frac = 0.0 if cl_b == cl_a else (cl_target - cl_a) / (cl_b - cl_a)
+            result = {
+                col: float(up[col].iloc[i] + frac * (up[col].iloc[i + 1] - up[col].iloc[i]))
+                for col in ("alpha", "cd", "cm")
+            }
+            result["cl"] = cl_target
+            return result
+
+    raise ValueError(
+        f"interpolate_at_cl: cl_target={cl_target} not bracketed by the converged "
+        f"cl range [{up['cl'].min():.4f}, {up['cl'].max():.4f}]"
+    )
+
+
+def cl_at_zero_angle(polar: pd.DataFrame) -> float:
+    """Cl at alpha=0 exactly, from the polar's own alpha=0 row.
+
+    Every run_two_leg_polar sweep includes an exact alpha=0.0 row (the
+    warm-start seed point both legs start from), which converges in every
+    run so far -- see run_cruise_polars.py/run_landing_polars.py output.
+    Raises if that row is missing or didn't converge, rather than
+    interpolate around it.
+    """
+    row = polar[(polar["alpha"] == 0.0) & polar["converged"]]
+    if row.empty:
+        raise ValueError("cl_at_zero_angle: no converged alpha=0 row in this polar")
+    return float(row["cl"].iloc[0])

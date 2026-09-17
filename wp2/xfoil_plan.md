@@ -251,12 +251,11 @@ value derived from one.
 
 ## 5. Status
 
-Stages 1–5 implemented and run for all 4 candidates (`config.py`,
+Stages 1–7 implemented and run for all 4 candidates (`config.py`,
 `xfoil_runtime.py`, `run_cruise_polars.py`, `run_landing_polars.py`,
-`mcrit_sweep.py`, plus supporting modules `polar_analysis.py`, `geometry.py`,
-`compressibility.py`). Stages 6–9 (validity flagging applied in the
-scorecard, `build_scorecard.py`, `make_plots.py`, `run_all.py`) not yet
-built.
+`mcrit_sweep.py`, `build_scorecard.py`, plus supporting modules
+`polar_analysis.py`, `geometry.py`, `compressibility.py`). Stages 8–9
+(`make_plots.py`, `run_all.py`) not yet built.
 
 Stage 5 results (M_n=0.7033 cruise): **all four candidates currently have
 M_crit below cruise M_n** (0.525–0.555 vs. 0.703) — every cruise Cd in the
@@ -267,3 +266,25 @@ positive margin (+0.068); the three conventional sections are all
 essentially at or just past their drag-divergence Mach at this cruise
 condition (margins −0.002 to −0.012) — consistent with what a supercritical
 section is specifically designed to do, not a coincidence in the numbers.
+
+Stage 7 scorecard (weighted total, ranked):
+
+| Airfoil | Total score |
+|---|---|
+| NACA_25112 | 0.7085 |
+| NASA_SC(2)-0712 | 0.4892 |
+| lockheed_c5a_bl758 | 0.4594 |
+| NACA_64212 | 0.3866 |
+
+Scoring direction for the two ambiguous criteria confirmed directly (not
+assumed): pitching moment scores on smaller `|Cm|` (not simply higher or
+lower), zero-angle Cl scores higher-is-better. `pitching_moment` and
+`cl_cd_cruise` (0.125 + 0.30 = 0.425 combined weight) are the biggest swing
+factors in NACA_25112's lead — it has the best (smallest-magnitude) Cm and
+a strong Cl/Cd, while NASA_SC(2)-0712 trades that off for the best Mach
+Critical and Cl max landing scores. A real bug was caught building this
+stage: `polar_analysis.interpolate_at_cl` initially restricted its search
+to `alpha >= 0` (copied from `find_cl_max`'s stall-detection restriction,
+which doesn't apply here) and raised a false "not bracketed" error for
+NASA_SC(2)-0712, whose cruise operating point genuinely falls at a negative
+alpha (≈−0.99°) due to its heavy camber.
