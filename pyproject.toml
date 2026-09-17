@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["wp2/tests"]
 addopts = "-ra"
+pythonpath = ["wp2"]
 
 [tool.mypy]
 python_version = "3.13"
