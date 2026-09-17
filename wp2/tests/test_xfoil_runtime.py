@@ -139,26 +139,15 @@ def test_load_airfoil_dat_rejects_geometry_that_doesnt_close(tmp_path: Path) -> 
         xfoil_runtime.load_airfoil_dat(open_loop)
 
 
-def test_wortmann_geometry_is_now_valid_but_still_fails_to_converge() -> None:
-    """Documents a real, investigated limitation rather than hiding it.
-
-    WORTMANN_FX_62-K-131.dat parses to a geometrically valid, correctly
-    wound TE->LE->TE loop after the Lednicer-format fix (this was verified
-    directly: XFoil itself reports "Counterclockwise ordering", a sane
-    thickness/camber, and a sharp trailing edge for it). It still fails to
-    converge at every angle of attack tried, across Mach 0.1-0.7 and
-    Reynolds 1e6-1.3e7, with and without repaneling -- XFoil's own runtime
-    diagnostic (`xf.print = True`) identifies the actual cause: "WARNING:
-    Poor input coordinate distribution ... Excessive panel angle 45.7 at
-    i=49 ... Repaneling with PANE and/or PPAR suggested". This is a
-    genuine data-quality defect in the source file (97 points vs. 121-152
-    for the other three candidates, sparse enough to leave a numerically
-    difficult kink XFoil's own repaneling can't fully smooth out), not a
-    bug in this codebase. If a cleaner coordinate file is substituted, this
-    test should start failing -- that's the point of asserting the current
-    behavior instead of skip-marking it.
-    """
-    airfoil = xfoil_runtime.load_airfoil_dat(config.AIRFOILS_DIR / "WORTMANN_FX_62-K-131.dat")
+def test_nasa_sc2_0712_converges_near_zero_alpha_at_cruise() -> None:
+    # WORTMANN_FX_62-K-131 (the airfoil that motivated the Lednicer-format
+    # fix above) was cut from the candidate set entirely -- an unfixable
+    # source-data defect (97 points, too sparse near the LE for XFoil's own
+    # repaneling to smooth out; see git history on this file for the full
+    # investigation). NASA_SC(2)-0712 replaced it and, being Lednicer-format
+    # too, exercises the same merge path with a real, working file.
+    path = config.AIRFOILS_DIR / "NASA_SC(2)-0712.dat"
+    airfoil = xfoil_runtime.load_airfoil_dat(path)
     assert airfoil.x[0] == pytest.approx(1.0, abs=1e-6)
     assert airfoil.x.min() == pytest.approx(0.0, abs=1e-3)
 
@@ -168,8 +157,8 @@ def test_wortmann_geometry_is_now_valid_but_still_fails_to_converge() -> None:
         reynolds=config.CRUISE.reynolds_normal,
         ncrit=config.CRUISE.ncrit,
     ) as xf:
-        result = xfoil_runtime.run_alpha_sweep(xf, [0.0])
-    assert not result["converged"].iloc[0]
+        result = xfoil_runtime.run_alpha_sweep(xf, [0.0, 0.5, 1.0])
+    assert result["converged"].all(), result[["alpha", "converged", "note"]]
 
 
 def test_naca_25112_converges_near_zero_alpha_at_cruise() -> None:

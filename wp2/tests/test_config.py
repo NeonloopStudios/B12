@@ -114,10 +114,12 @@ def test_scoring_weights_sum_to_one() -> None:
 
 
 def test_discover_airfoils_finds_final_candidate_set() -> None:
+    # WORTMANN_FX_62-K-131 was cut (unfixable source-data defect, see
+    # test_xfoil_runtime.py's history); NASA_SC(2)-0712 replaced it.
     found = {p.stem for p in config.discover_airfoils()}
     assert found == {
         "NACA_25112",
         "NACA_64212",
-        "WORTMANN_FX_62-K-131",
+        "NASA_SC(2)-0712",
         "lockheed_c5a_bl758",
     }
