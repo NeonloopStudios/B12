@@ -28,9 +28,12 @@ plan, not the install guide.
 | Mach Critical | 0.25 |
 | Cl/Cd cruise | 0.30 |
 | Cl max landing | 0.15 |
-| Stall Angle − Angle in Cruise | 0.125 |
+| Stall Angle − Angle in Cruise | 0.15 |
 | Zero Angle Cl | 0.05 |
-| Pitching Moment | 0.125 |
+| Pitching Moment | 0.10 |
+
+(Revised from the original 0.125/0.125 split: stall margin raised to 0.15,
+pitching moment lowered to 0.10.)
 
 `wp2/scripts/build_scorecard.py` (Stage 7) reproduces this exact table, per
 airfoil, computed from XFoil output rather than entered manually.

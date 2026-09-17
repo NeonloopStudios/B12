@@ -249,9 +249,9 @@ SCORING_WEIGHTS: dict[str, float] = {
     "mach_critical": 0.25,
     "cl_cd_cruise": 0.30,
     "cl_max_landing": 0.15,
-    "stall_margin": 0.125,  # stall angle minus cruise angle
+    "stall_margin": 0.15,  # stall angle minus cruise angle; raised from 0.125
     "cl_zero_angle": 0.05,
-    "pitching_moment": 0.125,
+    "pitching_moment": 0.10,  # lowered from 0.125
 }
 
 if abs(sum(SCORING_WEIGHTS.values()) - 1.0) > 1e-9:
