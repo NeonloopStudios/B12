@@ -63,12 +63,29 @@ def airfoil_colors() -> dict[str, str]:
     return dict(zip(stems, _PALETTE))
 
 
-def _style_axes(ax: "plt.Axes") -> None:
-    """Recessive gridlines behind the data, no chart-junk spines."""
+def _style_axes(ax: "plt.Axes", *, zero_lines: bool = True) -> None:
+    """Recessive gridlines behind the data, no chart-junk spines, and an
+    emphasized reference line at x=0/y=0 wherever that value falls within
+    the plotted range -- a plain gridline at zero reads identically to
+    every other gridline, easy to miss when the sign of a value (Cl, Cm,
+    Cp, alpha) is exactly the thing that matters. axhline/axvline use a
+    blended transform (data y or x, axes-fraction for the other axis) so
+    they track the final autoscaled view regardless of being added here,
+    before any real data is plotted.
+
+    zero_lines=False for the two comparison bar charts: their x-axis is
+    categorical (one position per criterion/airfoil, not a physical
+    quantity), so an "x=0" reference line is meaningless there -- verified
+    directly, it rendered as a stray vertical line poking through the
+    first bar group.
+    """
     ax.grid(True, color="#cccccc", linewidth=0.6, alpha=0.7, zorder=0)
     ax.set_axisbelow(True)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    if zero_lines:
+        ax.axhline(0, color="#888888", linewidth=1.1, zorder=1)
+        ax.axvline(0, color="#888888", linewidth=1.1, zorder=1)
 
 
 def _read_polar(stem: str, condition: str) -> pd.DataFrame:
@@ -126,10 +143,16 @@ def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
     _plot_nonconverged_markers(ax, cruise, converged)
 
     ax.axvline(op["alpha"], color="#555555", linestyle="--", linewidth=1, zorder=2)
+    # Up and to the left, right-aligned: the curve is rising through this
+    # point (so "up" alone isn't enough -- a small offset to the right
+    # runs into the curve catching back up, verified directly), and the
+    # dashed vertical cruise-alpha line passes through this exact x, so
+    # centering on it would put the line through the text. Left is where
+    # the rising curve is furthest below the label and clear of the line.
     ax.annotate(
         f"cruise α={op['alpha']:.2f}°\nCl={config.CRUISE.cl_normal:.3f}",
-        xy=(op["alpha"], config.CRUISE.cl_normal), xytext=(8, -18),
-        textcoords="offset points", fontsize=9,
+        xy=(op["alpha"], config.CRUISE.cl_normal), xytext=(-15, 20),
+        textcoords="offset points", fontsize=9, ha="right",
     )
     ax.plot([stall_alpha], [cl_max], marker="*", markersize=14, color="#D55E00", zorder=5)
     # always label below the marker: it sits at the curve's Cl peak, which
@@ -142,9 +165,9 @@ def plot_cl_vs_alpha_cruise(stem: str, color: str, out_dir: Path) -> None:
 
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl")
-    ax.set_title(f"{stem} — Cl vs α (cruise, M_n={config.CRUISE.mach_normal:.3f})")
+    ax.set_title(f"{stem}: Cl vs α (cruise, M_n={config.CRUISE.mach_normal:.3f})")
     ax.margins(y=0.15)
-    ax.legend(loc="lower right", frameon=False)
+    ax.legend(loc="lower right", frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(out_dir / "cl_vs_alpha_cruise.png", dpi=150)
     plt.close(fig)
@@ -184,7 +207,7 @@ def plot_cd_and_drag_polar(stem: str, color: str, out_dir: Path) -> None:
     ax_polar.set_ylabel("Cl")
     ax_polar.set_title("Drag polar (Cl vs Cd)")
 
-    fig.suptitle(f"{stem} — cruise drag characteristics (M_n={config.CRUISE.mach_normal:.3f})")
+    fig.suptitle(f"{stem}: cruise drag characteristics (M_n={config.CRUISE.mach_normal:.3f})")
     fig.tight_layout()
     fig.savefig(out_dir / "cd_and_drag_polar.png", dpi=150)
     plt.close(fig)
@@ -214,7 +237,7 @@ def plot_cl_cd_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     )
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl / Cd")
-    ax.set_title(f"{stem} — Cl/Cd vs α (cruise)")
+    ax.set_title(f"{stem}: Cl/Cd vs α (cruise)")
     fig.tight_layout()
     fig.savefig(out_dir / "cl_cd_vs_alpha.png", dpi=150)
     plt.close(fig)
@@ -236,10 +259,9 @@ def plot_cm_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
         f"cruise: Cm={op['cm']:.4f}", xy=(op["alpha"], op["cm"]),
         xytext=(0, 16), textcoords="offset points", fontsize=9, ha="center",
     )
-    ax.axhline(0.0, color="#999999", linewidth=1, linestyle=":", zorder=1)
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cm")
-    ax.set_title(f"{stem} — pitching moment vs α (cruise)")
+    ax.set_title(f"{stem}: pitching moment vs α (cruise)")
     fig.tight_layout()
     fig.savefig(out_dir / "cm_vs_alpha.png", dpi=150)
     plt.close(fig)
@@ -255,7 +277,7 @@ def plot_cp_distribution(stem: str, color: str, out_dir: Path) -> None:
     ax.set_xlabel("x / c")
     ax.set_ylabel("Cp")
     ax.set_title(
-        f"{stem} — Cp distribution at M={mcrit_sweep.BASELINE_MACH:.2f}, "
+        f"{stem}: Cp distribution at M={mcrit_sweep.BASELINE_MACH:.2f}, "
         f"Cl_n={config.CRUISE.cl_normal:.3f} (cruise operating Cl)"
     )
     fig.tight_layout()
@@ -288,8 +310,12 @@ def plot_mcrit_sweep(stem: str, color: str, out_dir: Path) -> None:
                     textcoords="offset points", fontsize=9)
     ax.set_xlabel("Mach")
     ax.set_ylabel("Cp")
-    ax.set_title(f"{stem} — Mach-critical determination")
-    ax.legend(loc="lower left", frameon=False)
+    ax.set_title(f"{stem}: Mach-critical determination")
+    # Upper left, not lower left: both curves start well below Cp=0 at the
+    # low-Mach end (Cp_crit around -7, Cp_min around -1.5), so that corner
+    # is consistently empty -- lower left sits right where the descending
+    # Cp_crit dashed curve passes through, verified directly.
+    ax.legend(loc="upper left", frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(out_dir / "mcrit_sweep.png", dpi=150)
     plt.close(fig)
@@ -321,8 +347,8 @@ def plot_landing_cl_vs_alpha(stem: str, color: str, out_dir: Path) -> None:
     ax.margins(y=0.15)
     ax.set_xlabel("Angle of attack α (deg)")
     ax.set_ylabel("Cl")
-    ax.set_title(f"{stem} — landing polar (M_n={config.LANDING.mach_normal:.3f})")
-    ax.legend(loc="lower right", frameon=False)
+    ax.set_title(f"{stem}: landing polar (M_n={config.LANDING.mach_normal:.3f})")
+    ax.legend(loc="lower right", frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(out_dir / "landing_cl_vs_alpha.png", dpi=150)
     plt.close(fig)
@@ -351,7 +377,7 @@ def plot_criteria_breakdown(colors: dict[str, str], out_dir: Path) -> None:
     x = range(len(criteria))
 
     fig, ax = plt.subplots(figsize=(11, 6))
-    _style_axes(ax)
+    _style_axes(ax, zero_lines=False)
     for i, airfoil in enumerate(airfoils):
         offsets = [xi - group_width / 2 + bar_width * (i + 0.5) for xi in x]
         values = [detail.loc[airfoil, f"{c}_weighted"] for c in criteria]
@@ -360,8 +386,8 @@ def plot_criteria_breakdown(colors: dict[str, str], out_dir: Path) -> None:
     ax.set_xticks(list(x))
     ax.set_xticklabels([_CRITERION_LABELS[c] for c in criteria])
     ax.set_ylabel("Weighted contribution")
-    ax.set_title("WP2 scorecard — weighted contribution per criterion")
-    ax.legend(loc="upper right", frameon=False, ncol=2)
+    ax.set_title("WP2 scorecard: weighted contribution per criterion")
+    ax.legend(loc="upper right", frameon=False, ncol=2, fontsize=8)
     fig.tight_layout()
     fig.savefig(out_dir / "criteria_breakdown.png", dpi=150)
     plt.close(fig)
@@ -373,7 +399,7 @@ def plot_total_score(colors: dict[str, str], out_dir: Path) -> None:
     airfoils = list(detail.index)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    _style_axes(ax)
+    _style_axes(ax, zero_lines=False)
     bars = ax.bar(
         airfoils, detail["total_score"], color=[colors[a] for a in airfoils], zorder=3,
     )
@@ -383,7 +409,7 @@ def plot_total_score(colors: dict[str, str], out_dir: Path) -> None:
             xytext=(0, 4), textcoords="offset points", ha="center", fontsize=10,
         )
     ax.set_ylabel("Total weighted score")
-    ax.set_title("WP2 scorecard — total score, ranked")
+    ax.set_title("WP2 scorecard: total score, ranked")
     ax.set_ylim(0, max(detail["total_score"]) * 1.15)
     fig.tight_layout()
     fig.savefig(out_dir / "total_score.png", dpi=150)
