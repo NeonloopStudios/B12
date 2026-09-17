@@ -206,16 +206,30 @@ class XFoil(object):
         -------
         cl, cd, cm, cp : float
             Corresponding values of the lift, drag, moment, and minimum pressure coefficients.
+            NaN for all four if the analysis did not converge.
+        diverged : bool
+            True if the boundary-layer Newton solve aborted on a NaN/divergence
+            mid-iteration, as opposed to running out of iterations without
+            meeting the convergence tolerance. See api.f90:alfa_.
+        rms_bl : float
+            Final RMS residual of the boundary-layer Newton system (XFoil's
+            VISCAL routine). Not meaningful when diverged is True (the solve
+            aborted before that iteration's residual was computed) or for an
+            inviscid analysis (always 0.0 in that case).
         """
         cl = c_float()
         cd = c_float()
         cm = c_float()
         cp = c_float()
         conv = c_bool()
+        diverged = c_bool()
+        rms_bl = c_float()
 
-        self._lib.alfa(byref(c_float(a)), byref(cl), byref(cd), byref(cm), byref(cp), byref(conv))
+        self._lib.alfa(byref(c_float(a)), byref(cl), byref(cd), byref(cm), byref(cp), byref(conv),
+                       byref(diverged), byref(rms_bl))
 
-        return (cl.value, cd.value, cm.value, cp.value) if conv else (np.nan, np.nan, np.nan, np.nan)
+        cl_cd_cm_cp = (cl.value, cd.value, cm.value, cp.value) if conv else (np.nan, np.nan, np.nan, np.nan)
+        return (*cl_cd_cm_cp, bool(diverged.value), rms_bl.value)
 
     def cl(self, cl):
         """"Analyze airfoil at a fixed lift coefficient.

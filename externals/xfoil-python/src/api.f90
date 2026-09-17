@@ -318,13 +318,27 @@ contains
         LQSppl = .false.
     end subroutine filter
 
-    subroutine alfa_(a_input, cl_out, cd_out, cm_out, cp_out, conv) bind(c, name='alfa')
+    subroutine alfa_(a_input, cl_out, cd_out, cm_out, cp_out, conv, diverged, rms_bl_out) &
+            bind(c, name='alfa')
+        ! diverged/rms_bl_out expose diagnostics from the viscous BL Newton
+        ! solve (i_xfoil module: RMSbl, and viscal's own raw return before
+        ! it is combined with LVConv) so callers can tell "ran out of
+        ! iterations, residual still RMSbl" apart from "aborted on NaN mid-
+        ! iteration" instead of only seeing a single converged/not-converged
+        ! bool. See viscal() in m_xoper.f90: `viscal = setbl()` is reassigned
+        ! every Newton iteration and only ever goes false (with an immediate
+        ! `return`) on the abort_on_nan path -- a fallthrough to the end of
+        ! the iteration loop (ran out of iterations, no NaN) always leaves
+        ! the raw return value true, with LVConv left false by the caller.
         use m_xoper, only: specal, viscal, fcpmin
         use i_xfoil
 
         real(c_float), intent(in) :: a_input
         real(c_float), intent(out) :: cl_out, cd_out, cm_out, cp_out
         logical(c_bool), intent(out) :: conv
+        logical(c_bool), intent(out) :: diverged
+        real(c_float), intent(out) :: rms_bl_out
+        logical :: viscal_raw
         ADEg = a_input
 
         ALFa = a_input * DTOr
@@ -336,10 +350,14 @@ contains
         if (abs(MINf - MVIsc)>1.0E-5) LVConv = .false.
         !
         if (LVIsc) then
-            conv = viscal(ITMax)
-            conv = LVConv .and. conv
+            viscal_raw = viscal(ITMax)
+            conv = LVConv .and. viscal_raw
+            diverged = .not. viscal_raw
+            rms_bl_out = RMSbl
         else
             conv = .true.
+            diverged = .false.
+            rms_bl_out = 0.0
         end if
 
         cl_out = CL

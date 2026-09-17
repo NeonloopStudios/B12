@@ -12,22 +12,32 @@ wp2/
   scripts/      the analysis pipeline (see xfoil_plan.md)
   results/      generated CSVs and plots (see xfoil_plan.md §3)
   xfoil_plan.md the stage-by-stage analysis plan
+
+externals/
+  xfoil-python/ vendored, tracked-in-repo source for XFoil's Python bindings
+                (see below) -- not gitignored, so our patches to it have real
+                commit history
 ```
 
 ## Installing XFoil (Windows, compiled from source)
 
 There is no working prebuilt `xfoil` wheel for modern Python/Windows, so the
-Python bindings ([DARcorporation/xfoil-python](https://github.com/DARcorporation/xfoil-python),
-a maintained fork of daniel-de-vries/xfoil-python with a native CMake+Fortran
-build) have to be compiled locally. A plain
+Python bindings are built locally from
+[`externals/xfoil-python`](../externals/xfoil-python) — a vendored copy of
+[DARcorporation/xfoil-python](https://github.com/DARcorporation/xfoil-python)
+(a maintained fork of daniel-de-vries/xfoil-python with a native CMake+Fortran
+build), commit `0a8c2fc`, with two kinds of local patches on top:
 
-```
-pip install git+https://github.com/DARcorporation/xfoil-python.git
-```
+1. Build fixes (Traps 1–2 below) needed just to compile it on Windows at all.
+2. A source change to `src/api.f90` that exposes real XFoil convergence
+   diagnostics through the Python bindings (see "Exposing XFoil's internal
+   convergence diagnostics" below) — not upstream, specific to this project.
 
-**fails out of the box on Windows** for two independent reasons, both hit and
-fixed while setting this project up. Reproduce it with the steps below instead
-of the one-liner.
+A plain `pip install git+https://github.com/DARcorporation/xfoil-python.git`
+(the unpatched upstream) **fails out of the box on Windows** for two
+independent reasons, both hit and fixed while setting this project up, and
+would also silently skip the diagnostics patch. Build from
+`externals/xfoil-python` using the steps below instead of the one-liner.
 
 ### Requirements
 
@@ -63,8 +73,8 @@ CMake Error at CMakeLists.txt:2 (project):
   No CMAKE_Fortran_COMPILER could be found.
 ```
 
-Fix: build with plain `setuptools` instead of `scikit-build`. Edit
-`pyproject.toml` in the cloned source to:
+Fix: build with plain `setuptools` instead of `scikit-build`. Already applied
+in `externals/xfoil-python/pyproject.toml`:
 
 ```toml
 [build-system]
@@ -74,12 +84,12 @@ build-backend = "setuptools.build_meta"
 
 **Trap 2 — the MinGW generator needs its own tools on PATH.**
 Once scikit-build is out of the way, `setup.py`'s own `CMakeBuild` step forces
-`-G "MinGW Makefiles"` on Windows (already present in `CMakeBuild.build_extensions`
-in this fork — if working from a different fork/version, add
-`'-G', 'MinGW Makefiles'` to the Windows `cmake_args` and make sure no
-`-DCMAKE_GENERATOR_PLATFORM=x64` argument survives alongside it, the two are
-mutually exclusive). But CMake still needs `mingw32-make` and `gfortran`
-resolvable, or you get:
+`-G "MinGW Makefiles"` on Windows (already present in
+`CMakeBuild.build_extensions` in `externals/xfoil-python/setup.py` — if
+working from a different fork/version, add `'-G', 'MinGW Makefiles'` to the
+Windows `cmake_args` and make sure no `-DCMAKE_GENERATOR_PLATFORM=x64`
+argument survives alongside it, the two are mutually exclusive). But CMake
+still needs `mingw32-make` and `gfortran` resolvable, or you get:
 
 ```
 CMake Error: CMake was unable to find a build program corresponding to "MinGW Makefiles".
@@ -92,13 +102,15 @@ the system `cmake`/generator:
 
 ```powershell
 $env:Path = "C:\msys64\mingw64\bin;C:\Program Files\CMake\bin;" + $env:Path
-git clone https://github.com/DARcorporation/xfoil-python.git tools\xfoil-python
-# apply the pyproject.toml fix above inside tools\xfoil-python
-pip install --no-build-isolation .\tools\xfoil-python
+pip install --no-build-isolation .\externals\xfoil-python
 ```
 
 This produces `xfoil-<version>-cp3xx-cp3xx-win_amd64.whl` and installs cleanly
-(`Successfully installed xfoil-1.1.1`).
+(`Successfully installed xfoil-1.1.1`). Re-run this after pulling in any
+change to `externals/xfoil-python` (e.g. the diagnostics patch below) — pip
+won't know to rebuild otherwise; uninstall first (`pip uninstall -y xfoil`)
+if it doesn't pick up a source change, and delete
+`externals\xfoil-python\build\` to clear stale CMake cache.
 
 **Trap 3 — the DLL builds, but won't load at runtime.**
 `import xfoil; XFoil()` then fails with:
@@ -146,13 +158,80 @@ Should print an `<xfoil.xfoil.XFoil object at ...>` with no traceback.
 | `CMAKE_Fortran_COMPILER not set, after EnableLanguage` | `gfortran` not on PATH, or MSYS2 `mingw-w64-x86_64-gcc-fortran` not installed | Install the package; ensure `mingw64\bin` (not `usr\bin`) is on PATH |
 | `FileNotFoundError: Could not find module '...tmpXXXX.dll' (or one of its dependencies)` at import time | Python ≥3.8 ctypes doesn't use PATH for dependent-DLL resolution | `os.add_dll_directory(r"C:\msys64\mingw64\bin")` before `import xfoil` (Trap 3) |
 
+### One more runtime bug: `XFoil.__del__` leaks a handle and a temp file
+
+Not a build problem, but hit and fixed while writing `wp2/scripts/xfoil_runtime.py`:
+`xfoil.XFoil.__del__` calls `ctypes.windll.kernel32.FreeLibrary(handle)`
+with no `argtypes` declared, so ctypes assumes a 32-bit `c_int`. The DLL
+handle is a 64-bit pointer, which overflows that assumption
+(`OverflowError: int too long to convert`); `FreeLibrary` never actually
+runs, and the following `os.remove()` of the instance's temp `.dll` copy
+then fails with `PermissionError` because the handle is still open. Verified
+directly in this environment — every `XFoil()` instance leaked its library
+handle and its temp file until this was fixed. Since the analysis pipeline
+creates one `XFoil()` per airfoil/condition (dozens over a full run), this
+isn't cosmetic. Fix (applied once, process-wide, in
+`xfoil_runtime._ensure_process_setup`):
+
+```python
+import ctypes
+ctypes.windll.kernel32.FreeLibrary.argtypes = [ctypes.c_void_p]
+ctypes.windll.kernel32.FreeLibrary.restype = ctypes.c_int
+```
+
+### Exposing XFoil's internal convergence diagnostics
+
+The unpatched binding's `XFoil.a(alpha)` only returns a `converged: bool` —
+useful, but it collapses two very different situations ("ran out of Newton
+iterations, residual still relatively small" vs. "the boundary-layer solve
+actually diverged") into the same flag, and gives no sense of *how close* a
+near-miss got. The natural instinct — capture XFoil's own printed diagnostic
+text (`'VISCAL:  Convergence failed'` etc., `m_xoper.f90`, gated by the
+`show_output`/`xf.print` flag) via Python's `os.dup2` stdout redirection —
+**does not work**: verified directly in this environment, the redirected file
+descriptor captured zero bytes while the Fortran output still printed
+straight to the real console. The MinGW-compiled DLL's I/O isn't routed
+through the fd table entry `os.dup2` rewrites (it resolves the console handle
+through its own CRT/Win32 path); genuinely redirecting it would need
+process-level `SetStdHandle` plumbing done before the DLL's first write, which
+is far more fragile than the alternative below.
+
+Instead, `externals/xfoil-python/src/api.f90`'s `alfa_` subroutine (the
+Fortran routine backing `.a()`) was patched to pass out two pieces of state
+it already computes internally, via `i_xfoil`'s module variables:
+
+- **`rms_bl`** — the boundary layer Newton system's final RMS residual
+  (`RMSbl`), i.e. how far from XFoil's own convergence tolerance (1e-4) the
+  solve actually got.
+- **`diverged`** — True only when the Newton solve aborted on a NaN
+  mid-iteration (`viscal()`'s own raw return value in `m_xoper.f90`, before
+  it's combined with `LVConv`), as opposed to simply exhausting the
+  iteration budget without meeting tolerance.
+
+`externals/xfoil-python/xfoil/xfoil.py`'s `.a()` was updated to match,
+returning `(cl, cd, cm, cp, diverged, rms_bl)` instead of a 4-tuple.
+`wp2/scripts/xfoil_runtime.run_alpha_sweep` consumes both fields directly
+(see its docstring for the resulting `note` text). Only `alfa_`/`.a()` were
+touched — `cl_`/`.cl()` (fixed-Cl mode) are unused by this project's
+pipeline and were deliberately left unpatched to keep the change scoped to
+what's actually exercised.
+
+Verified directly against NACA 25112 at the cruise condition: converged
+points return `diverged=False` with `rms_bl` on the order of `1e-5`–`1e-4`;
+a deliberately absurd angle of attack (40°, deep past stall) returns
+`diverged=True` with `rms_bl≈6.3` — a large, physically sensible residual
+from the aborted iteration, not a placeholder value.
+
 ### Notes
 
-- `tools/` (the cloned `xfoil-python` source + build artifacts) is git-ignored —
-  it's a vendored third-party build directory, not project source. This README
-  is what makes the build reproducible instead of committing it.
+- `externals/xfoil-python/` is tracked in this repo (not gitignored) so that
+  patches to it — the diagnostics change above, and any future ones — have
+  real commit history, unlike a locally-cloned build directory would.
+  `externals/xfoil-python/build/`, `dist/`, and `*.egg-info/` are still
+  gitignored (via that folder's own `.gitignore`) since they're regenerated
+  by every build.
 - The compiled package ends up in the project venv at
-  `venv/Lib/site-packages/xfoil/` (also git-ignored).
+  `venv/Lib/site-packages/xfoil/` (gitignored, like the rest of `venv/`).
 - `wp2/requirements.txt` covers the analysis dependencies (`numpy`, `matplotlib`,
   `pandas`, `scipy`) — it deliberately does **not** include `xfoil`, since that
   install is the multi-step process above, not a single pip line.
