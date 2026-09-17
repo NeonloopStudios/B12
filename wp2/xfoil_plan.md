@@ -185,11 +185,9 @@ wp2/results/
 
 - Chord (`config.CHORD_M = 2.649904207 m`) is set — same physical wing station
   for cruise and landing.
-- **Cruise required Cl (`CRUISE.cl_wing`)** — still open. `config.level_flight_cl`
-  implements `Cl = 2W/(ρV²S)` (level-flight trim, first-order); needs cruise
-  weight `W` and wing reference area `S` from WP1 sizing. This is the one value
-  Stage 3 (locating the cruise operating point on the polar) and Stage 5
-  (Mach-critical sweep reference Cl) are blocked on.
+- **Cruise required Cl (`CRUISE.cl_wing = 0.489433403`)** — set, from WP1's
+  level-flight trim calc (`Cl = 2W/(ρV²S)`, eq. 8.13). `Cl_n` (the sweep-corrected
+  section Cl XFoil's polar is matched against) is `cl_wing / cos²Λ ≈ 0.587`.
 - Landing does **not** need a required-Cl — "Cl max landing" is the polar's
   Cl_max at the landing Re/M, not a trim point. Landing's remaining open item is
   the approach Mach/altitude (`LANDING.mach_freestream`/`altitude_m` are still

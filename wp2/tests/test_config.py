@@ -77,11 +77,13 @@ def test_cruise_and_landing_reynolds_normal_now_computable() -> None:
     assert config.LANDING.reynolds_normal > 0.0
 
 
-def test_cruise_cl_wing_still_unset() -> None:
-    # cl_wing is the one input still missing -- must keep raising until
-    # weight/wing-area are supplied, never silently default to a guess.
-    with pytest.raises(ValueError, match="cl_wing is not set"):
-        _ = config.CRUISE.cl_normal
+def test_cruise_cl_normal_matches_sweep_correction() -> None:
+    # Cl_n = Cl_wing / cos^2(sweep); cl_wing = 0.489433403 (WP1, eq. 8.13).
+    cl_wing = 0.489433403
+    expected = cl_wing / config.CRUISE.cos_sweep**2
+    assert config.CRUISE.cl_wing == pytest.approx(cl_wing)
+    assert config.CRUISE.cl_normal == pytest.approx(expected)
+    assert 0.5 < config.CRUISE.cl_normal < 0.7
 
 
 def test_level_flight_cl_matches_lift_equals_weight() -> None:

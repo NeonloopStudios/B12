@@ -182,12 +182,11 @@ CRUISE = FlightCondition(
     sweep_rad=SWEEP_RAD,
     ncrit=9.0,  # TODO: confirm against assumed surface finish / free-stream turbulence
     chord_m=CHORD_M,
-    # cl_wing: required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight
-    # trim, e.g. textbook eq. 8.13) -- still unset, needs cruise weight W and
-    # wing reference area S from WP1 sizing. Locates the cruise operating
-    # point on the polar; used by cl_cd_cruise, stall_margin, pitching_moment,
-    # and the Stage 5 Mach-critical sweep.
-    cl_wing=None,  # TODO(WP1 sizing/performance): W_cruise and S -> Cl = 2W/(rho V^2 S)
+    # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
+    # eq. 8.13), computed externally from WP1 cruise weight and wing area.
+    # Locates the cruise operating point on the polar; used by cl_cd_cruise,
+    # stall_margin, pitching_moment, and the Stage 5 Mach-critical sweep.
+    cl_wing=0.489433403,
 )
 
 LANDING = FlightCondition(
