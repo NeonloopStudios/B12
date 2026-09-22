@@ -253,3 +253,39 @@ pytest
 mypy
 ```
 
+
+## 3D wing analysis: VSPAERO + XFoil profile drag
+
+`scripts/vspaero_analysis.py` analyses the wing (planform in
+`scripts/wing_geometry.py`, NACA 25112 sections) at the `config.CRUISE`
+condition:
+
+    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn/Lock)
+
+- **VSPAERO (VLM)** gives CL, CMy and the induced drag. Its own `CDo` (a
+  flat-plate skin-friction estimate) is discarded.
+- **Profile drag** comes from the XFoil cruise polar
+  (`results/data/<airfoil>_cruise_polar.csv`), strip by strip: local
+  cl -> cl_n = cl / cos^2(sweep) -> cd_n(cl_n) from the converged pre-stall
+  polar -> streamwise cd = cd_n (friction-dominated, conservative; the
+  cd_n cos^3(sweep) variant is reported as a sensitivity) -> Reynolds
+  correction (c / c_ref)^-0.2 -> integrated over the span. A strip past
+  the polar's cl_max gets cd = NaN (and the whole angle of attack has no
+  CD); the first such wing CL is reported as `CL_first_section_stall`.
+- **Wave drag**: swept Korn equation (kappa_A from `config.kappa_a`) with
+  Lock's 20 (M - M_crit)^4.
+
+Lift and moment stay inviscid. Details in `scripts/viscous_correction.py`.
+
+It needs the OpenVSP Python API, which is not in this venv. Run it from
+the OpenVSP conda env (OpenVSP 3.51.3), from `wp2/`:
+
+```
+conda activate openvsp
+python -m scripts.vspaero_analysis
+```
+
+Outputs go to `results/vspaero/<airfoil>/`: `polar.csv`, `span_loads.csv`,
+`summary.csv`, `polar.png`, `drag_breakdown.png`, `span_loads.png`,
+`transonic.png`. The raw VSPAERO run (`vspaero_run/`, including
+`wing.vsp3`) is gitignored.
