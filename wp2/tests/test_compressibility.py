@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""Tests for wp2/scripts/compressibility.py.
+"""Tests for wp2/src/b12wp2/common/compressibility.py.
 
 Verified against structural/limiting properties that can be derived with
 confidence (Cp_crit(1.0) = 0 exactly, Karman-Tsien = identity at M=0, etc.),

@@ -6,8 +6,9 @@ Created: 2026-09-17
 
 # WP2 — Airfoil Selection
 
-XFoil-based screening of candidate 2D airfoil sections. This file covers
-getting XFoil working and the repo layout.
+XFoil-based screening of candidate 2D airfoil sections, and the 3D wing and
+high-lift work built on the section that wins. This file covers the layout,
+how to run each step, and how to get XFoil and OpenVSP working.
 
 ## Layout
 
@@ -15,14 +16,59 @@ getting XFoil working and the repo layout.
 wp2/
   airfoils/     candidate .dat coordinate files (the set will change; any .dat
                 dropped here is picked up automatically by the scripts)
-  scripts/      the analysis pipeline
-  results/      generated CSVs and plots
+  scripts/      the runnable steps, one file per step -- nothing else
+  src/b12wp2/   the analysis library every step calls
+    config/     everything that is an input: paths, atmosphere, mission,
+                wing, hld, solvers, scoring
+    common/     airfoil geometry, compressibility relations
+    xfoil/      2D: the XFoil runtime, polar post-processing, M_crit,
+                lift-curve slope
+    wing/       3D: planform geometry, VSPAERO, viscous/wave corrections
+    hld/        high-lift device sizing and comparison
+    plots/      the figures, one module per stage
+    scoring/    the weighted scorecard
+  tests/        pytest suite over src/b12wp2/
+  results/      generated CSVs and plots, one directory per stage:
+    section/    2D XFoil work -- data/ and plots/
+    wing/       3D VSPAERO work, one subdirectory per airfoil
+    hld/        high-lift device comparison
+    scorecard/  scorecard.csv, scorecard_detail.csv
 
 externals/
   xfoil-python/ vendored, tracked-in-repo source for XFoil's Python bindings
                 (see below) -- not gitignored, so our patches to it have real
                 commit history
 ```
+
+## Running the analysis
+
+Every runnable step is one file in `scripts/`, started from `wp2/` as a
+module -- `python -m scripts.<name>`, not `python scripts/<name>.py`, since
+the package is what puts `src/` on the path. (The two OpenVSP steps are the
+exception: they add it themselves, so the editor's Run button works on
+them.)
+
+| Command | Does | Writes |
+|---|---|---|
+| `python -m scripts.run_all` | the whole 2D pipeline, in order | everything below except the 3D results |
+| `python -m scripts.run_cruise_polars` | XFoil cruise polars, every airfoil | `results/section/data/*_cruise_polar.csv` |
+| `python -m scripts.run_landing_polars` | XFoil landing polars | `results/section/data/*_landing_polar.csv` |
+| `python -m scripts.mcrit_sweep` | M_crit + Korn M_dd | `results/section/data/*_mcrit.csv`, `*_baseline_cp.csv`, `mcrit_summary.csv` |
+| `python -m scripts.build_scorecard` | the weighted scorecard | `results/scorecard/` |
+| `python -m scripts.make_plots` | every 2D figure | `results/section/plots/` |
+| `python -m scripts.lift_slope <airfoil>` | lift-curve slope by OLS, `--scan` for window sensitivity | prints only |
+| `python -m scripts.vspaero_analysis` | 3D wing polar (OpenVSP env) | `results/wing/<airfoil>/` |
+| `python -m scripts.hld_analysis` | high-lift device comparison (OpenVSP env) | `results/hld/` |
+
+The steps read what earlier ones wrote, so order matters; `run_all` is that
+order. The two OpenVSP steps are deliberately not in it -- they need a
+different interpreter (see below).
+
+Adding a candidate airfoil is dropping its `.dat` into `airfoils/` and
+rerunning: every step discovers the current set through
+`config.discover_airfoils()`. The one thing it will ask for is the Korn
+`kappa_A` classification in `config/scoring.py`, which is a design judgment
+and so raises rather than defaulting.
 
 ## Installing XFoil (Windows, compiled from source)
 
@@ -141,8 +187,8 @@ from xfoil import XFoil
 xf = XFoil()  # works
 ```
 
-`wp2/scripts/xfoil_runtime.py` does this once, centrally, so no other script in
-`wp2/scripts/` has to repeat it.
+`wp2/src/b12wp2/xfoil/runtime.py` does this once, centrally, so nothing else
+in the package has to repeat it.
 
 ### Verifying the install
 
@@ -165,7 +211,8 @@ Should print an `<xfoil.xfoil.XFoil object at ...>` with no traceback.
 
 ### One more runtime bug: `XFoil.__del__` leaks a handle and a temp file
 
-Not a build problem, but hit and fixed while writing `wp2/scripts/xfoil_runtime.py`:
+Not a build problem, but hit and fixed while writing
+`wp2/src/b12wp2/xfoil/runtime.py`:
 `xfoil.XFoil.__del__` calls `ctypes.windll.kernel32.FreeLibrary(handle)`
 with no `argtypes` declared, so ctypes assumes a 32-bit `c_int`. The DLL
 handle is a 64-bit pointer, which overflows that assumption
@@ -215,7 +262,7 @@ it already computes internally, via `i_xfoil`'s module variables:
 
 `externals/xfoil-python/xfoil/xfoil.py`'s `.a()` was updated to match,
 returning `(cl, cd, cm, cp, diverged, rms_bl)` instead of a 4-tuple.
-`wp2/scripts/xfoil_runtime.run_alpha_sweep` consumes both fields directly
+`b12wp2.xfoil.runtime.run_alpha_sweep` consumes both fields directly
 (see its docstring for the resulting `note` text). Only `alfa_`/`.a()` were
 touched — `cl_`/`.cl()` (fixed-Cl mode) are unused by this project's
 pipeline and were deliberately left unpatched to keep the change scoped to
@@ -245,7 +292,11 @@ from the aborted iteration, not a placeholder value.
 
 `wp2/requirements-dev.txt` adds `pytest` and `mypy`. Config lives in the repo
 root `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.mypy]`); tests belong
-in `wp2/tests/`, type-checked source is `wp2/scripts/`.
+in `wp2/tests/`, type-checked source is `wp2/src/` and `wp2/scripts/`.
+
+`b12wp2` is imported straight from the working tree, not pip-installed:
+`pyproject.toml`'s `pythonpath` puts `wp2/src` on the path for pytest, and
+`scripts/__init__.py` does the same for `python -m scripts.<name>`.
 
 ```
 pip install -r wp2/requirements.txt -r wp2/requirements-dev.txt
@@ -323,7 +374,8 @@ python -m scripts.hld_analysis
 
 or open either file in VS Code with the `openvsp` interpreter selected
 (Ctrl+Shift+P -> "Python: Select Interpreter") and press Run -- both
-scripts add `wp2/` to `sys.path` themselves when started as a file.
+scripts add `wp2/` and `wp2/src/` to `sys.path` themselves when started as a
+file.
 
 ### Troubleshooting
 
@@ -332,17 +384,17 @@ scripts add `wp2/` to `sys.path` themselves when started as a file.
 | `ModuleNotFoundError: No module named 'openvsp'` | Wrong interpreter (e.g. the repo venv or system Python) | `conda activate openvsp` / select that interpreter in VS Code |
 | `ImportError: DLL load failed while importing _vsp` | Env Python is not 3.11, so the prebuilt `.pyd` doesn't match | Recreate the env with `python=3.11` |
 | `ModuleNotFoundError: No module named 'scripts'` | Started as a file from outside `wp2/` with an older copy of the script | Run `python -m scripts.<name>` from `wp2/` |
-| `ModuleNotFoundError: No module named 'xfoil'` | Something imported `scripts/xfoil_runtime.py` | The OpenVSP env has no XFoil; only the VSPAERO scripts run there. XFoil polars are generated from the repo venv (above) |
+| `ModuleNotFoundError: No module named 'xfoil'` | Something imported `b12wp2.xfoil.runtime` | The OpenVSP env has no XFoil; only the VSPAERO scripts run there. XFoil polars are generated from the repo venv (above) |
 | `RuntimeError: vspaero.exe not found` | `openvsp` installed without its executables (e.g. from another source) | Reinstall from the release's `python\openvsp` folder |
 
-The XFoil polars in `results/data/` are inputs to the VSPAERO scripts, so
+The XFoil polars in `results/section/data/` are inputs to the VSPAERO scripts, so
 the two environments work in sequence: XFoil pipeline in the repo venv
 first, then the VSPAERO scripts in `openvsp`.
 
 ## 3D wing analysis: VSPAERO + XFoil profile drag
 
 `scripts/vspaero_analysis.py` analyses the wing (planform in
-`scripts/wing_geometry.py`, NACA 25112 sections) at the `config.CRUISE`
+`config/wing.py` and `wing/geometry.py`, NACA 25112 sections) at the `config.CRUISE`
 condition:
 
     CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn/Lock)
@@ -350,7 +402,7 @@ condition:
 - **VSPAERO (VLM)** gives CL, CMy and the induced drag. Its own `CDo` (a
   flat-plate skin-friction estimate) is discarded.
 - **Profile drag** comes from the XFoil cruise polar
-  (`results/data/<airfoil>_cruise_polar.csv`), strip by strip: local
+  (`results/section/data/<airfoil>_cruise_polar.csv`), strip by strip: local
   cl -> cl_n = cl / cos^2(sweep) -> cd_n(cl_n) from the converged pre-stall
   polar -> streamwise cd = cd_n (friction-dominated, conservative; the
   cd_n cos^3(sweep) variant is reported as a sensitivity) -> Reynolds
@@ -360,7 +412,7 @@ condition:
 - **Wave drag**: swept Korn equation (kappa_A from `config.kappa_a`) with
   Lock's 20 (M - M_crit)^4.
 
-Lift and moment stay inviscid. Details in `scripts/viscous_correction.py`.
+Lift and moment stay inviscid. Details in `wing/viscous_correction.py`.
 
 It needs the OpenVSP Python API, which is not in this venv. Run it from
 the OpenVSP conda env (see "Installing OpenVSP" above), from `wp2/`:
@@ -370,7 +422,7 @@ conda activate openvsp
 python -m scripts.vspaero_analysis
 ```
 
-Outputs go to `results/vspaero/<airfoil>/`: `polar.csv`, `span_loads.csv`,
+Outputs go to `results/wing/<airfoil>/`: `polar.csv`, `span_loads.csv`,
 `summary.csv`, `polar.png`, `drag_breakdown.png`, `span_loads.png`,
 `transonic.png`. The raw VSPAERO run (`vspaero_run/`, including
 `wing.vsp3`) is gitignored.
@@ -379,16 +431,17 @@ Outputs go to `results/vspaero/<airfoil>/`: `polar.csv`, `span_loads.csv`,
 
 `scripts/hld_analysis.py` (same OpenVSP env, `python -m scripts.hld_analysis`
 from `wp2/`) compares every trailing-edge x leading-edge device combination
-(`hld_sizing.TE_DEVICES` x `LE_DEVICES`) on the same wing:
+(`config.hld.TE_DEVICES` x `LE_DEVICES`) on the same wing:
 
 1. Clean-wing CL_max at M ~ 0.2 (`config.LANDING`): VSPAERO spanwise lift +
    critical-section method with the XFoil landing polar.
-2. ADSEE increments per device (`scripts/hld_sizing.py`):
+2. ADSEE increments per device (`hld/sizing.py`):
    dCL_max = 0.9 dcl_max (S_wf/S) cos(Lambda_hinge), S'/S, and the
    alpha_0L shift; take-off = 60% of the landing increment.
 3. Pareto front of CL_max,L vs. a qualitative mechanism-complexity rank.
 
 Span limits, spar positions and the (optional) CL_max requirements are the
-settings at the top of `hld_analysis.py`. Outputs in `results/hld/`:
+settings in `config/hld.py` and `config/solvers.py`. Outputs in
+`results/hld/`:
 `comparison.csv`, `clean_wing.csv`, `comparison_heatmap.png`,
 `cl_max_vs_complexity.png`, `lift_curves.png`, `planform_hld.png`.

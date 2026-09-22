@@ -23,6 +23,7 @@ zero-lift shifts are inputs, so they live in b12wp2.config.hld.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from b12wp2.config import hld as cfg
@@ -186,7 +187,7 @@ def min_eta_out(
     return hi
 
 
-def lift_curve(config: Configuration, alphas_deg: list[float]) -> list[float]:
+def lift_curve(config: Configuration, alphas_deg: Sequence[float]) -> list[float]:
     """Schematic CL(alpha): linear, blended into a parabola that is tangent
     to the linear part and peaks at (alpha_stall, CL_max). Post-stall is not
     modelled (the curve stops at alpha_stall)."""

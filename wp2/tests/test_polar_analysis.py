@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""Tests for wp2/scripts/polar_analysis.py."""
+"""Tests for wp2/src/b12wp2/xfoil/polar_analysis.py."""
 from __future__ import annotations
 
 import pandas as pd

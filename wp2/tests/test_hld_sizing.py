@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-09-22
-"""Tests for wp2/scripts/hld_sizing.py."""
+"""Tests for wp2/src/b12wp2/hld/sizing.py."""
 from __future__ import annotations
 
 import math
