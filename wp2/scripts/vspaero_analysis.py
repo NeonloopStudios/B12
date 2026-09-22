@@ -28,7 +28,13 @@ summary.csv, the plots, and the raw VSPAERO run in vspaero_run/.
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
+
+if __package__ in (None, ""):
+    # run as a file (e.g. the editor's Run button) instead of `python -m scripts.<name>`:
+    # make wp2/ importable so `from scripts import ...` resolves
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import openvsp as vsp

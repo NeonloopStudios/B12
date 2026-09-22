@@ -28,9 +28,9 @@ from scripts import config
 #  WING PLANFORM DESIGN VARIABLES
 # ============================================================
 
-S_REF = 80.5  # wing area, both halves [m^2]
+S_REF = 66.7  # wing area, both halves [m^2]
 AR = 9.50  # aspect ratio [-]
-TAPER = 0.50  # c_tip / c_root [-]
+TAPER = 0.40  # c_tip / c_root [-]
 
 SWEEP_LOC = 0.25  # chord fraction the sweep is measured at (quarter chord)
 SWEEP_DEG = math.degrees(config.SWEEP_RAD)  # 24.02 deg

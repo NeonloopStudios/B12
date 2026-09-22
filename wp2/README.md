@@ -253,6 +253,91 @@ pytest
 mypy
 ```
 
+## Installing OpenVSP (for the VSPAERO scripts)
+
+`scripts/vspaero_analysis.py` and `scripts/hld_analysis.py` need the OpenVSP
+Python API and the `vspaero.exe` solver. Nothing has to be compiled: the
+OpenVSP release ships a prebuilt extension module (`openvsp/_vsp.pyd`) and
+the solver executables. The catch is that the `.pyd` is built for **one
+Python version** -- Python 3.11 for OpenVSP 3.51.3 (see the release's
+`python/environment.yml`) -- so it gets its own conda environment instead
+of this repo's venv.
+
+Verified working in this environment: OpenVSP 3.51.3 (VSPAERO 7.2.2),
+Anaconda, Python 3.11.
+
+### Steps (Windows, PowerShell)
+
+1. Download the Windows 64-bit zip of OpenVSP 3.51.3 from
+   https://openvsp.org/download.php and extract it to a path you will keep
+   (the pip install below copies the packages, but keep the folder anyway
+   for the GUI `vsp.exe`). Below it is `<OpenVSP>`, e.g.
+   `C:\...\OpenVSP-3.51.3-win64`.
+
+2. Create the environment with the Python version the `.pyd` was built for:
+
+   ```
+   conda create -n openvsp python=3.11
+   conda activate openvsp
+   ```
+
+3. Install the OpenVSP Python packages from the release, **in this order**
+   (`openvsp` depends on the three before it):
+
+   ```
+   cd <OpenVSP>\python
+   pip install .\vsp_airfoils .\utilities .\degen_geom .\openvsp_config .\openvsp
+   ```
+
+   This is `requirements.txt` from that folder minus the unrelated rotor /
+   panel-code packages (CHARM, AvlPy, pyPMARC), which these scripts don't
+   use. The release's own `setup.ps1` (`conda env create -f environment.yml`
+   + `pip install -r requirements-dev.txt`) also works; it creates an env
+   named `vsppytools` instead of `openvsp` and installs everything in
+   editable mode.
+
+4. Add the analysis dependencies from this repo (and pytest if you want to
+   run the tests from this env):
+
+   ```
+   pip install -r <repo>\wp2\requirements.txt pytest
+   ```
+
+### Verifying the install
+
+```
+python -c "import os, openvsp as vsp; print(vsp.GetVSPVersion()); print(vsp.CheckForVSPAERO(os.path.dirname(vsp.__file__)))"
+```
+
+Should print `OpenVSP 3.51.3` and `True` (`vspaero.exe` is installed next
+to the package, which is where the scripts look for it).
+
+### Running
+
+From `wp2/`, with the env active:
+
+```
+python -m scripts.vspaero_analysis
+python -m scripts.hld_analysis
+```
+
+or open either file in VS Code with the `openvsp` interpreter selected
+(Ctrl+Shift+P -> "Python: Select Interpreter") and press Run -- both
+scripts add `wp2/` to `sys.path` themselves when started as a file.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'openvsp'` | Wrong interpreter (e.g. the repo venv or system Python) | `conda activate openvsp` / select that interpreter in VS Code |
+| `ImportError: DLL load failed while importing _vsp` | Env Python is not 3.11, so the prebuilt `.pyd` doesn't match | Recreate the env with `python=3.11` |
+| `ModuleNotFoundError: No module named 'scripts'` | Started as a file from outside `wp2/` with an older copy of the script | Run `python -m scripts.<name>` from `wp2/` |
+| `ModuleNotFoundError: No module named 'xfoil'` | Something imported `scripts/xfoil_runtime.py` | The OpenVSP env has no XFoil; only the VSPAERO scripts run there. XFoil polars are generated from the repo venv (above) |
+| `RuntimeError: vspaero.exe not found` | `openvsp` installed without its executables (e.g. from another source) | Reinstall from the release's `python\openvsp` folder |
+
+The XFoil polars in `results/data/` are inputs to the VSPAERO scripts, so
+the two environments work in sequence: XFoil pipeline in the repo venv
+first, then the VSPAERO scripts in `openvsp`.
 
 ## 3D wing analysis: VSPAERO + XFoil profile drag
 
@@ -278,7 +363,7 @@ condition:
 Lift and moment stay inviscid. Details in `scripts/viscous_correction.py`.
 
 It needs the OpenVSP Python API, which is not in this venv. Run it from
-the OpenVSP conda env (OpenVSP 3.51.3), from `wp2/`:
+the OpenVSP conda env (see "Installing OpenVSP" above), from `wp2/`:
 
 ```
 conda activate openvsp
