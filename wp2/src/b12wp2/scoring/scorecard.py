@@ -4,8 +4,9 @@
 """The weighted WP2 scorecard, built from the CSVs the earlier stages wrote.
 
 Reads every airfoil's cruise polar, landing polar and mcrit summary row,
-extracts the six scoring criteria, normalizes each 0-1 across the candidate
-set and applies config.scoring.SCORING_WEIGHTS. Two tables come out:
+extracts the six scoring criteria, normalizes each one ratio-to-best across
+the candidate set (x/max(x), or 1/|x| over its max for pitching moment) and
+applies config.scoring.SCORING_WEIGHTS. Two tables come out:
 
 - the detail table: one row per airfoil with the raw, normalized and
   weighted value of every criterion, the context quantities behind them, and
@@ -62,7 +63,13 @@ def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
         "mach_critical": m_crit,
         "cl_cd_cruise": cl_n / cruise_op["cd"],
         "cl_max_landing": landing_cl_max,
-        "stall_margin": cruise_stall_alpha - cruise_op["alpha"],
+        # Angle for Cl_max (landing polar) minus the cruise angle of attack.
+        # The two come from different polars -- landing Re/M for the stall
+        # angle, cruise Re/M for the operating angle -- so this is a
+        # mission-level "how much alpha is left before the wing stalls on
+        # approach", not a single-condition margin. It is the definition the
+        # WP2 trade-off table uses (sheet row 17 = row 16 - row 13).
+        "stall_margin": landing_stall_alpha - cruise_op["alpha"],
         "cl_zero_angle": cl_zero,
         "pitching_moment": cruise_op["cm"],
         # context, not scored directly
@@ -78,15 +85,23 @@ def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
 
 
 def _normalize(values: pd.Series, direction: str) -> pd.Series:
-    """Min-max normalize to [0, 1] across the candidate set."""
-    raw = values.abs() if direction == "min_abs" else values
-    lo, hi = raw.min(), raw.max()
-    if hi == lo:
-        return pd.Series(1.0, index=values.index)
-    norm = (raw - lo) / (hi - lo)
-    if direction == "min_abs":
-        norm = 1.0 - norm
-    return norm
+    """Ratio-to-best normalization onto (0, 1] across the candidate set.
+
+    "max"      -> x_i / max_j(x_j)
+    "min_abs"  -> (1/|x_i|) / max_j(1/|x_j|), i.e. min_j(|x_j|) / |x_i|
+
+    The best candidate scores exactly 1.0 and the rest keep their
+    proportional distance from it; see config/scoring.py's
+    CRITERION_DIRECTION for why this and not min-max.
+    """
+    raw = 1.0 / values.abs() if direction == "min_abs" else values
+    hi = raw.max()
+    if hi <= 0:
+        raise ValueError(
+            f"cannot ratio-normalize a criterion whose best value is {hi}: "
+            "x/max(x) is only meaningful for a positive-valued criterion"
+        )
+    return raw / hi
 
 
 def build_detail_table() -> pd.DataFrame:
