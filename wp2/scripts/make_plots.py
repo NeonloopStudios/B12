@@ -4,8 +4,8 @@
 """WP2: draw every 2D section figure for every candidate airfoil.
 
 Runs the figures of b12wp2.plots.section over the current candidate set and
-writes them to results/plots/<airfoil>/ plus the two cross-candidate figures
-to results/plots/comparison/. Needs the polar, mcrit and scorecard CSVs to
+writes them to results/section/plots/<airfoil>/ plus the two cross-candidate
+figures to results/section/plots/comparison/. Needs the polar, mcrit and scorecard CSVs to
 exist already -- it reads them, it never re-runs XFoil.
 """
 from __future__ import annotations

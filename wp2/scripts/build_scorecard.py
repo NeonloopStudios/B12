@@ -3,8 +3,8 @@
 # Created: 2026-09-17
 """WP2: build the weighted scorecard and print it.
 
-Writes results/scorecard.csv (the screenshot-shaped deliverable) and
-results/scorecard_detail.csv (raw, normalized and weighted values per
+Writes results/scorecard/scorecard.csv (the screenshot-shaped deliverable)
+and results/scorecard/scorecard_detail.csv (raw, normalized and weighted values per
 criterion plus validity notes), then prints the summary table and any
 validity note that came with it -- the transonic ones matter, they say when
 a cruise Cd is not trustworthy at the cruise Mach.

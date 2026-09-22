@@ -5,7 +5,7 @@
 
 For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
 LANDING flight condition (config.LANDING: M_n, Re_n, Ncrit) and writes the
-full polar to wp2/results/data/<airfoil>_landing_polar.csv.
+full polar to wp2/results/section/data/<airfoil>_landing_polar.csv.
 
 Unlike cruise, landing needs no required-Cl (config.LANDING.cl_wing is
 intentionally unset -- see config.py): "Cl max landing" in the scorecard is

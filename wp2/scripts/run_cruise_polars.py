@@ -5,7 +5,7 @@
 
 For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
 CRUISE flight condition (config.CRUISE: M_n, Re_n, Ncrit) and writes the
-full polar to wp2/results/data/<airfoil>_cruise_polar.csv.
+full polar to wp2/results/section/data/<airfoil>_cruise_polar.csv.
 
 This module only generates and saves the raw polar. Extracting the cruise
 operating point (matching Cl(alpha) = Cl_n), stall angle, Cl_max, and

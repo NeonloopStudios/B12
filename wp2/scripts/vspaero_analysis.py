@@ -12,7 +12,7 @@ Must be run from the OpenVSP Python environment, from the wp2/ folder:
 
     python -m scripts.vspaero_analysis
 
-Writes to wp2/results/vspaero/<airfoil>/: polar.csv, span_loads.csv,
+Writes to wp2/results/wing/<airfoil>/: polar.csv, span_loads.csv,
 summary.csv, the plots, and the raw VSPAERO run in vspaero_run/.
 """
 from __future__ import annotations

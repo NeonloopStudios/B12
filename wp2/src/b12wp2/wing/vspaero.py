@@ -44,8 +44,8 @@ AIRFOIL_STEM = wing_cfg.AIRFOIL_ROOT.stem
 SWEEP_DRAG_MODE = solvers.SWEEP_DRAG_MODE
 SWEEP_DRAG_MODE_SENSITIVITY = solvers.SWEEP_DRAG_MODE_SENSITIVITY
 
-OUT_DIR = paths.vspaero_out_dir(AIRFOIL_STEM)
-RUN_DIR = paths.vspaero_run_dir(AIRFOIL_STEM)
+OUT_DIR = paths.wing_out_dir(AIRFOIL_STEM)
+RUN_DIR = paths.wing_run_dir(AIRFOIL_STEM)
 SECTION_POLAR = paths.polar_csv(AIRFOIL_STEM, "cruise")
 
 # ============================================================

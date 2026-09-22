@@ -17,14 +17,22 @@ AIRFOILS_DIR = WP2_DIR / "airfoils"
 RESULTS_DIR = WP2_DIR / "results"
 
 # --- results, one directory per analysis stage ---
+#
+#   section/   2D XFoil work: polars, Mach-critical sweeps and their figures
+#   wing/      3D VSPAERO work, one subdirectory per airfoil
+#   hld/       high-lift device comparison
+#   scorecard/ the weighted selection tables
 
-DATA_DIR = RESULTS_DIR / "data"  # XFoil section polars, Mach-critical sweeps
-PLOTS_DIR = RESULTS_DIR / "plots"  # per-airfoil section figures + the comparison
-VSPAERO_DIR = RESULTS_DIR / "vspaero"  # 3D wing analysis, one subdirectory per airfoil
+SECTION_DIR = RESULTS_DIR / "section"
+DATA_DIR = SECTION_DIR / "data"  # XFoil section polars, Mach-critical sweeps
+PLOTS_DIR = SECTION_DIR / "plots"  # per-airfoil section figures + the comparison
+
+WING_DIR = RESULTS_DIR / "wing"  # 3D wing analysis, one subdirectory per airfoil
 HLD_DIR = RESULTS_DIR / "hld"  # high-lift device comparison
+SCORECARD_DIR = RESULTS_DIR / "scorecard"
 
-SCORECARD_CSV = RESULTS_DIR / "scorecard.csv"
-SCORECARD_DETAIL_CSV = RESULTS_DIR / "scorecard_detail.csv"
+SCORECARD_CSV = SCORECARD_DIR / "scorecard.csv"
+SCORECARD_DETAIL_CSV = SCORECARD_DIR / "scorecard_detail.csv"
 
 
 # --- the generated files, named in one place ---
@@ -59,9 +67,9 @@ def section_plots_dir(airfoil_stem: str) -> Path:
 COMPARISON_PLOTS_DIR = PLOTS_DIR / "comparison"
 
 
-def vspaero_out_dir(airfoil_stem: str) -> Path:
+def wing_out_dir(airfoil_stem: str) -> Path:
     """Where the 3D wing analysis of one airfoil writes its results."""
-    return VSPAERO_DIR / airfoil_stem
+    return WING_DIR / airfoil_stem
 
 
 # VSPAERO's own run files (the .vsp3 model, its solver input/output). Not
@@ -69,8 +77,8 @@ def vspaero_out_dir(airfoil_stem: str) -> Path:
 RUN_SUBDIR = "vspaero_run"
 
 
-def vspaero_run_dir(airfoil_stem: str) -> Path:
-    return vspaero_out_dir(airfoil_stem) / RUN_SUBDIR
+def wing_run_dir(airfoil_stem: str) -> Path:
+    return wing_out_dir(airfoil_stem) / RUN_SUBDIR
 
 
 HLD_RUN_DIR = HLD_DIR / RUN_SUBDIR
