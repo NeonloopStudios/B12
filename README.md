@@ -24,3 +24,9 @@ Three work packages, one aircraft, done in sequence:
 wp2/       WP2 code, data, results - see wp2/README.md
 externals/ vendored third-party source (e.g. xfoil-python)
 ```
+
+## License
+
+GPL-3.0-or-later, full text in [`LICENSE`](LICENSE). Airfoil coordinate files
+under `wp2/airfoils/` and everything in `externals/` come from third parties
+and keep their own terms.
