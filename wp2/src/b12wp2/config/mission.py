@@ -1,77 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""WP2 mission/aircraft constants and the sweep-theory reduction to 2D
-section conditions.
+"""The WP2 mission: the flight conditions, the wing geometry they are tied
+to, and the sweep-theory reduction from a flight condition to the 2D section
+condition XFoil is run at.
 
-Single source of truth for every other wp2/scripts module: the sweep-theory
-reduction from flight conditions to 2D section conditions, as data + a
-formula, not as numbers copy-pasted into each script.
+Single source of truth for every stage: the reduction is written here once,
+as data plus a formula, instead of the numbers being copy-pasted into each
+script.
 """
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
 
-WP2_DIR = Path(__file__).resolve().parents[2]  # .../wp2/src/b12wp2/config.py -> wp2/
-AIRFOILS_DIR = WP2_DIR / "airfoils"
-RESULTS_DIR = WP2_DIR / "results"
+from b12wp2.config.atmosphere import isa_atmosphere, sutherland_viscosity
 
 FT_TO_M = 0.3048
-
-
-def discover_airfoils() -> list[Path]:
-    """All candidate airfoil .dat files, sorted for deterministic ordering.
-
-    Deliberately a directory scan, not a hardcoded list -- the candidate set
-    has already changed once (EPPLER_395 -> NACA_64212); every later stage
-    must pick up whatever is in wp2/airfoils/ without code changes.
-    """
-    return sorted(AIRFOILS_DIR.glob("*.dat"))
-
-
-# --- ISA standard atmosphere (0-20 km, SI units) ---
-#
-# Troposphere (h <= 11 km): linear lapse rate.
-# Lower stratosphere (11 km < h <= 20 km): isothermal at 216.65 K.
-# Source: ICAO Standard Atmosphere. Constants below are the standard ISA
-# values, not fitted to this project.
-
-_T0 = 288.15  # K, sea-level standard temperature
-_P0 = 101_325.0  # Pa, sea-level standard pressure
-_L = 0.0065  # K/m, tropospheric lapse rate
-_R_AIR = 287.05287  # J/(kg K), specific gas constant for dry air
-_GAMMA = 1.4  # ratio of specific heats for air
-_G0 = 9.80665  # m/s^2, standard gravity
-_H_TROPOPAUSE = 11_000.0  # m
-_T_TROPOPAUSE = _T0 - _L * _H_TROPOPAUSE  # 216.65 K
-
-
-def isa_atmosphere(altitude_m: float) -> tuple[float, float, float]:
-    """Return (temperature K, speed of sound m/s, density kg/m^3) at a given
-    geopotential altitude, ISA standard atmosphere, valid 0-20 km.
-
-    Cross-checked in wp2/tests/test_config.py against the hand-derived
-    values at 35,000 ft (T ~ 218.8 K, a ~ 296.5 m/s, rho ~ 0.380 kg/m^3).
-    """
-    if altitude_m < 0.0:
-        raise ValueError(f"altitude_m must be >= 0, got {altitude_m}")
-    if altitude_m <= _H_TROPOPAUSE:
-        t = _T0 - _L * altitude_m
-        p = _P0 * (t / _T0) ** (_G0 / (_L * _R_AIR))
-    elif altitude_m <= 20_000.0:
-        t = _T_TROPOPAUSE
-        p_tropopause = _P0 * (_T_TROPOPAUSE / _T0) ** (_G0 / (_L * _R_AIR))
-        p = p_tropopause * math.exp(-_G0 * (altitude_m - _H_TROPOPAUSE) / (_R_AIR * t))
-    else:
-        raise ValueError(
-            f"altitude_m={altitude_m} is above the validated ISA range (0-20 km) "
-            "for this implementation"
-        )
-    rho = p / (_R_AIR * t)
-    a = math.sqrt(_GAMMA * _R_AIR * t)
-    return t, a, rho
 
 
 def level_flight_cl(
@@ -86,14 +31,6 @@ def level_flight_cl(
     given flight condition (e.g. textbook eq. 8.13).
     """
     return 2.0 * weight_n / (density_kg_m3 * velocity_m_s**2 * wing_area_m2)
-
-
-def sutherland_viscosity(temperature_k: float) -> float:
-    """Dynamic viscosity of air (Pa s) via Sutherland's law, for Reynolds
-    number. Constants are the standard values for air (mu0 at T0=273.15 K).
-    """
-    mu0, t0, s = 1.716e-5, 273.15, 110.4
-    return mu0 * (temperature_k / t0) ** 1.5 * (t0 + s) / (temperature_k + s)
 
 
 @dataclass(frozen=True)
@@ -210,51 +147,42 @@ LANDING = FlightCondition(
     cl_wing=None,
 )
 
-# --- Korn equation kappa_A per airfoil (used by mcrit_sweep.py) ---
-#
-# M_dd + t/c + Cl/10 = kappa_A. kappa_A ~0.87 for a conventional section,
-# ~0.95 for a supercritical one -- a real design-category judgment call,
-# not something derivable from the .dat coordinates, so it's recorded here
-# as an explicit per-airfoil decision rather than defaulted. NASA_SC(2)-0712
-# is a NASA supercritical section (SC(2) series) by design; the other three
-# candidates are conventional. If the candidate set changes again, this
-# mapping must be updated too -- kappa_a() raises rather than silently
-# assuming "conventional" for an unmapped airfoil.
-KAPPA_A_CONVENTIONAL = 0.87
-KAPPA_A_SUPERCRITICAL = 0.95
+# --- Mission constants ---
 
-_KAPPA_A_BY_AIRFOIL: dict[str, float] = {
-    "NACA_25112": KAPPA_A_CONVENTIONAL,
-    "NACA_64212": KAPPA_A_CONVENTIONAL,
-    "lockheed_c5a_bl758": KAPPA_A_CONVENTIONAL,
-    "NASA_SC(2)-0712": KAPPA_A_SUPERCRITICAL,
-}
+SWEEP_RAD = 0.419271315  # 24.02 deg, quarter-chord sweep
 
+CHORD_M = 2.649904207  # streamwise chord at the analysis station (WP1 sizing);
+# fixed wing geometry -- same value for cruise and landing, only V/rho/sweep
+# effects differ between flight conditions.
 
-def kappa_a(airfoil_stem: str) -> float:
-    """Korn equation kappa_A for a given airfoil (by its .dat filename stem)."""
-    try:
-        return _KAPPA_A_BY_AIRFOIL[airfoil_stem]
-    except KeyError:
-        raise ValueError(
-            f"kappa_a: no conventional/supercritical classification recorded "
-            f"for airfoil {airfoil_stem!r} -- add it to _KAPPA_A_BY_AIRFOIL "
-            "in config.py before running mcrit_sweep.py for this airfoil"
-        ) from None
+CRUISE = FlightCondition(
+    name="cruise",
+    altitude_m=35_000 * FT_TO_M,
+    mach_freestream=0.77,
+    sweep_rad=SWEEP_RAD,
+    ncrit=8.0,
+    chord_m=CHORD_M,
+    # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
+    # eq. 8.13), computed externally from WP1 cruise weight and wing area.
+    # Locates the cruise operating point on the polar; used by cl_cd_cruise,
+    # stall_margin, pitching_moment, and mcrit_sweep.py's Mach-critical sweep.
+    cl_wing=0.489433403,
+)
 
+# Landing: sea level, 65 m/s approach speed. Mach is derived (V / speed of
+# sound at sea level), not a separately-given number, so it stays
+# consistent with isa_atmosphere by construction.
+LANDING_SPEED_MS = 65.0
 
-# --- WP2 scoring matrix (selection criteria and their weights) ---
-
-SCORING_WEIGHTS: dict[str, float] = {
-    "mach_critical": 0.25,
-    "cl_cd_cruise": 0.30,
-    "cl_max_landing": 0.15,
-    "stall_margin": 0.15,  # stall angle minus cruise angle; raised from 0.125
-    "cl_zero_angle": 0.05,
-    "pitching_moment": 0.10,  # lowered from 0.125
-}
-
-if abs(sum(SCORING_WEIGHTS.values()) - 1.0) > 1e-9:
-    raise AssertionError(
-        f"SCORING_WEIGHTS must sum to 1.0, got {sum(SCORING_WEIGHTS.values())}"
-    )
+LANDING = FlightCondition(
+    name="landing",
+    altitude_m=0.0,  # sea level
+    mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
+    sweep_rad=SWEEP_RAD,
+    ncrit=8.0,
+    chord_m=CHORD_M,
+    # cl_wing intentionally left unset and NOT required: "Cl max landing" in
+    # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
+    # point -- none of the 6 scoring criteria need a required-Cl at landing.
+    cl_wing=None,
+)

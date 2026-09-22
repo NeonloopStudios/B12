@@ -16,12 +16,13 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.patches import Polygon  # noqa: E402
 
+from b12wp2.config import hld as hld_cfg  # noqa: E402
 from b12wp2.hld import sizing as hs  # noqa: E402
 from b12wp2.plots.vspaero import DPI, _style_axes  # noqa: E402
 
 # Okabe-Ito; LE device colors are fixed by LE_DEVICES order
 _OKABE_ITO = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9"]
-LE_COLORS = {d.name: c for d, c in zip(hs.LE_DEVICES, ["#999999", "#E69F00", "#009E73", "#0072B2"])}
+LE_COLORS = {d.name: c for d, c in zip(hld_cfg.LE_DEVICES, ["#999999", "#E69F00", "#009E73", "#0072B2"])}
 C_CLEAN = "#555555"
 C_REQ = "#D55E00"
 INK = "#222222"
@@ -54,8 +55,8 @@ def _spread(values: list[float], min_gap: float) -> list[float]:
 
 
 def plot_heatmap(df: pd.DataFrame, cl_max_clean: float, req: float | None, out_dir: Path) -> None:
-    te_names = [d.name for d in hs.TE_DEVICES]
-    le_names = [d.name for d in hs.LE_DEVICES]
+    te_names = [d.name for d in hld_cfg.TE_DEVICES]
+    le_names = [d.name for d in hld_cfg.LE_DEVICES]
     grid = (
         df.pivot(index="te_device", columns="le_device", values="CLmax_L")
         .loc[te_names, le_names]
@@ -98,7 +99,7 @@ def plot_cl_max_vs_complexity(
     front = df[df["pareto"]].sort_values("complexity")
     ax.step(front["complexity"], front["CLmax_L"], where="post", color="#bbbbbb", lw=1.5,
             zorder=1, label="Pareto front")
-    for le in hs.LE_DEVICES:
+    for le in hld_cfg.LE_DEVICES:
         d = df[df["le_device"] == le.name]
         # small horizontal offset per LE device so equal-complexity points don't stack
         dx = (list(LE_COLORS).index(le.name) - 1.5) * 0.08
@@ -154,8 +155,8 @@ def plot_lift_curves(
                    xytext=(6, -4), textcoords="offset points", fontsize=8, color=C_CLEAN, va="top")
         points = []
         for color, (_, r) in zip(_OKABE_ITO, front.iterrows()):
-            te = next(d for d in hs.TE_DEVICES if d.name == r["te_device"])
-            le = next(d for d in hs.LE_DEVICES if d.name == r["le_device"])
+            te = next(d for d in hld_cfg.TE_DEVICES if d.name == r["te_device"])
+            le = next(d for d in hld_cfg.LE_DEVICES if d.name == r["le_device"])
             te_eff = hs.device_effect(planform, te, layout.flap_chord_ratio, layout.eta_in, layout.eta_out_te)
             le_eff = (hs.device_effect(planform, le, layout.slat_chord_ratio, layout.eta_in, layout.eta_out_le)
                       if le.dcl_max > 0 else hs.DeviceEffect(0.0, 0.0, 0.0, 1.0, 0.0))

@@ -21,17 +21,15 @@ from pathlib import Path
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.config import solvers
 from b12wp2.xfoil import runtime as xfoil_runtime
-
-ALPHA_LOW_DEG = -6.0
-ALPHA_HIGH_DEG = 20.0
 
 
 def run_cruise_polar(airfoil_path: Path) -> pd.DataFrame:
     """Run the cruise alpha sweep for one airfoil and return its polar.
 
     Uses xfoil_runtime.run_two_leg_polar (warm-started from alpha=0 in
-    both directions) rather than a single cold sweep from ALPHA_LOW_DEG --
+    both directions) rather than a single cold sweep from the low end --
     see that function's docstring for why a cold start reliably fails at
     this Mach.
     """
@@ -41,8 +39,8 @@ def run_cruise_polar(airfoil_path: Path) -> pd.DataFrame:
         mach=config.CRUISE.mach_normal,
         reynolds=config.CRUISE.reynolds_normal,
         ncrit=config.CRUISE.ncrit,
-        alpha_low_deg=ALPHA_LOW_DEG,
-        alpha_high_deg=ALPHA_HIGH_DEG,
+        alpha_low_deg=solvers.CRUISE_ALPHA_LOW_DEG,
+        alpha_high_deg=solvers.CRUISE_ALPHA_HIGH_DEG,
     )
 
 

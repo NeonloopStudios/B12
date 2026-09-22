@@ -41,9 +41,8 @@ import pandas as pd
 matplotlib.use("Agg")  # headless: this script only ever saves PNGs
 
 from b12wp2 import config
+from b12wp2.config import solvers
 from b12wp2.xfoil import polar_analysis
-
-from scripts import mcrit_sweep
 
 # Okabe-Ito colorblind-safe categorical palette (Okabe & Ito, 2008),
 # assigned in a fixed order by discover_airfoils()'s sort order -- never
@@ -313,7 +312,7 @@ def plot_cp_distribution(stem: str, color: str, out_dir: Path) -> None:
     ax.set_xlabel("x / c")
     ax.set_ylabel("Cp")
     ax.set_title(
-        f"{stem}: Cp distribution at M={mcrit_sweep.BASELINE_MACH:.2f}, "
+        f"{stem}: Cp distribution at M={solvers.MCRIT_BASELINE_MACH:.2f}, "
         f"Cl_n={config.CRUISE.cl_normal:.3f} (cruise operating Cl)"
     )
     fig.tight_layout()

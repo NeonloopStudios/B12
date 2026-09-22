@@ -8,8 +8,8 @@
    landing polar -- the wing CL at which the first strip's sweep-normal
    cl_n = cl / cos^2(sweep) reaches the section cl_max.
 2. Every trailing-edge x leading-edge device combination of
-   hld_sizing.TE_DEVICES x hld_sizing.LE_DEVICES, sized on the same
-   available span, through the ADSEE empirical increments (hld_sizing.py),
+   config.hld.TE_DEVICES x config.hld.LE_DEVICES, sized on the same
+   available span, through the ADSEE empirical increments (b12wp2.hld.sizing),
    for the landing and the take-off setting.
 3. Optional (when CL_MAX_*_REQ are set): margin against the required
    CL_max and the smallest flap span that meets it.
@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.config import hld as hld_cfg, solvers, wing as wing_cfg
 from b12wp2.hld import sizing as hs
 from b12wp2.plots import hld as hld_plots
 from b12wp2.wing import geometry as wg, viscous_correction as vc
@@ -45,35 +46,33 @@ from b12wp2.wing import geometry as wg, viscous_correction as vc
 from scripts import vspaero_analysis as va
 
 # ============================================================
-#  SETTINGS
+#  SETTINGS  (the values themselves: b12wp2/config/hld.py, solvers.py)
 # ============================================================
 
 # --- spanwise limits (fraction of the semi-span) ---
-ETA_IN = 0.12  # fuselage side + clearance
-ETA_OUT_TE = 0.75  # trailing-edge devices end where the aileron starts
-ETA_OUT_LE = 0.95  # leading-edge devices run in front of the aileron, short of the tip
+ETA_IN = hld_cfg.ETA_IN
+ETA_OUT_TE = hld_cfg.ETA_OUT_TE
+ETA_OUT_LE = hld_cfg.ETA_OUT_LE
 
 # --- chordwise size, from the spar positions ---
-FRONT_SPAR = 0.15
-REAR_SPAR = 0.65
-FLAP_CHORD_RATIO = 1.0 - REAR_SPAR  # c_f / c
-SLAT_CHORD_RATIO = FRONT_SPAR  # c_s / c
+FLAP_CHORD_RATIO = hld_cfg.FLAP_CHORD_RATIO  # c_f / c
+SLAT_CHORD_RATIO = hld_cfg.SLAT_CHORD_RATIO  # c_s / c
 
 # --- requirements from WP1 (None = not yet available, checks skipped) ---
-CL_MAX_L_REQ: float | None = None
-CL_MAX_TO_REQ: float | None = None
+CL_MAX_L_REQ = hld_cfg.CL_MAX_L_REQ
+CL_MAX_TO_REQ = hld_cfg.CL_MAX_TO_REQ
 
 # --- VSPAERO sweep at the landing condition ---
-ALPHA_START = -4.0
-ALPHA_END = 20.0
-ALPHA_NPTS = 25
-LINEAR_RANGE = (-4.0, 6.0)  # alpha range for the CL_alpha fit [deg]
+ALPHA_START = solvers.HLD_ALPHA_START
+ALPHA_END = solvers.HLD_ALPHA_END
+ALPHA_NPTS = solvers.HLD_ALPHA_NPTS
+LINEAR_RANGE = solvers.HLD_LINEAR_RANGE  # alpha range for the CL_alpha fit [deg]
 
 OUT_DIR = config.RESULTS_DIR / "hld"
 RUN_DIR = OUT_DIR / "vspaero_run"
-LANDING_POLAR = config.RESULTS_DIR / "data" / f"{wg.AIRFOIL_ROOT.stem}_landing_polar.csv"
+LANDING_POLAR = config.RESULTS_DIR / "data" / f"{wing_cfg.AIRFOIL_ROOT.stem}_landing_polar.csv"
 
-PLANFORM = hs.Planform(wg.S_REF, wg.B, wg.C_ROOT, wg.C_TIP, wg.TAN_SWEEP_LE)
+PLANFORM = hs.Planform(wing_cfg.S_REF, wg.B, wg.C_ROOT, wg.C_TIP, wg.TAN_SWEEP_LE)
 
 
 # ============================================================
@@ -121,9 +120,9 @@ def clean_wing() -> tuple[hs.CleanWing, pd.DataFrame, pd.DataFrame, float]:
 def compare(clean: hs.CleanWing) -> pd.DataFrame:
     """One row per TE x LE configuration."""
     rows = []
-    for te in hs.TE_DEVICES:
+    for te in hld_cfg.TE_DEVICES:
         te_eff = hs.device_effect(PLANFORM, te, FLAP_CHORD_RATIO, ETA_IN, ETA_OUT_TE)
-        for le in hs.LE_DEVICES:
+        for le in hld_cfg.LE_DEVICES:
             le_eff = (
                 hs.device_effect(PLANFORM, le, SLAT_CHORD_RATIO, ETA_IN, ETA_OUT_LE)
                 if le.dcl_max > 0

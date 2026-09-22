@@ -20,13 +20,8 @@ from pathlib import Path
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.config import solvers
 from b12wp2.xfoil import polar_analysis, runtime as xfoil_runtime
-
-# Low-speed, clean-configuration stall angles run noticeably higher than the
-# cruise polar's (compressibility at M_n~0.70 cut cruise stall to ~3-5 deg;
-# at landing's M~0.2 that effect is negligible), so this sweep goes wider.
-ALPHA_LOW_DEG = -8.0
-ALPHA_HIGH_DEG = 25.0
 
 
 def run_landing_polar(airfoil_path: Path) -> pd.DataFrame:
@@ -37,8 +32,8 @@ def run_landing_polar(airfoil_path: Path) -> pd.DataFrame:
         mach=config.LANDING.mach_normal,
         reynolds=config.LANDING.reynolds_normal,
         ncrit=config.LANDING.ncrit,
-        alpha_low_deg=ALPHA_LOW_DEG,
-        alpha_high_deg=ALPHA_HIGH_DEG,
+        alpha_low_deg=solvers.LANDING_ALPHA_LOW_DEG,
+        alpha_high_deg=solvers.LANDING_ALPHA_HIGH_DEG,
     )
 
 
@@ -60,10 +55,10 @@ def _sanity_check(airfoil_stem: str, polar: pd.DataFrame) -> None:
         f"alpha in [{converged['alpha'].min():.2f}, {converged['alpha'].max():.2f}] deg, "
         f"Cl_max_landing={cl_max:.3f} at alpha={alpha_at_cl_max:.2f} deg"
     )
-    if converged["alpha"].max() >= ALPHA_HIGH_DEG - 0.5:
+    if converged["alpha"].max() >= solvers.LANDING_ALPHA_HIGH_DEG - 0.5:
         print(
             f"  [NOTE] {airfoil_stem}: still converging at the top of the swept "
-            f"range ({ALPHA_HIGH_DEG} deg) -- expected (see polar_analysis.find_cl_max), "
+            f"range ({solvers.LANDING_ALPHA_HIGH_DEG} deg) -- expected (see polar_analysis.find_cl_max), "
             "Cl_max_landing above already excludes that non-physical tail"
         )
 

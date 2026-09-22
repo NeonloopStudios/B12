@@ -35,7 +35,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from b12wp2.config import RESULTS_DIR
+from b12wp2.config import solvers
+from b12wp2.config.paths import RESULTS_DIR
 
 
 class OLSFit:
@@ -130,8 +131,8 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("airfoil", help="airfoil tag, e.g. NACA_25112")
     p.add_argument("--condition", default="cruise", choices=["cruise", "landing"])
-    p.add_argument("--alpha-lo", type=float, default=-3.0)
-    p.add_argument("--alpha-hi", type=float, default=3.0)
+    p.add_argument("--alpha-lo", type=float, default=solvers.LIFT_SLOPE_ALPHA_LO_DEG)
+    p.add_argument("--alpha-hi", type=float, default=solvers.LIFT_SLOPE_ALPHA_HI_DEG)
     p.add_argument("--scan", action="store_true", help="also print a window-sensitivity table")
     args = p.parse_args()
 

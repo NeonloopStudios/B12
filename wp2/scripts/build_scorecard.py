@@ -21,33 +21,8 @@ import numpy as np
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.config import scoring
 from b12wp2.xfoil import polar_analysis
-
-# Direction each raw criterion is scored in. "max" = higher raw value is
-# better (normalize ascending). "min_abs" = smaller |value| is better
-# (normalize the absolute value, then invert): pitching_moment is
-# smaller-|Cm|-is-better (standard trim-drag rationale), cl_zero_angle is
-# higher-is-better. The other four criteria (mach_critical, cl_cd_cruise,
-# cl_max_landing, stall_margin) are unambiguously higher-is-better on
-# their own terms.
-CRITERION_DIRECTION: dict[str, str] = {
-    "mach_critical": "max",
-    "cl_cd_cruise": "max",
-    "cl_max_landing": "max",
-    "stall_margin": "max",
-    "cl_zero_angle": "max",
-    "pitching_moment": "min_abs",
-}
-
-CRITERION_LABELS: dict[str, str] = {
-    "mach_critical": "Mach Critical",
-    "cl_cd_cruise": "Cl/Cd cruise",
-    "cl_max_landing": "Cl max landing",
-    "stall_margin": "Stall Angle - Angle in Cruise",
-    "cl_zero_angle": "Zero Angle Cl",
-    "pitching_moment": "Pitching Moment",
-}
-
 
 def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
     data_dir = config.RESULTS_DIR / "data"
@@ -68,8 +43,9 @@ def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
     if np.isnan(m_crit):
         raise ValueError(
             f"{airfoil_stem}: no M_crit found within mcrit_sweep.py's Mach sweep -- "
-            "cannot score mach_critical for this airfoil. Widen mcrit_sweep.py's "
-            "MACH_GRID and rerun it; do not silently drop it from scoring."
+            "cannot score mach_critical for this airfoil. Widen "
+            "config/solvers.py's MCRIT_MACH_GRID and rerun scripts/mcrit_sweep.py; "
+            "do not silently drop it from scoring."
         )
 
     validity_notes: list[str] = []
@@ -124,7 +100,7 @@ def build_detail_table() -> pd.DataFrame:
     detail = pd.DataFrame(index=raw.index)
     total = pd.Series(0.0, index=raw.index)
     for criterion, weight in config.SCORING_WEIGHTS.items():
-        direction = CRITERION_DIRECTION[criterion]
+        direction = scoring.CRITERION_DIRECTION[criterion]
         norm = _normalize(raw[criterion], direction)
         detail[f"{criterion}_raw"] = raw[criterion]
         detail[f"{criterion}_norm"] = norm
@@ -150,7 +126,7 @@ def build_summary_table(detail: pd.DataFrame) -> pd.DataFrame:
     airfoils = list(detail.index)  # already ranked by total_score
     rows: list[dict[str, object]] = []
     for criterion, weight in config.SCORING_WEIGHTS.items():
-        row: dict[str, object] = {"Criteria / Options": CRITERION_LABELS[criterion], "Weight": weight}
+        row: dict[str, object] = {"Criteria / Options": scoring.CRITERION_LABELS[criterion], "Weight": weight}
         row.update({a: detail.loc[a, f"{criterion}_weighted"] for a in airfoils})
         rows.append(row)
     total_row: dict[str, object] = {

@@ -10,21 +10,26 @@ For a device spanning eta_in..eta_out of the semi-span:
     da_0L     = da_0L,airfoil * (S_wf / S) * cos(sweep_hinge)   (trailing edge only)
 
 with S_wf the (full-chord) wing area covered by the device, dcl_max the
-airfoil increment of the device type (DEVICES table), c'/c the chord
+airfoil increment of the device type (config.hld device tables), c'/c the chord
 extension of the deployed device and sweep_hinge the sweep of its hinge
 line (x/c = 1 - c_f/c for a trailing-edge device, c_s/c for a leading-edge
 one).
 
 Pure numpy, no OpenVSP: the planform is passed in as a Planform, so this is
-unit-testable in any environment.
+unit-testable in any environment. The device table itself (which devices
+exist, their ADSEE increments and complexity ranks) and the airfoil
+zero-lift shifts are inputs, so they live in b12wp2.config.hld.
 """
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
 
+from b12wp2.config import hld as cfg
+from b12wp2.config.hld import Device
+
 # ============================================================
-#  DEVICE DATA
+#  PLANFORM
 # ============================================================
 
 
@@ -50,53 +55,6 @@ class Planform:
         return math.atan(
             self.tan_sweep_le - chord_fraction * (self.c_root - self.c_tip) / self.b_half
         )
-
-
-@dataclass(frozen=True)
-class Device:
-    """One high-lift device type.
-
-    dcl_max_base is the ADSEE airfoil increment; for slotted-extending
-    devices (extends=True) it is multiplied by c'/c. complexity is a
-    relative mechanism-complexity rank (0 = no device), an engineering
-    judgment for the trade-off, not a computed quantity.
-    """
-
-    name: str
-    edge: str  # "TE" or "LE"
-    dcl_max_base: float
-    extends: bool
-    chord_extension: float  # c'/c of the deployed device (landing)
-    complexity: int
-
-    @property
-    def dcl_max(self) -> float:
-        return self.dcl_max_base * (self.chord_extension if self.extends else 1.0)
-
-
-# chord extension c'/c: default values for the landing setting
-TE_DEVICES: tuple[Device, ...] = (
-    Device("plain", "TE", 0.9, False, 1.00, 1),
-    Device("split", "TE", 0.9, False, 1.00, 1),
-    Device("single-slotted", "TE", 1.3, False, 1.00, 2),
-    Device("Fowler", "TE", 1.3, True, 1.30, 3),
-    Device("double-slotted", "TE", 1.6, True, 1.20, 4),
-    Device("triple-slotted", "TE", 1.9, True, 1.25, 5),
-)
-
-LE_DEVICES: tuple[Device, ...] = (
-    Device("none", "LE", 0.0, False, 1.00, 0),
-    Device("LE flap", "LE", 0.3, False, 1.00, 1),
-    Device("Krueger", "LE", 0.3, False, 1.00, 2),
-    Device("slat", "LE", 0.4, True, 1.10, 2),
-)
-
-# Airfoil zero-lift angle shift of a trailing-edge flap [deg]
-DALPHA_0L_AIRFOIL_LANDING = -15.0
-DALPHA_0L_AIRFOIL_TAKEOFF = -10.0
-
-# Take-off setting as a fraction of the landing-setting dCL_max and c'/c - 1
-TAKEOFF_FRACTION = 0.6
 
 
 # ============================================================
@@ -140,7 +98,7 @@ def device_effect(
     swf_s = covered_area(planform, eta_in, eta_out) / planform.s_ref
     sweep = hinge_sweep(planform, device, chord_ratio)
     cos_h = math.cos(sweep)
-    dalpha = DALPHA_0L_AIRFOIL_LANDING * swf_s * cos_h if device.edge == "TE" else 0.0
+    dalpha = cfg.DALPHA_0L_AIRFOIL_LANDING * swf_s * cos_h if device.edge == "TE" else 0.0
     return DeviceEffect(
         swf_s=swf_s,
         sweep_hinge_rad=sweep,
@@ -182,11 +140,13 @@ def configuration(
 ) -> Configuration:
     """Combine TE and LE effects (superposed) on the clean wing.
 
-    Take-off: TAKEOFF_FRACTION of the landing dCL_max and of the chord
+    Take-off: config.hld.TAKEOFF_FRACTION of the landing dCL_max and of the chord
     extension (S'/S - 1), and the take-off airfoil da_0L.
     """
-    f = TAKEOFF_FRACTION if takeoff else 1.0
-    dalpha_scale = DALPHA_0L_AIRFOIL_TAKEOFF / DALPHA_0L_AIRFOIL_LANDING if takeoff else 1.0
+    f = cfg.TAKEOFF_FRACTION if takeoff else 1.0
+    dalpha_scale = (
+        cfg.DALPHA_0L_AIRFOIL_TAKEOFF / cfg.DALPHA_0L_AIRFOIL_LANDING if takeoff else 1.0
+    )
     dcl_max = f * (te.dcl_max_wing + le.dcl_max_wing)
     area_ratio = 1.0 + f * ((te.area_ratio - 1.0) + (le.area_ratio - 1.0))
     cl_max = clean.cl_max + dcl_max

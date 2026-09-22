@@ -8,6 +8,7 @@ import math
 
 import pytest
 
+from b12wp2.config import hld as hld_cfg
 from b12wp2.hld import sizing as hs
 
 # unswept rectangular wing: S = 20 m^2, b = 10 m, c = 2 m
@@ -15,9 +16,9 @@ RECT = hs.Planform(s_ref=20.0, b=10.0, c_root=2.0, c_tip=2.0, tan_sweep_le=0.0)
 # swept tapered wing
 TAPERED = hs.Planform(s_ref=80.5, b=27.65, c_root=3.88, c_tip=1.94, tan_sweep_le=math.tan(math.radians(25.7)))
 
-SINGLE_SLOTTED = next(d for d in hs.TE_DEVICES if d.name == "single-slotted")
-FOWLER = next(d for d in hs.TE_DEVICES if d.name == "Fowler")
-SLAT = next(d for d in hs.LE_DEVICES if d.name == "slat")
+SINGLE_SLOTTED = next(d for d in hld_cfg.TE_DEVICES if d.name == "single-slotted")
+FOWLER = next(d for d in hld_cfg.TE_DEVICES if d.name == "Fowler")
+SLAT = next(d for d in hld_cfg.LE_DEVICES if d.name == "slat")
 
 
 def test_covered_area_of_whole_wing_is_reference_area() -> None:
@@ -36,7 +37,7 @@ def test_full_span_unswept_flap_gives_0_9_times_airfoil_increment() -> None:
     eff = hs.device_effect(RECT, SINGLE_SLOTTED, 0.3, 0.0, 1.0)
     assert eff.swf_s == pytest.approx(1.0)
     assert eff.dcl_max_wing == pytest.approx(0.9 * 1.3)
-    assert eff.dalpha_0l_deg == pytest.approx(hs.DALPHA_0L_AIRFOIL_LANDING)
+    assert eff.dalpha_0l_deg == pytest.approx(hld_cfg.DALPHA_0L_AIRFOIL_LANDING)
 
 
 def test_extending_devices_scale_with_chord_extension() -> None:
@@ -67,9 +68,9 @@ def test_takeoff_setting_scales_increments() -> None:
     land = hs.configuration(clean, te, le)
     to = hs.configuration(clean, te, le, takeoff=True)
     assert land.cl_max - clean.cl_max == pytest.approx(te.dcl_max_wing + le.dcl_max_wing)
-    assert to.cl_max - clean.cl_max == pytest.approx(hs.TAKEOFF_FRACTION * (land.cl_max - clean.cl_max))
+    assert to.cl_max - clean.cl_max == pytest.approx(hld_cfg.TAKEOFF_FRACTION * (land.cl_max - clean.cl_max))
     assert to.alpha_0l_deg - clean.alpha_0l_deg == pytest.approx(
-        te.dalpha_0l_deg * hs.DALPHA_0L_AIRFOIL_TAKEOFF / hs.DALPHA_0L_AIRFOIL_LANDING
+        te.dalpha_0l_deg * hld_cfg.DALPHA_0L_AIRFOIL_TAKEOFF / hld_cfg.DALPHA_0L_AIRFOIL_LANDING
     )
 
 

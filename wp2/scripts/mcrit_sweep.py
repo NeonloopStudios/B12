@@ -27,10 +27,8 @@ import pandas as pd
 
 from b12wp2 import config
 from b12wp2.common import compressibility, geometry
+from b12wp2.config import solvers
 from b12wp2.xfoil import runtime as xfoil_runtime
-
-BASELINE_MACH = 0.2
-MACH_GRID = np.arange(0.30, 0.951, 0.005)
 
 
 def run_mcrit_analysis(
@@ -49,7 +47,7 @@ def run_mcrit_analysis(
 
     with xfoil_runtime.xfoil_session(
         airfoil,
-        mach=BASELINE_MACH,
+        mach=solvers.MCRIT_BASELINE_MACH,
         reynolds=config.CRUISE.reynolds_normal,
         ncrit=config.CRUISE.ncrit,
     ) as xf:
@@ -70,7 +68,7 @@ def run_mcrit_analysis(
         baseline_cp = xfoil_runtime.cp_distribution(xf)
 
     cp0 = baseline_cp["cp"].to_numpy()
-    m_crit, sweep = compressibility.find_mcrit(cp0, MACH_GRID)
+    m_crit, sweep = compressibility.find_mcrit(cp0, solvers.MCRIT_MACH_GRID)
     summary = {
         "m_crit": float("nan") if m_crit is None else m_crit,
         "m_dd": m_dd,
@@ -87,7 +85,7 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"Baseline Mach={BASELINE_MACH}, Cl_n={config.CRUISE.cl_normal:.4f}, "
+        f"Baseline Mach={solvers.MCRIT_BASELINE_MACH}, Cl_n={config.CRUISE.cl_normal:.4f}, "
         f"cruise M_n={config.CRUISE.mach_normal:.4f} (Korn margin reference)"
     )
 
@@ -103,9 +101,9 @@ def main() -> None:
 
         if m_crit is None:
             print(f"  [WARN] {stem}: baseline Cl={config.CRUISE.cl_normal:.4f} solve at "
-                  f"M={BASELINE_MACH} did not converge -- no M_crit, M_dd/margin still computed")
+                  f"M={solvers.MCRIT_BASELINE_MACH} did not converge -- no M_crit, M_dd/margin still computed")
         elif np.isnan(summary["m_crit"]) and not sweep.empty:
-            print(f"  [WARN] {stem}: no Mach in [{MACH_GRID[0]:.2f}, {MACH_GRID[-1]:.2f}] "
+            print(f"  [WARN] {stem}: no Mach in [{solvers.MCRIT_MACH_GRID[0]:.2f}, {solvers.MCRIT_MACH_GRID[-1]:.2f}] "
                   f"reached critical -- M_crit above this grid's range")
         else:
             print(

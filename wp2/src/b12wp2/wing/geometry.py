@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-09-22
-"""Wing planform and OpenVSP model for the WP2 VSPAERO analysis.
+"""Wing planform geometry and the OpenVSP model built from it.
 
-Planform values are the WP1 sizing used in the stand-alone VSP_analysis
-study (S, AR, taper, dihedral, incidence); the quarter-chord sweep is taken
-from config.SWEEP_RAD so the 3D model and the XFoil sweep-theory reduction
-use exactly the same angle.
+The design variables themselves are in b12wp2.config.wing (and the
+quarter-chord sweep in b12wp2.config.mission, shared with the XFoil
+sweep-theory reduction so the 3D model and the 2D sections cannot use
+different angles). What is computed here is everything that follows from
+them: span, chords, MAC, the sweep of any chord line, the t/c at the MAC --
+and the OpenVSP geom itself.
 
 Deliberately has its own .dat reader instead of reusing
-xfoil_runtime.load_airfoil_dat: importing xfoil_runtime loads the compiled
-XFoil DLL, which is not installed in the OpenVSP Python environment (and is
-not needed here -- only the coordinates are).
+b12wp2.xfoil.runtime.load_airfoil_dat: importing that module loads the
+compiled XFoil DLL, which is not installed in the OpenVSP Python environment
+(and is not needed here -- only the coordinates are).
 """
 from __future__ import annotations
 
@@ -22,55 +24,22 @@ import numpy as np
 import numpy.typing as npt
 import openvsp as vsp
 
-from b12wp2 import config
-
-# ============================================================
-#  WING PLANFORM DESIGN VARIABLES
-# ============================================================
-
-S_REF = 66.7  # wing area, both halves [m^2]
-AR = 9.50  # aspect ratio [-]
-TAPER = 0.40  # c_tip / c_root [-]
-
-SWEEP_LOC = 0.25  # chord fraction the sweep is measured at (quarter chord)
-SWEEP_DEG = math.degrees(config.SWEEP_RAD)  # 24.02 deg
-
-DIHEDRAL_DEG = 2.6
-TWIST_TIP_DEG = 0.0  # tip twist relative to the root (negative = wash-out)
-TWIST_LOC = 0.25  # twist axis as a chord fraction
-INCIDENCE_DEG = 2.0  # wing incidence, added on top of the VSPAERO angle of attack
-
-X_LE_ROOT = 0.0  # [m]
-Z_ROOT = 0.3  # [m]
-
-AIRFOIL_ROOT = config.AIRFOILS_DIR / "NACA_25112.dat"
-AIRFOIL_TIP = AIRFOIL_ROOT
-
-# --- VLM mesh ---
-# The stand-alone study used OpenVSP's default of 5 spanwise strips per
-# half-wing, too coarse to resolve the spanwise cl distribution the strip
-# viscous correction is evaluated on. OUT_CLUSTER < 1 clusters strips
-# towards the tip, where the load falls off fastest.
-SPAN_TESS = 25  # spanwise section tessellation -> SPAN_TESS - 1 strips per half-wing
-CHORD_TESS = 33  # chordwise tessellation (Tess_W)
-OUT_CLUSTER = 0.5
-
-NAME = "Wing"
+from b12wp2.config import mission, wing as cfg
 
 # ============================================================
 #  DERIVED QUANTITIES
 # ============================================================
 
-B = math.sqrt(S_REF * AR)  # span [m]
+B = math.sqrt(cfg.S_REF * cfg.AR)  # span [m]
 B_HALF = B / 2
-C_ROOT = 2 * S_REF / (B * (1 + TAPER))
-C_TIP = TAPER * C_ROOT
+C_ROOT = 2 * cfg.S_REF / (B * (1 + cfg.TAPER))
+C_TIP = cfg.TAPER * C_ROOT
 
-MAC = 2 / 3 * C_ROOT * (1 + TAPER + TAPER**2) / (1 + TAPER)
-Y_MAC = B / 6 * (1 + 2 * TAPER) / (1 + TAPER)
+MAC = 2 / 3 * C_ROOT * (1 + cfg.TAPER + cfg.TAPER**2) / (1 + cfg.TAPER)
+Y_MAC = B / 6 * (1 + 2 * cfg.TAPER) / (1 + cfg.TAPER)
 
-TAN_SWEEP_LE = math.tan(config.SWEEP_RAD) + SWEEP_LOC * (C_ROOT - C_TIP) / B_HALF
-X_LE_MAC = X_LE_ROOT + Y_MAC * TAN_SWEEP_LE
+TAN_SWEEP_LE = math.tan(mission.SWEEP_RAD) + cfg.SWEEP_LOC * (C_ROOT - C_TIP) / B_HALF
+X_LE_MAC = cfg.X_LE_ROOT + Y_MAC * TAN_SWEEP_LE
 
 
 def sweep_at(chord_fraction: float) -> float:
@@ -136,8 +105,8 @@ def airfoil_thickness(path: Path) -> float:
 def mac_thickness() -> float:
     """t/c at the MAC station, linearly interpolated between root and tip."""
     eta = Y_MAC / B_HALF
-    tc_root = airfoil_thickness(AIRFOIL_ROOT)
-    tc_tip = airfoil_thickness(AIRFOIL_TIP)
+    tc_root = airfoil_thickness(cfg.AIRFOIL_ROOT)
+    tc_tip = airfoil_thickness(cfg.AIRFOIL_TIP)
     return tc_root + eta * (tc_tip - tc_root)
 
 
@@ -160,11 +129,11 @@ def _set_airfoil(surf: str, idx: int, path: Path) -> None:
 def build_wing() -> str:
     """Add the wing to the current OpenVSP model and return its geom ID."""
     wid: str = vsp.AddGeom("WING")
-    vsp.SetGeomName(wid, NAME)
+    vsp.SetGeomName(wid, cfg.WING_NAME)
 
-    vsp.SetParmVal(wid, "X_Rel_Location", "XForm", X_LE_ROOT)
-    vsp.SetParmVal(wid, "Z_Rel_Location", "XForm", Z_ROOT)
-    vsp.SetParmVal(wid, "Y_Rel_Rotation", "XForm", INCIDENCE_DEG)
+    vsp.SetParmVal(wid, "X_Rel_Location", "XForm", cfg.X_LE_ROOT)
+    vsp.SetParmVal(wid, "Z_Rel_Location", "XForm", cfg.Z_ROOT)
+    vsp.SetParmVal(wid, "Y_Rel_Rotation", "XForm", cfg.INCIDENCE_DEG)
 
     grp = "XSec_1"
     vsp.SetDriverGroup(
@@ -173,19 +142,19 @@ def build_wing() -> str:
     vsp.SetParmVal(wid, "Span", grp, B_HALF)
     vsp.SetParmVal(wid, "Root_Chord", grp, C_ROOT)
     vsp.SetParmVal(wid, "Tip_Chord", grp, C_TIP)
-    vsp.SetParmVal(wid, "Sweep", grp, SWEEP_DEG)
-    vsp.SetParmVal(wid, "Sweep_Location", grp, SWEEP_LOC)
-    vsp.SetParmVal(wid, "Dihedral", grp, DIHEDRAL_DEG)
-    vsp.SetParmVal(wid, "Twist", grp, TWIST_TIP_DEG)
-    vsp.SetParmVal(wid, "Twist_Location", grp, TWIST_LOC)
-    vsp.SetParmVal(wid, "SectTess_U", grp, SPAN_TESS)
-    vsp.SetParmVal(wid, "OutCluster", grp, OUT_CLUSTER)
-    vsp.SetParmVal(wid, "Tess_W", "Shape", CHORD_TESS)
+    vsp.SetParmVal(wid, "Sweep", grp, cfg.SWEEP_DEG)
+    vsp.SetParmVal(wid, "Sweep_Location", grp, cfg.SWEEP_LOC)
+    vsp.SetParmVal(wid, "Dihedral", grp, cfg.DIHEDRAL_DEG)
+    vsp.SetParmVal(wid, "Twist", grp, cfg.TWIST_TIP_DEG)
+    vsp.SetParmVal(wid, "Twist_Location", grp, cfg.TWIST_LOC)
+    vsp.SetParmVal(wid, "SectTess_U", grp, cfg.SPAN_TESS)
+    vsp.SetParmVal(wid, "OutCluster", grp, cfg.OUT_CLUSTER)
+    vsp.SetParmVal(wid, "Tess_W", "Shape", cfg.CHORD_TESS)
     vsp.Update()
 
     surf = vsp.GetXSecSurf(wid, 0)
-    _set_airfoil(surf, 0, AIRFOIL_ROOT)
-    _set_airfoil(surf, 1, AIRFOIL_TIP)
+    _set_airfoil(surf, 0, cfg.AIRFOIL_ROOT)
+    _set_airfoil(surf, 1, cfg.AIRFOIL_TIP)
     vsp.Update()
     return wid
 
@@ -193,13 +162,13 @@ def build_wing() -> str:
 def print_summary(wid: str) -> None:
     s_vsp = vsp.GetParmVal(wid, "TotalArea", "WingGeom")
     b_vsp = vsp.GetParmVal(wid, "TotalSpan", "WingGeom")
-    print(f"Wing '{NAME}' ({AIRFOIL_ROOT.stem} root, {AIRFOIL_TIP.stem} tip):")
-    print(f"  S        = {S_REF:.3f} m^2   (OpenVSP: {s_vsp:.3f})")
+    print(f"Wing '{cfg.WING_NAME}' ({cfg.AIRFOIL_ROOT.stem} root, {cfg.AIRFOIL_TIP.stem} tip):")
+    print(f"  S        = {cfg.S_REF:.3f} m^2   (OpenVSP: {s_vsp:.3f})")
     print(f"  b        = {B:.3f} m     (OpenVSP: {b_vsp:.3f})")
-    print(f"  AR       = {AR:.2f}, taper = {TAPER:.3f}")
+    print(f"  AR       = {cfg.AR:.2f}, taper = {cfg.TAPER:.3f}")
     print(f"  c_root   = {C_ROOT:.3f} m, c_tip = {C_TIP:.3f} m")
     print(
         f"  LE sweep = {math.degrees(sweep_at(0.0)):.2f} deg "
-        f"(sweep at {SWEEP_LOC:.2f}c = {SWEEP_DEG:.2f} deg)"
+        f"(sweep at {cfg.SWEEP_LOC:.2f}c = {cfg.SWEEP_DEG:.2f} deg)"
     )
     print(f"  MAC      = {MAC:.3f} m  (y_MAC = {Y_MAC:.3f} m, x_LE_MAC = {X_LE_MAC:.3f} m)")

@@ -44,25 +44,26 @@ import openvsp as vsp
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.config import solvers, wing as wing_cfg
 from b12wp2.plots import vspaero as vspaero_plots
 from b12wp2.wing import geometry as wg, viscous_correction as vc
 
 # ============================================================
-#  SETTINGS
+#  SETTINGS  (the values themselves: b12wp2/config/solvers.py)
 # ============================================================
 
-AIRFOIL_STEM = wg.AIRFOIL_ROOT.stem
+AIRFOIL_STEM = wing_cfg.AIRFOIL_ROOT.stem
 
-ALPHA_START = -4.0  # [deg], VSPAERO angle of attack (wing incidence comes on top)
-ALPHA_END = 10.0
-ALPHA_NPTS = 15
+ALPHA_START = solvers.VSPAERO_ALPHA_START
+ALPHA_END = solvers.VSPAERO_ALPHA_END
+ALPHA_NPTS = solvers.VSPAERO_ALPHA_NPTS
 
-WAKE_ITER = 5
-N_CPU = 4
+WAKE_ITER = solvers.VSPAERO_WAKE_ITER
+N_CPU = solvers.VSPAERO_N_CPU
 
-KORN_SWEEP_LOC = 0.5  # chord fraction of the sweep line used in the Korn equation
-SWEEP_DRAG_MODE = "friction"  # baseline, see viscous_correction.sweep_drag_factor
-SWEEP_DRAG_MODE_SENSITIVITY = "cos3"
+KORN_SWEEP_LOC = solvers.KORN_SWEEP_LOC
+SWEEP_DRAG_MODE = solvers.SWEEP_DRAG_MODE
+SWEEP_DRAG_MODE_SENSITIVITY = solvers.SWEEP_DRAG_MODE_SENSITIVITY
 
 OUT_DIR = config.RESULTS_DIR / "vspaero" / AIRFOIL_STEM
 RUN_DIR = OUT_DIR / "vspaero_run"
@@ -130,12 +131,12 @@ def run_vspaero(
     vsp.SetIntAnalysisInput(a, "Symmetry", [1])
 
     vsp.SetIntAnalysisInput(a, "RefFlag", [vsp.MANUAL_REF])
-    vsp.SetDoubleAnalysisInput(a, "Sref", [wg.S_REF])
+    vsp.SetDoubleAnalysisInput(a, "Sref", [wing_cfg.S_REF])
     vsp.SetDoubleAnalysisInput(a, "bref", [wg.B])
     vsp.SetDoubleAnalysisInput(a, "cref", [wg.MAC])
     vsp.SetDoubleAnalysisInput(a, "Xcg", [X_CG])
     vsp.SetDoubleAnalysisInput(a, "Ycg", [0.0])
-    vsp.SetDoubleAnalysisInput(a, "Zcg", [wg.Z_ROOT])
+    vsp.SetDoubleAnalysisInput(a, "Zcg", [wing_cfg.Z_ROOT])
 
     vsp.SetDoubleAnalysisInput(a, "AlphaStart", [alpha_start])
     vsp.SetDoubleAnalysisInput(a, "AlphaEnd", [alpha_end])
@@ -221,7 +222,7 @@ def build_polar(
         s = strips[np.isclose(strips["alpha"], p["alpha"])]
         s_out, cd_prof = vc.strip_profile_drag(
             s, section, sweep_rad=config.SWEEP_RAD, chord_ref=config.CHORD_M,
-            s_ref=wg.S_REF, mode=SWEEP_DRAG_MODE,
+            s_ref=wing_cfg.S_REF, mode=SWEEP_DRAG_MODE,
         )
         cd_prof_sens = cd_prof * (
             vc.sweep_drag_factor(SWEEP_DRAG_MODE_SENSITIVITY, config.SWEEP_RAD)
