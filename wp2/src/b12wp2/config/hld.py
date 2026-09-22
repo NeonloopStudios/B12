@@ -60,7 +60,7 @@ DALPHA_0L_AIRFOIL_LANDING = -15.0
 DALPHA_0L_AIRFOIL_TAKEOFF = -10.0
 
 # Take-off setting as a fraction of the landing-setting dCL_max and c'/c - 1
-TAKEOFF_FRACTION = 0.6
+TAKEOFF_FRACTION = 0.7
 
 # --- spanwise limits (fraction of the semi-span) ---
 
@@ -70,8 +70,8 @@ ETA_OUT_LE = 0.95  # leading-edge devices run in front of the aileron, short of 
 
 # --- chordwise size, from the spar positions ---
 
-FRONT_SPAR = 0.15
-REAR_SPAR = 0.65
+FRONT_SPAR = 0.2
+REAR_SPAR = 0.7
 FLAP_CHORD_RATIO = 1.0 - REAR_SPAR  # c_f / c
 SLAT_CHORD_RATIO = FRONT_SPAR  # c_s / c
 

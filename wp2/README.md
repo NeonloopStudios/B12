@@ -354,6 +354,18 @@ Anaconda, Python 3.11.
    pip install -r <repo>\wp2\requirements.txt pytest
    ```
 
+5. Make the `b12wp2` package importable from anywhere in this env, by
+   putting a one-line `.pth` file (the absolute path of `wp2\src`) in the
+   env's `site-packages`:
+
+   ```
+   python -c "import sysconfig, pathlib; pathlib.Path(sysconfig.get_paths()['purelib'], 'b12wp2-src.pth').write_text(r'<repo>\wp2\src' + '\n')"
+   ```
+
+   Without it, `b12wp2` only resolves when you start from `wp2/` with
+   `python -m scripts.<name>`, or through the path fix at the top of the two
+   OpenVSP entry scripts.
+
 ### Verifying the install
 
 ```
@@ -384,6 +396,7 @@ file.
 | `ModuleNotFoundError: No module named 'openvsp'` | Wrong interpreter (e.g. the repo venv or system Python) | `conda activate openvsp` / select that interpreter in VS Code |
 | `ImportError: DLL load failed while importing _vsp` | Env Python is not 3.11, so the prebuilt `.pyd` doesn't match | Recreate the env with `python=3.11` |
 | `ModuleNotFoundError: No module named 'scripts'` | Started as a file from outside `wp2/` with an older copy of the script | Run `python -m scripts.<name>` from `wp2/` |
+| `ModuleNotFoundError: No module named 'b12wp2'` | A file under `src/b12wp2/` was started directly (a library module, it has no `main`), or the env has no `.pth` from step 5 | Run the entry point in `scripts/` instead; add the `.pth` (step 5) |
 | `ModuleNotFoundError: No module named 'xfoil'` | Something imported `b12wp2.xfoil.runtime` | The OpenVSP env has no XFoil; only the VSPAERO scripts run there. XFoil polars are generated from the repo venv (above) |
 | `RuntimeError: vspaero.exe not found` | `openvsp` installed without its executables (e.g. from another source) | Reinstall from the release's `python\openvsp` folder |
 

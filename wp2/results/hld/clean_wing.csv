@@ -8,7 +8,7 @@ alpha_0L,-3.05925399130048
 eta_in,0.12
 eta_out_te,0.75
 eta_out_le,0.95
-flap_chord_ratio,0.35
-slat_chord_ratio,0.15
-hinge_sweep_te_deg,20.481584119161955
-hinge_sweep_le_deg,24.879226799634683
+flap_chord_ratio,0.30000000000000004
+slat_chord_ratio,0.2
+hinge_sweep_te_deg,20.02658662173188
+hinge_sweep_le_deg,24.452308133479832
