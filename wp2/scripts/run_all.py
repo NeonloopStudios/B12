@@ -17,8 +17,9 @@ another) is this one command -- every step auto-discovers the current
 candidate set via config.discover_airfoils(), nothing here is hardcoded
 to the airfoils present when this was written.
 
-config.py and xfoil_runtime.py aren't run scripts -- every other module
-imports them directly, there is nothing to orchestrate.
+The 3D steps (vspaero_analysis, hld_analysis) are not in this pipeline:
+they need the OpenVSP Python environment, which is a different interpreter
+from the one XFoil is built into, so they are run separately.
 """
 from __future__ import annotations
 

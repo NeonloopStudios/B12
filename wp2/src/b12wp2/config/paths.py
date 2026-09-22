@@ -16,6 +16,65 @@ WP2_DIR = Path(__file__).resolve().parents[3]  # .../wp2/src/b12wp2/config/paths
 AIRFOILS_DIR = WP2_DIR / "airfoils"
 RESULTS_DIR = WP2_DIR / "results"
 
+# --- results, one directory per analysis stage ---
+
+DATA_DIR = RESULTS_DIR / "data"  # XFoil section polars, Mach-critical sweeps
+PLOTS_DIR = RESULTS_DIR / "plots"  # per-airfoil section figures + the comparison
+VSPAERO_DIR = RESULTS_DIR / "vspaero"  # 3D wing analysis, one subdirectory per airfoil
+HLD_DIR = RESULTS_DIR / "hld"  # high-lift device comparison
+
+SCORECARD_CSV = RESULTS_DIR / "scorecard.csv"
+SCORECARD_DETAIL_CSV = RESULTS_DIR / "scorecard_detail.csv"
+
+
+# --- the generated files, named in one place ---
+#
+# Every stage writes files another stage reads back by name, so the names
+# are built here rather than f-strung at both ends of each hand-off.
+
+
+def polar_csv(airfoil_stem: str, condition: str) -> Path:
+    """XFoil polar of one airfoil at one flight condition ("cruise"/"landing")."""
+    return DATA_DIR / f"{airfoil_stem}_{condition}_polar.csv"
+
+
+def mcrit_csv(airfoil_stem: str) -> Path:
+    """Karman-Tsien Mach sweep: cp_min_corrected and cp_crit vs Mach."""
+    return DATA_DIR / f"{airfoil_stem}_mcrit.csv"
+
+
+def baseline_cp_csv(airfoil_stem: str) -> Path:
+    """Cp(x) at the subsonic baseline solve the Mach sweep starts from."""
+    return DATA_DIR / f"{airfoil_stem}_baseline_cp.csv"
+
+
+MCRIT_SUMMARY_CSV = DATA_DIR / "mcrit_summary.csv"
+
+
+def section_plots_dir(airfoil_stem: str) -> Path:
+    """Where one airfoil's 2D section figures go."""
+    return PLOTS_DIR / airfoil_stem
+
+
+COMPARISON_PLOTS_DIR = PLOTS_DIR / "comparison"
+
+
+def vspaero_out_dir(airfoil_stem: str) -> Path:
+    """Where the 3D wing analysis of one airfoil writes its results."""
+    return VSPAERO_DIR / airfoil_stem
+
+
+# VSPAERO's own run files (the .vsp3 model, its solver input/output). Not
+# results: they are regenerated on every run and are gitignored.
+RUN_SUBDIR = "vspaero_run"
+
+
+def vspaero_run_dir(airfoil_stem: str) -> Path:
+    return vspaero_out_dir(airfoil_stem) / RUN_SUBDIR
+
+
+HLD_RUN_DIR = HLD_DIR / RUN_SUBDIR
+
 
 def discover_airfoils() -> list[Path]:
     """All candidate airfoil .dat files, sorted for deterministic ordering.
