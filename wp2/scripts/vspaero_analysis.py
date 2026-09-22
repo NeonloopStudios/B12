@@ -62,11 +62,7 @@ SECTION_POLAR = config.RESULTS_DIR / "data" / f"{AIRFOIL_STEM}_cruise_polar.csv"
 # ============================================================
 
 CRUISE = config.CRUISE
-V_INF = CRUISE.v_freestream
-RHO = CRUISE.density
 MACH = CRUISE.mach_freestream
-MU = config.sutherland_viscosity(CRUISE.temperature_k)
-RE_MAC = RHO * V_INF * wg.MAC / MU
 CL_DESIGN = CRUISE.cl_wing if CRUISE.cl_wing is not None else float("nan")
 
 X_CG = wg.X_LE_MAC + 0.25 * wg.MAC  # moment reference at quarter MAC
@@ -81,9 +77,23 @@ SWEEP_KORN = wg.sweep_at(KORN_SWEEP_LOC)
 # ============================================================
 
 
-def run_vspaero(vsp3_path: Path) -> None:
+def reynolds_mac(condition: config.FlightCondition) -> float:
+    """Freestream Reynolds number based on the MAC."""
+    mu = config.sutherland_viscosity(condition.temperature_k)
+    return condition.density * condition.v_freestream * wg.MAC / mu
+
+
+def run_vspaero(
+    vsp3_path: Path,
+    condition: config.FlightCondition = CRUISE,
+    alpha_start: float = ALPHA_START,
+    alpha_end: float = ALPHA_END,
+    alpha_npts: int = ALPHA_NPTS,
+) -> None:
     """Build the wing, save it to vsp3_path and run the VSPAERO alpha sweep
-    (VSPAERO writes its files next to the .vsp3)."""
+    at the given flight condition (VSPAERO writes its files next to the .vsp3)."""
+    v_inf, rho, mach = condition.v_freestream, condition.density, condition.mach_freestream
+    re_mac = reynolds_mac(condition)
     vsp.VSPRenew()
     vsp.DeleteAllResults()
     wid = wg.build_wing()
@@ -116,26 +126,26 @@ def run_vspaero(vsp3_path: Path) -> None:
     vsp.SetDoubleAnalysisInput(a, "Ycg", [0.0])
     vsp.SetDoubleAnalysisInput(a, "Zcg", [wg.Z_ROOT])
 
-    vsp.SetDoubleAnalysisInput(a, "AlphaStart", [ALPHA_START])
-    vsp.SetDoubleAnalysisInput(a, "AlphaEnd", [ALPHA_END])
-    vsp.SetIntAnalysisInput(a, "AlphaNpts", [ALPHA_NPTS])
+    vsp.SetDoubleAnalysisInput(a, "AlphaStart", [alpha_start])
+    vsp.SetDoubleAnalysisInput(a, "AlphaEnd", [alpha_end])
+    vsp.SetIntAnalysisInput(a, "AlphaNpts", [alpha_npts])
     vsp.SetDoubleAnalysisInput(a, "BetaStart", [0.0])
     vsp.SetDoubleAnalysisInput(a, "BetaEnd", [0.0])
     vsp.SetIntAnalysisInput(a, "BetaNpts", [1])
-    vsp.SetDoubleAnalysisInput(a, "MachStart", [MACH])
-    vsp.SetDoubleAnalysisInput(a, "MachEnd", [MACH])
+    vsp.SetDoubleAnalysisInput(a, "MachStart", [mach])
+    vsp.SetDoubleAnalysisInput(a, "MachEnd", [mach])
     vsp.SetIntAnalysisInput(a, "MachNpts", [1])
-    vsp.SetDoubleAnalysisInput(a, "ReCref", [RE_MAC])
-    vsp.SetDoubleAnalysisInput(a, "ReCrefEnd", [RE_MAC])
+    vsp.SetDoubleAnalysisInput(a, "ReCref", [re_mac])
+    vsp.SetDoubleAnalysisInput(a, "ReCrefEnd", [re_mac])
     vsp.SetIntAnalysisInput(a, "ReCrefNpts", [1])
-    vsp.SetDoubleAnalysisInput(a, "Vinf", [V_INF])
-    vsp.SetDoubleAnalysisInput(a, "Rho", [RHO])
+    vsp.SetDoubleAnalysisInput(a, "Vinf", [v_inf])
+    vsp.SetDoubleAnalysisInput(a, "Rho", [rho])
     vsp.SetIntAnalysisInput(a, "WakeNumIter", [WAKE_ITER])
     vsp.SetIntAnalysisInput(a, "NCPU", [N_CPU])
 
     print(
-        f"Running VSPAERO: V={V_INF:.2f} m/s, M={MACH:.3f}, Re_MAC={RE_MAC:.3g}, "
-        f"alpha {ALPHA_START}..{ALPHA_END} deg ({ALPHA_NPTS} points)"
+        f"Running VSPAERO ({condition.name}): V={v_inf:.2f} m/s, M={mach:.3f}, Re_MAC={re_mac:.3g}, "
+        f"alpha {alpha_start}..{alpha_end} deg ({alpha_npts} points)"
     )
     vsp.ExecAnalysis(a)
 

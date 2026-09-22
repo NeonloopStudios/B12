@@ -289,3 +289,21 @@ Outputs go to `results/vspaero/<airfoil>/`: `polar.csv`, `span_loads.csv`,
 `summary.csv`, `polar.png`, `drag_breakdown.png`, `span_loads.png`,
 `transonic.png`. The raw VSPAERO run (`vspaero_run/`, including
 `wing.vsp3`) is gitignored.
+
+## High-lift device comparison
+
+`scripts/hld_analysis.py` (same OpenVSP env, `python -m scripts.hld_analysis`
+from `wp2/`) compares every trailing-edge x leading-edge device combination
+(`hld_sizing.TE_DEVICES` x `LE_DEVICES`) on the same wing:
+
+1. Clean-wing CL_max at M ~ 0.2 (`config.LANDING`): VSPAERO spanwise lift +
+   critical-section method with the XFoil landing polar.
+2. ADSEE increments per device (`scripts/hld_sizing.py`):
+   dCL_max = 0.9 dcl_max (S_wf/S) cos(Lambda_hinge), S'/S, and the
+   alpha_0L shift; take-off = 60% of the landing increment.
+3. Pareto front of CL_max,L vs. a qualitative mechanism-complexity rank.
+
+Span limits, spar positions and the (optional) CL_max requirements are the
+settings at the top of `hld_analysis.py`. Outputs in `results/hld/`:
+`comparison.csv`, `clean_wing.csv`, `comparison_heatmap.png`,
+`cl_max_vs_complexity.png`, `lift_curves.png`, `planform_hld.png`.
