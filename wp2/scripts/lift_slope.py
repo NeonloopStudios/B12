@@ -35,10 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 
-try:
-    from .config import RESULTS_DIR
-except ImportError:  # running as a plain script, not a package module
-    from config import RESULTS_DIR
+from b12wp2.config import RESULTS_DIR
 
 
 class OLSFit:

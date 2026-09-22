@@ -8,7 +8,7 @@ import math
 
 import pytest
 
-from scripts import hld_sizing as hs
+from b12wp2.hld import sizing as hs
 
 # unswept rectangular wing: S = 20 m^2, b = 10 m, c = 2 m
 RECT = hs.Planform(s_ref=20.0, b=10.0, c_root=2.0, c_tip=2.0, tan_sweep_le=0.0)

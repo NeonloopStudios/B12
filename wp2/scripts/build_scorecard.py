@@ -20,7 +20,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from scripts import config, polar_analysis
+from b12wp2 import config
+from b12wp2.xfoil import polar_analysis
 
 # Direction each raw criterion is scored in. "max" = higher raw value is
 # better (normalize ascending). "min_abs" = smaller |value| is better

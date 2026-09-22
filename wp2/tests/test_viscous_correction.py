@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scripts import compressibility, viscous_correction as vc
+from b12wp2.common import compressibility
+from b12wp2.wing import viscous_correction as vc
 
 SWEEP = math.radians(24.0)
 

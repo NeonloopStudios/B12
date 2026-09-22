@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scripts import compressibility
+from b12wp2.common import compressibility
 
 
 def test_karman_tsien_identity_at_zero_mach() -> None:

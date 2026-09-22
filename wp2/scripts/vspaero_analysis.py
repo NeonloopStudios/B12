@@ -33,14 +33,19 @@ from pathlib import Path
 
 if __package__ in (None, ""):
     # run as a file (e.g. the editor's Run button) instead of `python -m scripts.<name>`:
-    # make wp2/ importable so `from scripts import ...` resolves
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    # make wp2/ and wp2/src/ importable so `from scripts import ...` and
+    # `from b12wp2 import ...` resolve
+    _WP2_DIR = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(_WP2_DIR))
+    sys.path.insert(0, str(_WP2_DIR / "src"))
 
 import numpy as np
 import openvsp as vsp
 import pandas as pd
 
-from scripts import config, viscous_correction as vc, vspaero_plots, wing_geometry as wg
+from b12wp2 import config
+from b12wp2.plots import vspaero as vspaero_plots
+from b12wp2.wing import geometry as wg, viscous_correction as vc
 
 # ============================================================
 #  SETTINGS

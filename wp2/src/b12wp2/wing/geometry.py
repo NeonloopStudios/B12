@@ -22,7 +22,7 @@ import numpy as np
 import numpy.typing as npt
 import openvsp as vsp
 
-from scripts import config
+from b12wp2 import config
 
 # ============================================================
 #  WING PLANFORM DESIGN VARIABLES

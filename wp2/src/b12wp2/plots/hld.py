@@ -16,8 +16,8 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.patches import Polygon  # noqa: E402
 
-from scripts import hld_sizing as hs  # noqa: E402
-from scripts.vspaero_plots import DPI, _style_axes  # noqa: E402
+from b12wp2.hld import sizing as hs  # noqa: E402
+from b12wp2.plots.vspaero import DPI, _style_axes  # noqa: E402
 
 # Okabe-Ito; LE device colors are fixed by LE_DEVICES order
 _OKABE_ITO = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9"]

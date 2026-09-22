@@ -25,7 +25,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts import compressibility, config, geometry, xfoil_runtime
+from b12wp2 import config
+from b12wp2.common import compressibility, geometry
+from b12wp2.xfoil import runtime as xfoil_runtime
 
 BASELINE_MACH = 0.2
 MACH_GRID = np.arange(0.30, 0.951, 0.005)

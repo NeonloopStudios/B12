@@ -7,7 +7,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from scripts import polar_analysis
+from b12wp2.xfoil import polar_analysis
 
 
 def _polar(alphas: list[float], cls: list[float]) -> pd.DataFrame:

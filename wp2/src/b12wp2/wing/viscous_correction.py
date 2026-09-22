@@ -32,7 +32,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
-from scripts import polar_analysis
+from b12wp2.xfoil import polar_analysis
 
 Array = npt.NDArray[np.float64]
 

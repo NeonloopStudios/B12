@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-09-17
-"""Tests for wp2/scripts/geometry.py.
+"""Tests for wp2/src/b12wp2/common/geometry.py.
 
 max_thickness_to_chord is validated against XFoil's own internally-computed
 "Max thickness" (printed at airfoil-load time with xf.print=True, not
@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import pytest
 
-from scripts import config, geometry, xfoil_runtime
+from b12wp2 import config
+from b12wp2.common import geometry
+from b12wp2.xfoil import runtime as xfoil_runtime
 
 # XFoil's own reported "Max thickness" for each candidate, captured directly
 # (xf.print = True, xf.airfoil = <loaded airfoil>) -- not computed by this

@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts import config, polar_analysis, xfoil_runtime
+from b12wp2 import config
+from b12wp2.xfoil import polar_analysis, runtime as xfoil_runtime
 
 # Low-speed, clean-configuration stall angles run noticeably higher than the
 # cruise polar's (compressibility at M_n~0.70 cut cruise stall to ~3-5 deg;

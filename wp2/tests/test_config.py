@@ -14,7 +14,7 @@ import math
 
 import pytest
 
-from scripts import config
+from b12wp2 import config
 
 
 def test_isa_sea_level_matches_standard_values() -> None:

@@ -40,7 +40,10 @@ import pandas as pd
 
 matplotlib.use("Agg")  # headless: this script only ever saves PNGs
 
-from scripts import config, mcrit_sweep, polar_analysis
+from b12wp2 import config
+from b12wp2.xfoil import polar_analysis
+
+from scripts import mcrit_sweep
 
 # Okabe-Ito colorblind-safe categorical palette (Okabe & Ito, 2008),
 # assigned in a fixed order by discover_airfoils()'s sort order -- never

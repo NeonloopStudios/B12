@@ -20,7 +20,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts import config, xfoil_runtime
+from b12wp2 import config
+from b12wp2.xfoil import runtime as xfoil_runtime
 
 ALPHA_LOW_DEG = -6.0
 ALPHA_HIGH_DEG = 20.0

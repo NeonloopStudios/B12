@@ -14,7 +14,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-WP2_DIR = Path(__file__).resolve().parent.parent
+WP2_DIR = Path(__file__).resolve().parents[2]  # .../wp2/src/b12wp2/config.py -> wp2/
 AIRFOILS_DIR = WP2_DIR / "airfoils"
 RESULTS_DIR = WP2_DIR / "results"
 

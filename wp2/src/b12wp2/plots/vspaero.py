@@ -22,7 +22,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.colors import Normalize  # noqa: E402
 
-from scripts import viscous_correction as vc  # noqa: E402
+from b12wp2.wing import viscous_correction as vc  # noqa: E402
 
 # Okabe-Ito, fixed role per drag component across every figure.
 C_TOTAL = "#0072B2"
