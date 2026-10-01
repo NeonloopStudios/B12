@@ -93,10 +93,6 @@ def plot_polar(polar: pd.DataFrame, summary: dict[str, float], out_dir: Path) ->
     a.set(xlabel="$C_L$", ylabel="$C_m$ (1/4 MAC)", title="Pitching moment")
     _style_axes(a)
 
-    fig.suptitle(
-        f"Wing with NACA 25112, M = {summary['mach']:.3f}: VSPAERO + XFoil profile drag + Korn/Lock wave drag",
-        fontsize=11,
-    )
     fig.tight_layout()
     fig.savefig(out_dir / "polar.png", dpi=DPI)
     plt.close(fig)
