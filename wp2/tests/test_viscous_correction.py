@@ -73,17 +73,15 @@ def test_one_stalled_strip_makes_profile_drag_nan() -> None:
 
 
 def test_korn_swept_reduces_to_unswept_korn() -> None:
-    m_dd, m_crit = vc.korn_swept(0.87, 0.12, 0.5, 0.0)
-    assert m_dd == pytest.approx(compressibility.korn_mdd(0.87, 0.12, 0.5))
-    assert m_dd - m_crit == pytest.approx((0.1 / 80) ** (1 / 3))
+    assert vc.korn_swept(0.87, 0.12, 0.5, 0.0) == pytest.approx(compressibility.korn_mdd(0.87, 0.12, 0.5))
 
 
-def test_lock_wave_drag_is_zero_below_mcrit_and_hits_divergence_slope_at_mdd() -> None:
-    assert vc.lock_wave_drag(0.6, 0.65) == 0.0
-    m_dd, m_crit = vc.korn_swept(0.87, 0.12, 0.5, SWEEP)
-    h = 1e-6
-    slope = (vc.lock_wave_drag(m_dd + h, m_crit) - vc.lock_wave_drag(m_dd - h, m_crit)) / (2 * h)
-    assert slope == pytest.approx(0.1, rel=1e-4)
+def test_wave_drag_matches_adsee_formula_on_both_sides_of_mdd() -> None:
+    assert vc.wave_drag(0.70, 0.70) == pytest.approx(0.002)
+    assert vc.wave_drag(0.65, 0.70) == pytest.approx(0.002 / (1 + 2.5))
+    assert vc.wave_drag(0.75, 0.70) == pytest.approx(0.002 * 2**2.5)
+    h = 1e-9
+    assert vc.wave_drag(0.70 - h, 0.70) == pytest.approx(vc.wave_drag(0.70, 0.70), rel=1e-6)  # continuous
 
 
 def test_load_section_polar_drops_nonconverged_and_post_stall(tmp_path: Path) -> None:

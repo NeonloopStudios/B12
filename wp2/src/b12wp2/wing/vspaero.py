@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-09-22
-"""3D wing analysis at cruise: VSPAERO (VLM) + XFoil profile drag + Korn/Lock
+"""3D wing analysis at cruise: VSPAERO (VLM) + XFoil profile drag + ADSEE
 wave drag, for the wing of b12wp2.wing.geometry with NACA 25112 sections.
 
-    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn/Lock)
+    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (ADSEE)
 
 - VSPAERO: inviscid VLM angle-of-attack sweep at the cruise condition of
   config.CRUISE. Kept: CL, CMy and the wake (Trefftz-plane) induced drag
@@ -13,7 +13,8 @@ wave drag, for the wing of b12wp2.wing.geometry with NACA 25112 sections.
 - Profile drag: the spanwise strip loads of every angle of attack are run
   through the XFoil cruise polar, see b12wp2.wing.viscous_correction.
 - Wave drag: XFoil models no shocks, so wave drag is added from the swept
-  Korn equation (kappa_A from config.kappa_a) and Lock's approximation.
+  Korn equation (kappa_A from config.kappa_a) and the ADSEE drag-rise
+  formula, see b12wp2.wing.viscous_correction.wave_drag.
 
 Lift and pitching moment stay inviscid (no viscous decambering); only drag
 is corrected.
@@ -207,8 +208,8 @@ def build_polar(
             vc.sweep_drag_factor(SWEEP_DRAG_MODE_SENSITIVITY, config.SWEEP_RAD)
             / vc.sweep_drag_factor(SWEEP_DRAG_MODE, config.SWEEP_RAD)
         )
-        m_dd, m_crit = vc.korn_swept(KAPPA_A, T_C, float(p["CL"]), SWEEP_KORN)
-        cd_wave = vc.lock_wave_drag(MACH, m_crit)
+        m_dd = vc.korn_swept(KAPPA_A, T_C, float(p["CL"]), SWEEP_KORN)
+        cd_wave = vc.wave_drag(MACH, m_dd)
         cd = p["CDi"] + cd_prof + cd_wave
         ratio = s_out["cl_n"] / cl_max_n
         rows.append(
@@ -216,7 +217,6 @@ def build_polar(
                 **p.to_dict(),
                 "CD_profile": cd_prof,
                 f"CD_profile_{SWEEP_DRAG_MODE_SENSITIVITY}": cd_prof_sens,
-                "M_crit": m_crit,
                 "M_dd": m_dd,
                 "CD_wave": cd_wave,
                 "CD": cd,
@@ -254,7 +254,7 @@ def summarise(polar: pd.DataFrame) -> dict[str, float]:
     ratio, cl_w = upper["max_cl_ratio"].to_numpy(), upper["CL"].to_numpy()
     cl_first_stall = float(np.interp(1.0, ratio, cl_w)) if ratio.max() >= 1.0 > ratio.min() else float("nan")
 
-    m_dd, m_crit = vc.korn_swept(KAPPA_A, T_C, CL_DESIGN, SWEEP_KORN)
+    m_dd = vc.korn_swept(KAPPA_A, T_C, CL_DESIGN, SWEEP_KORN)
     return {
         "CL_design": CL_DESIGN,
         "alpha_design": _at_cl(polar, "alpha", CL_DESIGN),
@@ -273,7 +273,6 @@ def summarise(polar: pd.DataFrame) -> dict[str, float]:
         "CL_alpha_per_rad": cl_alpha,
         "alpha_0L": _at_cl(polar, "alpha", 0.0),
         "CL_first_section_stall": cl_first_stall,
-        "M_crit_design": m_crit,
         "M_dd_design": m_dd,
         "mach": MACH,
         "t_c": T_C,

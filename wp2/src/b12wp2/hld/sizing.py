@@ -8,6 +8,7 @@ For a device spanning eta_in..eta_out of the semi-span:
     dCL_max   = 0.9 * dcl_max * (S_wf / S) * cos(sweep_hinge)
     S' / S    = 1 + (S_wf / S) * (c'/c - 1)          -> CL_alpha' = CL_alpha * S'/S
     da_0L     = da_0L,airfoil * (S_wf / S) * cos(sweep_hinge)   (trailing edge only)
+    alpha_s   = CL_max / CL_alpha + alpha_0L + dalpha_CLmax      (DATCOM, high-AR wings)
 
 with S_wf the (full-chord) wing area covered by the device, dcl_max the
 airfoil increment of the device type (config.hld device tables), c'/c the chord
@@ -109,6 +110,12 @@ def device_effect(
     )
 
 
+def stall_angle(cl_max: float, cl_alpha_per_deg: float, alpha_0l_deg: float) -> float:
+    """High-AR wing stall angle [deg]: CL_max / CL_alpha + alpha_0L + dalpha_CLmax,
+    with dalpha_CLmax from the DATCOM chart (config.hld.DALPHA_CLMAX_DEG)."""
+    return cl_max / cl_alpha_per_deg + alpha_0l_deg + cfg.DALPHA_CLMAX_DEG
+
+
 @dataclass(frozen=True)
 class CleanWing:
     """Clean-wing lift characteristics (from VSPAERO + XFoil landing polar)."""
@@ -116,14 +123,11 @@ class CleanWing:
     cl_max: float
     cl_alpha_per_deg: float
     alpha_0l_deg: float
-    alpha_stall_deg: float
+    alpha_crit_deg: float  # wing alpha at which the first strip reaches the section cl_max
 
     @property
-    def alpha_offset_deg(self) -> float:
-        """Stall angle beyond the linear-lift intercept of CL_max:
-        alpha_stall - (alpha_0L + CL_max / CL_alpha). Carried over unchanged
-        to the flapped configurations."""
-        return self.alpha_stall_deg - (self.alpha_0l_deg + self.cl_max / self.cl_alpha_per_deg)
+    def alpha_stall_deg(self) -> float:
+        return stall_angle(self.cl_max, self.cl_alpha_per_deg, self.alpha_0l_deg)
 
 
 @dataclass(frozen=True)
@@ -153,8 +157,7 @@ def configuration(
     cl_max = clean.cl_max + dcl_max
     cl_alpha = clean.cl_alpha_per_deg * area_ratio
     alpha_0l = clean.alpha_0l_deg + dalpha_scale * (te.dalpha_0l_deg + le.dalpha_0l_deg)
-    alpha_stall = alpha_0l + cl_max / cl_alpha + clean.alpha_offset_deg
-    return Configuration(cl_max, cl_alpha, alpha_0l, alpha_stall)
+    return Configuration(cl_max, cl_alpha, alpha_0l, stall_angle(cl_max, cl_alpha, alpha_0l))
 
 
 def min_eta_out(

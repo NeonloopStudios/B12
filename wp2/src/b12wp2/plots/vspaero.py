@@ -105,7 +105,7 @@ def plot_drag_breakdown(polar: pd.DataFrame, summary: dict[str, float], out_dir:
     ax.stackplot(
         p["CL"], p["CDi"], p["CD_profile"], p["CD_wave"],
         colors=[C_INDUCED, C_PROFILE, C_WAVE], edgecolor="white", linewidth=1.5,
-        labels=["induced (VSPAERO)", "profile (XFoil strips)", "wave (Korn/Lock)"],
+        labels=["induced (VSPAERO)", "profile (XFoil strips)", "wave (Korn + ADSEE)"],
     )
     cl_d = summary["CL_design"]
     _design_line(ax, cl_d, horizontal=False)
@@ -170,11 +170,10 @@ def plot_span_loads(strips: pd.DataFrame, section: pd.DataFrame, out_dir: Path) 
 def plot_transonic(summary: dict[str, float], out_dir: Path) -> None:
     cls = np.linspace(0.0, 1.0, 41)
     sweep = math.radians(summary["sweep_korn_deg"])
-    korn = np.array([vc.korn_swept(summary["kappa_a"], summary["t_c"], c, sweep) for c in cls])
+    m_dd = [vc.korn_swept(summary["kappa_a"], summary["t_c"], c, sweep) for c in cls]
 
     fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    ax.plot(korn[:, 0], cls, "-", color=C_TOTAL, lw=2, label="$M_{dd}$")
-    ax.plot(korn[:, 1], cls, "--", color=C_WAVE, lw=2, label="$M_{crit}$")
+    ax.plot(m_dd, cls, "-", color=C_TOTAL, lw=2, label="$M_{dd}$")
     ax.axvline(summary["mach"], color="#222222", lw=1.1)
     ax.annotate(f"flight M = {summary['mach']:.3f}", (summary["mach"], 0.97),
                 xycoords=("data", "axes fraction"), xytext=(4, 0), textcoords="offset points",

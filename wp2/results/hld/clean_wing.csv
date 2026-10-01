@@ -2,7 +2,9 @@ quantity,value
 mach,0.19101130871291416
 section_cl_max_n,1.7974413633346558
 CLmax_clean,1.3470747484214751
-alpha_stall_clean,13.453342369742597
+alpha_crit_clean,13.453342369742597
+dalpha_CLmax,3.0
+alpha_stall_clean,16.275685613005024
 CL_alpha_per_deg,0.08246585423960907
 alpha_0L,-3.05925399130048
 eta_in,0.12

@@ -62,7 +62,7 @@ def test_leading_edge_device_does_not_shift_zero_lift_angle() -> None:
 
 
 def test_takeoff_setting_scales_increments() -> None:
-    clean = hs.CleanWing(cl_max=1.4, cl_alpha_per_deg=0.08, alpha_0l_deg=-3.0, alpha_stall_deg=15.0)
+    clean = hs.CleanWing(cl_max=1.4, cl_alpha_per_deg=0.08, alpha_0l_deg=-3.0, alpha_crit_deg=15.0)
     te = hs.device_effect(RECT, FOWLER, 0.3, 0.0, 0.6)
     le = hs.device_effect(RECT, SLAT, 0.15, 0.0, 0.9)
     land = hs.configuration(clean, te, le)
@@ -75,11 +75,22 @@ def test_takeoff_setting_scales_increments() -> None:
 
 
 def test_clean_configuration_reproduces_clean_stall_angle() -> None:
-    clean = hs.CleanWing(cl_max=1.4, cl_alpha_per_deg=0.08, alpha_0l_deg=-3.0, alpha_stall_deg=16.0)
+    clean = hs.CleanWing(cl_max=1.4, cl_alpha_per_deg=0.08, alpha_0l_deg=-3.0, alpha_crit_deg=16.0)
     none = hs.DeviceEffect(0.0, 0.0, 0.0, 1.0, 0.0)
     cfg = hs.configuration(clean, none, none)
     assert cfg.alpha_stall_deg == pytest.approx(clean.alpha_stall_deg)
     assert cfg.cl_max == pytest.approx(clean.cl_max)
+
+
+def test_stall_angle_is_datcom_high_ar_estimate() -> None:
+    clean = hs.CleanWing(cl_max=1.4, cl_alpha_per_deg=0.08, alpha_0l_deg=-3.0, alpha_crit_deg=16.0)
+    assert clean.alpha_stall_deg == pytest.approx(1.4 / 0.08 - 3.0 + hld_cfg.DALPHA_CLMAX_DEG)
+    te = hs.device_effect(RECT, FOWLER, 0.3, 0.0, 0.6)
+    le = hs.device_effect(RECT, SLAT, 0.15, 0.0, 0.9)
+    land = hs.configuration(clean, te, le)
+    assert land.alpha_stall_deg == pytest.approx(
+        land.cl_max / land.cl_alpha_per_deg + land.alpha_0l_deg + hld_cfg.DALPHA_CLMAX_DEG
+    )
 
 
 def test_min_eta_out_meets_requirement_exactly() -> None:

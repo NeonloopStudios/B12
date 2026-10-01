@@ -410,7 +410,7 @@ first, then the VSPAERO scripts in `openvsp`.
 `config/wing.py` and `wing/geometry.py`, NACA 25112 sections) at the `config.CRUISE`
 condition:
 
-    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn/Lock)
+    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn + ADSEE)
 
 - **VSPAERO (VLM)** gives CL, CMy and the induced drag. Its own `CDo` (a
   flat-plate skin-friction estimate) is discarded.
@@ -422,8 +422,10 @@ condition:
   correction (c / c_ref)^-0.2 -> integrated over the span. A strip past
   the polar's cl_max gets cd = NaN (and the whole angle of attack has no
   CD); the first such wing CL is reported as `CL_first_section_stall`.
-- **Wave drag**: swept Korn equation (kappa_A from `config.kappa_a`) with
-  Lock's 20 (M - M_crit)^4.
+- **Wave drag** (ADSEE): M_dd from the swept Korn equation (kappa_A from
+  `config.kappa_a`, half-chord sweep), then
+  CD_wave = 0.002 [1 + 2.5 (M_dd - M) / 0.05]^-1 for M < M_dd and
+  0.002 [1 + (M - M_dd) / 0.05]^2.5 for M >= M_dd.
 
 Lift and moment stay inviscid. Details in `wing/viscous_correction.py`.
 
@@ -450,7 +452,9 @@ from `wp2/`) compares every trailing-edge x leading-edge device combination
    critical-section method with the XFoil landing polar.
 2. ADSEE increments per device (`hld/sizing.py`):
    dCL_max = 0.9 dcl_max (S_wf/S) cos(Lambda_hinge), S'/S, and the
-   alpha_0L shift; take-off = 60% of the landing increment.
+   alpha_0L shift; take-off = 60% of the landing increment. Stall angle
+   alpha_s = CL_max / CL_alpha + alpha_0L + dalpha_CLmax (DATCOM, high-AR
+   wings), with dalpha_CLmax read off the chart (`config.hld.DALPHA_CLMAX_DEG`).
 3. Pareto front of CL_max,L vs. a qualitative mechanism-complexity rank.
 
 Span limits, spar positions and the (optional) CL_max requirements are the

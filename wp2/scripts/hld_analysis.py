@@ -48,6 +48,8 @@ def main() -> None:
         "mach": config.LANDING.mach_freestream,
         "section_cl_max_n": cl_max_n,
         "CLmax_clean": clean.cl_max,
+        "alpha_crit_clean": clean.alpha_crit_deg,
+        "dalpha_CLmax": cfg.DALPHA_CLMAX_DEG,
         "alpha_stall_clean": clean.alpha_stall_deg,
         "CL_alpha_per_deg": clean.cl_alpha_per_deg,
         "alpha_0L": clean.alpha_0l_deg,
@@ -66,9 +68,13 @@ def main() -> None:
     df.sort_values("CLmax_L", ascending=False).to_csv(paths.HLD_DIR / "comparison.csv", index=False)
 
     print(
-        f"\nClean wing, M = {config.LANDING.mach_freestream:.3f}: CL_max = {clean.cl_max:.3f} at "
-        f"alpha = {clean.alpha_stall_deg:.2f} deg (section cl_max,n = {cl_max_n:.3f}), "
+        f"\nClean wing, M = {config.LANDING.mach_freestream:.3f}: CL_max = {clean.cl_max:.3f} "
+        f"(first section reaches cl_max,n = {cl_max_n:.3f} at alpha = {clean.alpha_crit_deg:.2f} deg), "
         f"CL_alpha = {clean.cl_alpha_per_deg:.4f} /deg, alpha_0L = {clean.alpha_0l_deg:.2f} deg"
+    )
+    print(
+        f"Stall angle (DATCOM, dalpha_CLmax = {cfg.DALPHA_CLMAX_DEG:.1f} deg): "
+        f"alpha_s = {clean.alpha_stall_deg:.2f} deg"
     )
     print(
         f"Devices: TE eta {cfg.ETA_IN}-{cfg.ETA_OUT_TE}, c_f/c = {cfg.FLAP_CHORD_RATIO:.2f}, hinge sweep {te_sweep:.1f} deg; "

@@ -7,7 +7,9 @@ added to, and the comparison across every TE x LE combination.
 1. Clean-wing CL_max at M ~ 0.2 (config.LANDING: sea level, 65 m/s):
    VSPAERO (VLM) spanwise lift + critical-section method with the XFoil
    landing polar -- the wing CL at which the first strip's sweep-normal
-   cl_n = cl / cos^2(sweep) reaches the section cl_max.
+   cl_n = cl / cos^2(sweep) reaches the section cl_max. The linear VLM lift
+   curve has no pre-stall round-off, so the stall angle is not that wing
+   alpha but the DATCOM high-AR estimate (b12wp2.hld.sizing.stall_angle).
 2. Every trailing-edge x leading-edge device combination of
    config.hld.TE_DEVICES x config.hld.LE_DEVICES, sized on the same
    available span, through the ADSEE empirical increments (b12wp2.hld.sizing),
@@ -73,9 +75,9 @@ def clean_wing() -> tuple[hs.CleanWing, pd.DataFrame, pd.DataFrame, float]:
             "clean_wing: section cl_max not reached inside the alpha sweep, "
             f"widen config.solvers.HLD_ALPHA_END (max cl_n / cl_max_n = {up['max_cl_ratio'].max():.3f})"
         )
-    alpha_stall = float(np.interp(1.0, up["max_cl_ratio"], up["alpha"]))
-    cl_max = float(np.interp(alpha_stall, up["alpha"], up["CL"]))
-    return hs.CleanWing(cl_max, float(cl_alpha), alpha_0l, alpha_stall), polar, strips, cl_max_n
+    alpha_crit = float(np.interp(1.0, up["max_cl_ratio"], up["alpha"]))
+    cl_max = float(np.interp(alpha_crit, up["alpha"], up["CL"]))
+    return hs.CleanWing(cl_max, float(cl_alpha), alpha_0l, alpha_crit), polar, strips, cl_max_n
 
 
 # ============================================================

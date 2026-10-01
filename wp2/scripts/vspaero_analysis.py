@@ -4,8 +4,8 @@
 """WP2: run the 3D wing analysis at cruise and write its results.
 
 Drives b12wp2.wing.vspaero: VSPAERO (VLM) for lift, moment and induced drag,
-the XFoil section polar for profile drag, the swept Korn equation and Lock's
-approximation for wave drag. Prints the corrected polar and the key figures
+the XFoil section polar for profile drag, the swept Korn equation and the
+ADSEE drag-rise formula for wave drag. Prints the corrected polar and the key figures
 of it, then draws the plots.
 
 Must be run from the OpenVSP Python environment, from the wp2/ folder:

@@ -148,25 +148,26 @@ def strip_profile_drag(
 
 
 # ============================================================
-#  WAVE DRAG (Korn equation + Lock's approximation)
+#  WAVE DRAG (ADSEE: Korn equation + empirical drag rise)
 # ============================================================
 
-# M_crit = M_dd - (0.1 / 80)^(1/3): the Mach at which Lock's
-# 20 (M - M_crit)^4 reaches dCD/dM = 0.1, i.e. the drag-divergence definition.
-KORN_MCRIT_OFFSET = (0.1 / 80) ** (1 / 3)
 
-
-def korn_swept(kappa_a: float, t_c: float, cl: float, sweep_rad: float) -> tuple[float, float]:
-    """(M_dd, M_crit) of a swept wing from the Korn equation with simple
-    sweep theory: M_dd = kappa/cos - (t/c)/cos^2 - CL/(10 cos^3).
+def korn_swept(kappa_a: float, t_c: float, cl: float, sweep_rad: float) -> float:
+    """M_dd of a swept wing from the Korn equation with simple sweep theory:
+    M_dd = kappa/cos - (t/c)/cos^2 - CL/(10 cos^3).
 
     Reduces to compressibility.korn_mdd for zero sweep.
     """
     cos_s = math.cos(sweep_rad)
-    m_dd = kappa_a / cos_s - t_c / cos_s**2 - cl / (10 * cos_s**3)
-    return m_dd, m_dd - KORN_MCRIT_OFFSET
+    return kappa_a / cos_s - t_c / cos_s**2 - cl / (10 * cos_s**3)
 
 
-def lock_wave_drag(mach: float, m_crit: float) -> float:
-    """Lock's approximation: CD_wave = 20 (M - M_crit)^4 for M > M_crit."""
-    return 20 * (mach - m_crit) ** 4 if mach > m_crit else 0.0
+def wave_drag(mach: float, m_dd: float) -> float:
+    """ADSEE wave drag (0.002 at M = M_dd):
+
+        M <  M_dd:  CD_wave = 0.002 [1 + 2.5 (M_dd - M) / 0.05]^-1
+        M >= M_dd:  CD_wave = 0.002 [1 + (M - M_dd) / 0.05]^2.5
+    """
+    if mach < m_dd:
+        return 0.002 / (1 + 2.5 * (m_dd - mach) / 0.05)
+    return 0.002 * (1 + (mach - m_dd) / 0.05) ** 2.5
