@@ -75,7 +75,7 @@ REAR_SPAR = 0.7
 FLAP_CHORD_RATIO = 1.0 - REAR_SPAR  # c_f / c
 SLAT_CHORD_RATIO = FRONT_SPAR  # c_s / c
 
-# --- requirements from WP1 (None = not yet available, checks skipped) ---
+# --- requirements from WP1 ---
 
-CL_MAX_L_REQ: float | None = None
-CL_MAX_TO_REQ: float | None = None
+CL_MAX_L_REQ: float | None = 2.49
+CL_MAX_TO_REQ: float | None = 2

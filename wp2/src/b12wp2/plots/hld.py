@@ -84,7 +84,6 @@ def plot_heatmap(df: pd.DataFrame, cl_max_clean: float, req: float | None, out_d
     ax.tick_params(which="both", length=0)
     for s in ax.spines.values():
         s.set_visible(False)
-    ax.set_title(f"Landing $C_{{L,max}}$ per configuration (clean wing {cl_max_clean:.2f})")
     ax.set_ylabel("trailing-edge device")
     fig.colorbar(im, ax=ax, label="$C_{L,max}$ landing", fraction=0.04, pad=0.02)
     fig.tight_layout()
@@ -114,8 +113,7 @@ def plot_cl_max_vs_complexity(
     ax.annotate(f"clean wing {cl_max_clean:.2f}", (1.0, cl_max_clean), xycoords=("axes fraction", "data"),
                 xytext=(-4, 4), textcoords="offset points", fontsize=8, color=C_CLEAN, ha="right")
     _req_line(ax, req, "required $C_{L,max}$ landing")
-    ax.set(xlabel="mechanism complexity rank (TE + LE, qualitative)", ylabel="$C_{L,max}$ landing",
-           title="Maximum lift vs. complexity")
+    ax.set(xlabel="mechanism complexity rank (TE + LE, qualitative)", ylabel="$C_{L,max}$ landing")
     ax.set_xticks(range(int(df["complexity"].min()), int(df["complexity"].max()) + 1))
     ax.legend(fontsize=8, frameon=False, loc="upper left")
     _style_axes(ax, horizontal_zero=False, vertical_zero=False)
@@ -177,8 +175,6 @@ def plot_lift_curves(
         a.set(xlabel="α [deg] (aircraft reference, wing incidence included)", title=title)
         _style_axes(a)
     ax[0].set_ylabel("$C_L$")
-    fig.suptitle("Lift curves of the Pareto-front configurations (VLM slope, ADSEE increments; "
-                 "equal-slope TE devices share one line up to their own stall point)", fontsize=10)
     fig.tight_layout()
     fig.savefig(out_dir / "lift_curves.png", dpi=DPI)
     plt.close(fig)
@@ -216,7 +212,7 @@ def plot_planform(planform: hs.Planform, layout: Layout, out_dir: Path) -> None:
     ax.set_xlim(-0.5, bh * 1.12)
     ax.set_ylim(x_at(1, 1) + 0.6, -0.8)
     ax.set_aspect("equal")
-    ax.set(xlabel="y [m]", ylabel="x [m]", title="High-lift device layout (right half-wing)")
+    ax.set(xlabel="y [m]", ylabel="x [m]")
     ax.legend(fontsize=8, frameon=False, loc="lower left", ncol=3)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
