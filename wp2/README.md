@@ -410,7 +410,7 @@ first, then the VSPAERO scripts in `openvsp`.
 `config/wing.py` and `wing/geometry.py`, NACA 25112 sections) at the `config.CRUISE`
 condition:
 
-    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (Korn + ADSEE)
+    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (ADSEE)
 
 - **VSPAERO (VLM)** gives CL, CMy and the induced drag. Its own `CDo` (a
   flat-plate skin-friction estimate) is discarded.

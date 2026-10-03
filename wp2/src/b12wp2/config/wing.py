@@ -29,7 +29,7 @@ SWEEP_LOC = 0.25  # chord fraction the sweep is measured at (quarter chord)
 SWEEP_DEG = math.degrees(SWEEP_RAD)  # 24.02 deg
 
 DIHEDRAL_DEG = 2.6
-TWIST_TIP_DEG = 0.0  # tip twist relative to the root (negative = wash-out)
+TWIST_TIP_DEG = -2.0  # tip twist relative to the root (negative = wash-out)
 TWIST_LOC = 0.25  # twist axis as a chord fraction
 INCIDENCE_DEG = 2.0  # wing incidence, added on top of the VSPAERO angle of attack
 
