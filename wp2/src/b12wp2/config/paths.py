@@ -83,6 +83,9 @@ def wing_run_dir(airfoil_stem: str) -> Path:
 
 HLD_RUN_DIR = HLD_DIR / RUN_SUBDIR
 
+# OpenVSP model with the high-lift devices and ailerons in colour (b12wp2.wing.hld_model)
+HLD_VSP3 = HLD_DIR / "wing_hld.vsp3"
+
 
 def discover_airfoils() -> list[Path]:
     """All candidate airfoil .dat files, sorted for deterministic ordering.

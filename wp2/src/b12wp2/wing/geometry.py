@@ -115,7 +115,7 @@ def mac_thickness() -> float:
 # ============================================================
 
 
-def _set_airfoil(surf: str, idx: int, path: Path) -> None:
+def set_airfoil(surf: str, idx: int, path: Path) -> None:
     upper, lower = read_airfoil_dat(path)
     vsp.ChangeXSecShape(surf, idx, vsp.XS_FILE_AIRFOIL)
     xs = vsp.GetXSec(surf, idx)
@@ -153,8 +153,8 @@ def build_wing() -> str:
     vsp.Update()
 
     surf = vsp.GetXSecSurf(wid, 0)
-    _set_airfoil(surf, 0, cfg.AIRFOIL_ROOT)
-    _set_airfoil(surf, 1, cfg.AIRFOIL_TIP)
+    set_airfoil(surf, 0, cfg.AIRFOIL_ROOT)
+    set_airfoil(surf, 1, cfg.AIRFOIL_TIP)
     vsp.Update()
     return wid
 

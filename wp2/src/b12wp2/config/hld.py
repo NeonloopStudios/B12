@@ -83,6 +83,18 @@ REAR_SPAR = 0.7
 FLAP_CHORD_RATIO = 1.0 - REAR_SPAR  # c_f / c
 SLAT_CHORD_RATIO = FRONT_SPAR  # c_s / c
 
+# --- aileron: behind the rear spar, outboard of the trailing-edge devices ---
+
+ETA_OUT_AILERON = 1.0
+AILERON_CHORD_RATIO = FLAP_CHORD_RATIO  # c_a / c
+
+# --- selected configuration (names from TE_DEVICES / LE_DEVICES) ---
+# Only used to name and colour the devices in the OpenVSP model of
+# b12wp2.wing.hld_model; the comparison itself runs over every combination.
+
+SELECTED_TE = "Fowler"
+SELECTED_LE = "LE flap"
+
 # --- requirements from WP1 ---
 
 CL_MAX_L_REQ: float | None = 2.49
