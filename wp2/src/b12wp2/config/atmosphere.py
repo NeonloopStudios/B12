@@ -55,6 +55,9 @@ def isa_atmosphere(altitude_m: float) -> tuple[float, float, float]:
 def sutherland_viscosity(temperature_k: float) -> float:
     """Dynamic viscosity of air (Pa s) via Sutherland's law, for Reynolds
     number. Constants are the standard values for air (mu0 at T0=273.15 K).
+
+    Law: Sutherland, Phil. Mag. 5th ser. 36 (1893) 507-531, eq. (4).
+    S = 110.4 K: ISO 2533:1975, Standard Atmosphere.
     """
     mu0, t0, s = 1.716e-5, 273.15, 110.4
     return mu0 * (temperature_k / t0) ** 1.5 * (t0 + s) / (temperature_k + s)
