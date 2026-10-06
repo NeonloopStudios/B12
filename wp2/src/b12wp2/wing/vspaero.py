@@ -4,12 +4,18 @@
 """3D wing analysis at cruise: VSPAERO (VLM) + XFoil profile drag + ADSEE
 wave drag, for the wing of b12wp2.wing.geometry with NACA 25112 sections.
 
-    CD = CDi (VSPAERO, Trefftz plane) + CD_profile (XFoil strips) + CD_wave (ADSEE)
+    CD = CDi (lifting line on the VLM span loading) + CD_profile (XFoil strips) + CD_wave (ADSEE)
 
 - VSPAERO: inviscid VLM angle-of-attack sweep at the cruise condition of
-  config.CRUISE. Kept: CL, CMy and the wake (Trefftz-plane) induced drag
-  CDiw. Discarded: VSPAERO's own CDo (a flat-plate skin-friction estimate)
-  and its surface-integrated CDi (goes negative near CL = 0).
+  config.CRUISE. Kept: CL, CMy and the spanwise strip loads. Discarded:
+  VSPAERO's own CDo (a flat-plate skin-friction estimate) and both of its
+  induced drags. The surface-integrated CDi goes negative near CL = 0; the
+  wake (Trefftz-plane) CDiw depends on sweep rather than on the loading --
+  for this planform its span efficiency is 1.17 unswept and 0.80 at the
+  design sweep, while the span loading itself is near-elliptic (0.99-1.00)
+  in both cases. CDiw is kept in the polar as CDiw_vsp, for comparison only.
+- Induced drag: Prandtl's lifting-line Fourier analysis of the VSPAERO
+  span loading cl c(y), see b12wp2.common.drag_polar.induced_drag_from_loading.
 - Profile drag: the spanwise strip loads of every angle of attack are run
   through the XFoil cruise polar, see b12wp2.wing.viscous_correction.
 - Wave drag: XFoil models no shocks, so wave drag is added from the swept
@@ -162,7 +168,7 @@ def read_vsp_polar() -> pd.DataFrame:
         {
             "alpha": col("Alpha"),
             "CL": col("CLtot"),
-            "CDi": col("CDiw"),  # wake / Trefftz-plane induced drag
+            "CDiw_vsp": col("CDiw"),  # wake / Trefftz-plane induced drag, comparison only
             "CMy": col("CMytot"),
             "CDo_vsp": col("CDo"),
             "CDtot_vsp": col("CDtot"),
@@ -196,7 +202,7 @@ def read_strips() -> pd.DataFrame:
 def build_polar(
     vsp_polar: pd.DataFrame, strips: pd.DataFrame, section: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Add profile and wave drag to the VSPAERO polar.
+    """Add induced (lifting line), profile and wave drag to the VSPAERO polar.
 
     Returns (polar, strips) with the strip-level cl_n, cd_n, cd, status added.
     """
@@ -204,6 +210,9 @@ def build_polar(
     rows, strip_frames = [], []
     for _, p in vsp_polar.iterrows():
         s = strips[np.isclose(strips["alpha"], p["alpha"])]
+        ll = dp.induced_drag_from_loading(
+            s["y"], s["cl"] * s["chord"], wg.B, wing_cfg.AR, solvers.LIFTING_LINE_N_TERMS
+        )
         s_out, cd_prof = vc.strip_profile_drag(
             s, section, sweep_rad=config.SWEEP_RAD, chord_ref=config.CHORD_M,
             s_ref=wing_cfg.S_REF, mode=SWEEP_DRAG_MODE,
@@ -214,17 +223,20 @@ def build_polar(
         )
         m_dd = vc.korn_swept(KAPPA_A, T_C, float(p["CL"]), SWEEP_KORN)
         cd_wave = vc.wave_drag(MACH, m_dd)
-        cd = p["CDi"] + cd_prof + cd_wave
+        cd = ll.cdi + cd_prof + cd_wave
         ratio = s_out["cl_n"] / cl_max_n
         rows.append(
             {
                 **p.to_dict(),
+                "CDi": ll.cdi,
+                "span_eff": ll.span_efficiency,
+                "CL_strips": ll.cl,
                 "CD_profile": cd_prof,
                 f"CD_profile_{SWEEP_DRAG_MODE_SENSITIVITY}": cd_prof_sens,
                 "M_dd": m_dd,
                 "CD_wave": cd_wave,
                 "CD": cd,
-                f"CD_{SWEEP_DRAG_MODE_SENSITIVITY}": p["CDi"] + cd_prof_sens + cd_wave,
+                f"CD_{SWEEP_DRAG_MODE_SENSITIVITY}": ll.cdi + cd_prof_sens + cd_wave,
                 "L_D": p["CL"] / cd,
                 "L_D_no_wave": p["CL"] / (cd - cd_wave),
                 "n_stalled": int((s_out["status"] == vc.STALLED).sum()),
@@ -282,10 +294,15 @@ def summarise(polar: pd.DataFrame) -> dict[str, float]:
         "t_c": T_C,
         "kappa_a": KAPPA_A,
         "sweep_korn_deg": math.degrees(SWEEP_KORN),
-        # ADSEE-II Oswald factor of the clean wing; compared with the
-        # wing-only span efficiency CL^2 / (pi AR CDi) of the VLM
+        # ADSEE-II Oswald factor (whole aircraft) vs the wing-only span
+        # efficiency CL^2 / (pi AR CDi): from the lifting-line fit used in CD,
+        # and from VSPAERO's Trefftz-plane CDiw for comparison
         "sweep_half_chord_deg": math.degrees(SWEEP_HALF_CHORD),
         "oswald_e_adsee": OSWALD_E,
         "K_adsee": dp.induced_drag_factor(OSWALD_E, wing_cfg.AR),
-        "span_efficiency_vsp_design": CL_DESIGN**2 / (math.pi * wing_cfg.AR * _at_cl(polar, "CDi", CL_DESIGN)),
+        "span_efficiency_design": _at_cl(polar, "span_eff", CL_DESIGN),
+        "CDi_trefftz_vsp_design": _at_cl(polar, "CDiw_vsp", CL_DESIGN),
+        "span_efficiency_trefftz_vsp_design": (
+            CL_DESIGN**2 / (math.pi * wing_cfg.AR * _at_cl(polar, "CDiw_vsp", CL_DESIGN))
+        ),
     }
