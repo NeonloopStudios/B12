@@ -4,7 +4,7 @@
 """The weighted WP2 scorecard, built from the CSVs the earlier stages wrote.
 
 Reads every airfoil's cruise polar, landing polar and mcrit summary row,
-extracts the six scoring criteria, normalizes each one ratio-to-best across
+extracts the five scoring criteria, normalizes each one ratio-to-best across
 the candidate set (x/max(x), or 1/|x| over its max for pitching moment) and
 applies config.scoring.SCORING_WEIGHTS. Two tables come out:
 
@@ -70,9 +70,9 @@ def _load_raw_metrics(airfoil_stem: str) -> dict[str, float | str]:
         # approach", not a single-condition margin. It is the definition the
         # WP2 trade-off table uses (sheet row 17 = row 16 - row 13).
         "stall_margin": landing_stall_alpha - cruise_op["alpha"],
-        "cl_zero_angle": cl_zero,
         "pitching_moment": cruise_op["cm"],
         # context, not scored directly
+        "cl_zero_angle": cl_zero,
         "m_dd": m_dd,
         "margin_m_dd_minus_m_n": margin,
         "cruise_alpha_at_cl_n": cruise_op["alpha"],
@@ -126,7 +126,7 @@ def build_detail_table() -> pd.DataFrame:
 
     detail["total_score"] = total
     for col in (
-        "m_dd", "margin_m_dd_minus_m_n", "cruise_alpha_at_cl_n", "cruise_cd_at_cl_n",
+        "cl_zero_angle", "m_dd", "margin_m_dd_minus_m_n", "cruise_alpha_at_cl_n", "cruise_cd_at_cl_n",
         "stall_alpha_cruise", "cruise_cl_max", "landing_stall_alpha",
     ):
         detail[col] = raw[col]
