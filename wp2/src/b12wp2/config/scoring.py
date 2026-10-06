@@ -45,12 +45,15 @@ def kappa_a(airfoil_stem: str) -> float:
 
 # --- WP2 scoring matrix (selection criteria and their weights) ---
 
+#
+# Five criteria, as argued in the report's trade-off section. Zero-angle Cl is
+# still extracted (it is a column of the report's results table) but is not
+# weighted: its former 0.05 went to mach_critical (0.10 -> 0.15).
 SCORING_WEIGHTS: dict[str, float] = {
-    "mach_critical": 0.10,
+    "mach_critical": 0.15,
     "cl_cd_cruise": 0.45,
     "cl_max_landing": 0.15,
     "stall_margin": 0.15,  # angle for Cl_max (landing) minus the cruise angle
-    "cl_zero_angle": 0.05,
     "pitching_moment": 0.10,
 }
 
@@ -76,7 +79,6 @@ if abs(sum(SCORING_WEIGHTS.values()) - 1.0) > 1e-9:
 #   J5 = J12/MAX(J12:M12)   Cl/Cd cruise
 #   J6 = J15/MAX(J15:M15)   Cl_max landing
 #   J7 = J17/MAX(J17:M17)   stall margin, J17 = J16 - J13
-#   J8 = J14/MAX(J14:M14)   zero-angle Cl
 #   J9 = J20/MAX(J20:M20)   pitching moment, J20 = 1/ABS(J18)
 #
 # pitching_moment is scored on the reciprocal 1/|Cm| rather than on |Cm|
@@ -91,7 +93,6 @@ CRITERION_DIRECTION: dict[str, str] = {
     "cl_cd_cruise": "max",
     "cl_max_landing": "max",
     "stall_margin": "max",
-    "cl_zero_angle": "max",
     "pitching_moment": "min_abs",
 }
 
@@ -100,6 +101,5 @@ CRITERION_LABELS: dict[str, str] = {
     "cl_cd_cruise": "Cl/Cd cruise",
     "cl_max_landing": "Cl max landing",
     "stall_margin": "Stall Angle - Angle in Cruise",
-    "cl_zero_angle": "Zero Angle Cl",
     "pitching_moment": "Pitching Moment",
 }
