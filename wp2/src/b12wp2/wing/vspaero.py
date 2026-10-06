@@ -33,6 +33,7 @@ import openvsp as vsp
 import pandas as pd
 
 from b12wp2 import config
+from b12wp2.common import drag_polar as dp
 from b12wp2.config import paths, solvers, wing as wing_cfg
 from b12wp2.wing import geometry as wg, viscous_correction as vc
 
@@ -62,6 +63,9 @@ X_CG = wg.X_LE_MAC + 0.25 * wg.MAC  # moment reference at quarter MAC
 T_C = wg.mac_thickness()
 KAPPA_A = config.kappa_a(AIRFOIL_STEM)
 SWEEP_KORN = wg.sweep_at(solvers.KORN_SWEEP_LOC)
+
+SWEEP_HALF_CHORD = wg.sweep_at(0.5)  # the ADSEE-II Oswald formula uses Lambda_0.5c
+OSWALD_E = dp.oswald_factor(wing_cfg.AR, SWEEP_HALF_CHORD)
 
 
 # ============================================================
@@ -278,4 +282,10 @@ def summarise(polar: pd.DataFrame) -> dict[str, float]:
         "t_c": T_C,
         "kappa_a": KAPPA_A,
         "sweep_korn_deg": math.degrees(SWEEP_KORN),
+        # ADSEE-II Oswald factor of the clean wing; compared with the
+        # wing-only span efficiency CL^2 / (pi AR CDi) of the VLM
+        "sweep_half_chord_deg": math.degrees(SWEEP_HALF_CHORD),
+        "oswald_e_adsee": OSWALD_E,
+        "K_adsee": dp.induced_drag_factor(OSWALD_E, wing_cfg.AR),
+        "span_efficiency_vsp_design": CL_DESIGN**2 / (math.pi * wing_cfg.AR * _at_cl(polar, "CDi", CL_DESIGN)),
     }
