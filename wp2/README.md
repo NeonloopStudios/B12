@@ -32,6 +32,7 @@ wp2/
     section/    2D XFoil work -- data/ and plots/
     wing/       3D VSPAERO work, one subdirectory per airfoil
     hld/        high-lift device comparison
+    hld_v2/     high-lift device trade-off
     scorecard/  scorecard.csv, scorecard_detail.csv
 
 externals/
@@ -59,6 +60,7 @@ them.)
 | `python -m scripts.lift_slope <airfoil>` | lift-curve slope by OLS, `--scan` for window sensitivity | prints only |
 | `python -m scripts.vspaero_analysis` | 3D wing polar (OpenVSP env) | `results/wing/<airfoil>/` |
 | `python -m scripts.hld_analysis` | high-lift device comparison (OpenVSP env) | `results/hld/` |
+| `python -m scripts.hld_analysis_v2` | HLD trade-off: performance, occupied space, complexity (needs `results/hld/clean_wing.csv`) | `results/hld_v2/` |
 
 The steps read what earlier ones wrote, so order matters; `run_all` is that
 order. The two OpenVSP steps are deliberately not in it -- they need a
@@ -462,3 +464,30 @@ settings in `config/hld.py` and `config/solvers.py`. Outputs in
 `results/hld/`:
 `comparison.csv`, `clean_wing.csv`, `comparison_heatmap.png`,
 `cl_max_vs_complexity.png`, `lift_curves.png`, `planform_hld.png`.
+
+### HLD trade-off (v2)
+
+`scripts/hld_analysis_v2.py` (`python -m scripts.hld_analysis_v2` from
+`wp2/`, any environment: it reads the clean wing from
+`results/hld/clean_wing.csv` instead of rerunning VSPAERO) turns the
+comparison into a trade-off (`hld/tradeoff.py`, inputs in
+`config/hld_v2.py`):
+
+1. Every device type has its own chord, which sets the spar it pushes:
+   front spar at max(X_FS_MIN, c_s/c), rear spar at 1 - c_f/c.
+2. LE devices run the full span ETA_IN..ETA_OUT_LE; the TE device runs from
+   ETA_IN to at most the aileron's inboard edge (`ETA_AILERON_IN`). Each
+   TE x LE configuration is evaluated on a grid of TE outboard ends, which
+   always includes the smallest span meeting both CL_max requirements.
+3. Grid points below CL_max,L or CL_max,TO required are discarded.
+4. Criteria, every sub-metric min-max normalised over all feasible grid
+   points (1 = best): performance = 1/2 CL_max,L/req + 1/2 CL_max,TO/req;
+   occupied space = 1/2 front spar + 1/2 (1/2 c_f/c + 1/2 S_wf,TE/S);
+   complexity rank. Score = weighted sum (1/3 each by default); a
+   configuration's score is that of its best grid point.
+5. Weight sensitivity: the winner for every weight set on a 0.1 simplex grid.
+
+Outputs in `results/hld_v2/`: `tradeoff.csv` (one row per configuration,
+ranked, discarded ones with the reason), `tradeoff_grid.csv` (every grid
+point), `sensitivity.csv`, `performance_vs_area.png`, `tradeoff_scores.png`,
+`tradeoff_scatter.png`, `weight_sensitivity.png`.

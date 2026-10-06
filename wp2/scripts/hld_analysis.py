@@ -62,7 +62,7 @@ def main() -> None:
         "hinge_sweep_le_deg": le_sweep,
     }
     pd.DataFrame([clean_rows]).T.rename(columns={0: "value"}).to_csv(
-        paths.HLD_DIR / "clean_wing.csv", index_label="quantity"
+        paths.HLD_CLEAN_WING_CSV, index_label="quantity"
     )
     polar.to_csv(paths.HLD_DIR / "clean_polar_landing.csv", index=False)
     df.sort_values("CLmax_L", ascending=False).to_csv(paths.HLD_DIR / "comparison.csv", index=False)
