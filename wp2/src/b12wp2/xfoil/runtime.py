@@ -337,7 +337,8 @@ def run_two_leg_polar(
     so a bad excursion at one extreme (e.g. deep stall on the upper leg)
     can't leave corrupted BL state that taints the other leg's results.
     The two legs' alpha=0 point is identical by construction; the lower
-    leg's copy is dropped before merging.
+    leg's copy is dropped before merging. Isolated non-converged points are
+    then retried once (see _retry_isolated_failures).
     """
     upper_alphas = np.arange(0.0, alpha_high_deg + alpha_step_deg, alpha_step_deg)
     lower_alphas = np.arange(0.0, alpha_low_deg - alpha_step_deg, -alpha_step_deg)
@@ -350,7 +351,52 @@ def run_two_leg_polar(
     lower = lower[lower["alpha"] != 0.0]
 
     polar = pd.concat([lower, upper], ignore_index=True)
-    return polar.sort_values("alpha").reset_index(drop=True)
+    polar = polar.sort_values("alpha").reset_index(drop=True)
+    return _retry_isolated_failures(
+        polar, airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit, alpha_step_deg=alpha_step_deg
+    )
+
+
+def _retry_isolated_failures(
+    polar: pd.DataFrame,
+    airfoil: Airfoil,
+    *,
+    mach: float,
+    reynolds: float,
+    ncrit: float,
+    alpha_step_deg: float,
+) -> pd.DataFrame:
+    """Re-solve each isolated non-converged point once, warm-started from a
+    converged neighbour.
+
+    "Isolated" means both neighbours (alpha -/+ alpha_step_deg) converged, so
+    the point lies inside the converged range and is not part of the stall
+    breakdown at either end of the polar. Such points are iteration-limit
+    misses, not physical breakdown -- verified on the 30 deg-sweep cruise
+    polars: NASA_SC(2)-0712 failed at alpha = 0 (the cold-start seed of both
+    legs, final RMS 6.9e-3) with alpha = -0.25 and +0.25 both converged.
+    Each retry runs in a fresh session: solve the neighbour, then the point,
+    the same warm start XFoil gets in interactive use. The lower neighbour is
+    tried first, then the upper one. A point that still fails stays failed.
+    """
+    converged_alphas = {round(float(a), 6) for a in polar.loc[polar["converged"], "alpha"]}
+    polar = polar.copy()
+    for idx in polar.index[~polar["converged"]]:
+        alpha = float(polar.at[idx, "alpha"])
+        neighbours = [round(alpha - alpha_step_deg, 6), round(alpha + alpha_step_deg, 6)]
+        if not all(nb in converged_alphas for nb in neighbours):
+            continue
+        for nb in neighbours:
+            with xfoil_session(airfoil, mach=mach, reynolds=reynolds, ncrit=ncrit) as xf:
+                retry = run_alpha_sweep(xf, [nb, alpha], stop_after_n_nonconverged=2)
+            if len(retry) == 2 and bool(retry["converged"].iloc[1]):
+                row = retry.iloc[1].copy()
+                row["note"] = f"converged on retry, warm-started from alpha={nb:g} deg"
+                polar.loc[idx, row.index] = row.to_numpy()
+                break
+    polar["converged"] = polar["converged"].astype(bool)
+    polar["diverged"] = polar["diverged"].astype(bool)
+    return polar
 
 
 def solve_at_cl(xf: Any, cl_target: float) -> dict[str, float | bool]:
