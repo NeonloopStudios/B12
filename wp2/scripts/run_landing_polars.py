@@ -20,7 +20,7 @@ from pathlib import Path
 import pandas as pd
 
 from b12wp2 import config
-from b12wp2.config import solvers
+from b12wp2.config import paths, solvers
 from b12wp2.xfoil import polar_analysis, runtime as xfoil_runtime
 
 
@@ -64,8 +64,7 @@ def _sanity_check(airfoil_stem: str, polar: pd.DataFrame) -> None:
 
 
 def main() -> None:
-    out_dir = config.RESULTS_DIR / "data"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    paths.DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     print(
         f"Landing condition (sea level, V={config.LANDING_SPEED_MS} m/s): "
@@ -74,7 +73,7 @@ def main() -> None:
     )
     for airfoil_path in config.discover_airfoils():
         polar = run_landing_polar(airfoil_path)
-        out_path = out_dir / f"{airfoil_path.stem}_landing_polar.csv"
+        out_path = paths.polar_csv(airfoil_path.stem, "landing")
         polar.to_csv(out_path, index=False)
         _sanity_check(airfoil_path.stem, polar)
         print(f"    -> {out_path}")
