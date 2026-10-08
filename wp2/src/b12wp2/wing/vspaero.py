@@ -61,7 +61,7 @@ X_CG = wg.X_LE_MAC + 0.25 * wg.MAC  # moment reference at quarter MAC
 
 T_C = wg.mac_thickness()
 KAPPA_A = config.kappa_a(AIRFOIL_STEM)
-SWEEP_KORN = wg.sweep_at(solvers.KORN_SWEEP_LOC)
+SWEEP_KORN = config.SECTION_SWEEP_RAD  # same line as the 2D reduction (planform.SECTION_SWEEP_LOC)
 
 
 # ============================================================
@@ -201,12 +201,12 @@ def build_polar(
     for _, p in vsp_polar.iterrows():
         s = strips[np.isclose(strips["alpha"], p["alpha"])]
         s_out, cd_prof = vc.strip_profile_drag(
-            s, section, sweep_rad=config.SWEEP_RAD, chord_ref=config.CHORD_M,
+            s, section, sweep_rad=config.SECTION_SWEEP_RAD, chord_ref=config.CHORD_M,
             s_ref=wing_cfg.S_REF, mode=SWEEP_DRAG_MODE,
         )
         cd_prof_sens = cd_prof * (
-            vc.sweep_drag_factor(SWEEP_DRAG_MODE_SENSITIVITY, config.SWEEP_RAD)
-            / vc.sweep_drag_factor(SWEEP_DRAG_MODE, config.SWEEP_RAD)
+            vc.sweep_drag_factor(SWEEP_DRAG_MODE_SENSITIVITY, config.SECTION_SWEEP_RAD)
+            / vc.sweep_drag_factor(SWEEP_DRAG_MODE, config.SECTION_SWEEP_RAD)
         )
         m_dd = vc.korn_swept(KAPPA_A, T_C, float(p["CL"]), SWEEP_KORN)
         cd_wave = vc.wave_drag(MACH, m_dd)

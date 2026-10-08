@@ -4,29 +4,27 @@
 # Created: 2026-09-22
 """Wing planform design variables and the VLM mesh they are meshed with.
 
-The planform numbers are the WP1 sizing used in the stand-alone VSP_analysis
-study (S, AR, taper, dihedral, incidence). The quarter-chord sweep is not
-repeated here: it is mission.SWEEP_RAD, so the 3D model and the XFoil
-sweep-theory reduction cannot drift apart.
+S, AR, taper and the quarter-chord sweep are not repeated here: they live in
+config/planform.py, which the XFoil sweep-theory reduction (mission.py) also
+reads, so the 3D model and the 2D sections cannot drift apart. They are
+re-exported below under their usual names.
 
-Everything in this module is an input. The quantities derived from it (span,
-chords, MAC, sweep of any chord line) are computed in b12wp2.wing.geometry.
+Everything else in this module is an input of the 3D model only. The
+quantities derived from the planform (span, chords, MAC, sweep of any chord
+line) are computed in config/planform.py.
 """
 from __future__ import annotations
 
-import math
-
-from b12wp2.config.mission import SWEEP_RAD
+from b12wp2.config.planform import AR as AR  # re-exported
+from b12wp2.config.planform import S_REF as S_REF
+from b12wp2.config.planform import SWEEP_C4_DEG
+from b12wp2.config.planform import SWEEP_LOC as SWEEP_LOC
+from b12wp2.config.planform import TAPER as TAPER
 from b12wp2.config.paths import AIRFOILS_DIR
 
 # --- planform ---
 
-S_REF = 66.7  # wing area, both halves [m^2]
-AR = 9.50  # aspect ratio [-]
-TAPER = 0.40  # c_tip / c_root [-]
-
-SWEEP_LOC = 0.25  # chord fraction the sweep is measured at (quarter chord)
-SWEEP_DEG = math.degrees(SWEEP_RAD)  # 24.02 deg
+SWEEP_DEG = SWEEP_C4_DEG  # quarter-chord sweep, from config/planform.py
 
 DIHEDRAL_DEG = 2.6
 TWIST_TIP_DEG = -2.0  # tip twist relative to the root (negative = wash-out)

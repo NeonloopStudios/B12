@@ -3,12 +3,13 @@
 # Created: 2026-09-22
 """Wing planform geometry and the OpenVSP model built from it.
 
-The design variables themselves are in b12wp2.config.wing (and the
-quarter-chord sweep in b12wp2.config.mission, shared with the XFoil
-sweep-theory reduction so the 3D model and the 2D sections cannot use
-different angles). What is computed here is everything that follows from
-them: span, chords, MAC, the sweep of any chord line, the t/c at the MAC --
-and the OpenVSP geom itself.
+The planform (S, AR, taper, quarter-chord sweep) and what follows from it
+(span, chords, MAC, the sweep of any chord line) are in
+b12wp2.config.planform, shared with the XFoil sweep-theory reduction so the
+3D model and the 2D sections cannot use different geometry; they are
+re-exported here under their usual names. The other 3D inputs are in
+b12wp2.config.wing. What is computed here is the t/c at the MAC and the
+OpenVSP geom itself.
 
 Deliberately has its own .dat reader instead of reusing
 b12wp2.xfoil.runtime.load_airfoil_dat: importing that module loads the
@@ -24,27 +25,24 @@ import numpy as np
 import numpy.typing as npt
 import openvsp as vsp
 
-from b12wp2.config import mission, wing as cfg
+from b12wp2.config import planform, wing as cfg
 
 # ============================================================
 #  DERIVED QUANTITIES
 # ============================================================
 
-B = math.sqrt(cfg.S_REF * cfg.AR)  # span [m]
-B_HALF = B / 2
-C_ROOT = 2 * cfg.S_REF / (B * (1 + cfg.TAPER))
-C_TIP = cfg.TAPER * C_ROOT
+B = planform.B  # span [m]
+B_HALF = planform.B_HALF
+C_ROOT = planform.C_ROOT
+C_TIP = planform.C_TIP
 
-MAC = 2 / 3 * C_ROOT * (1 + cfg.TAPER + cfg.TAPER**2) / (1 + cfg.TAPER)
-Y_MAC = B / 6 * (1 + 2 * cfg.TAPER) / (1 + cfg.TAPER)
+MAC = planform.MAC
+Y_MAC = planform.Y_MAC
 
-TAN_SWEEP_LE = math.tan(mission.SWEEP_RAD) + cfg.SWEEP_LOC * (C_ROOT - C_TIP) / B_HALF
+TAN_SWEEP_LE = planform.TAN_SWEEP_LE
 X_LE_MAC = cfg.X_LE_ROOT + Y_MAC * TAN_SWEEP_LE
 
-
-def sweep_at(chord_fraction: float) -> float:
-    """Sweep angle [rad] of the line at the given chord fraction."""
-    return math.atan(TAN_SWEEP_LE - chord_fraction * (C_ROOT - C_TIP) / B_HALF)
+sweep_at = planform.sweep_at  # sweep angle [rad] of the line at a chord fraction
 
 
 # ============================================================

@@ -15,6 +15,7 @@ import math
 import pytest
 
 from b12wp2 import config
+from b12wp2.config import planform  # noqa: F401  (makes config.planform resolvable)
 
 
 def test_isa_sea_level_matches_standard_values() -> None:
@@ -41,8 +42,8 @@ def test_isa_rejects_out_of_range_altitude() -> None:
 
 
 def test_cruise_mach_normal_matches_hand_derivation() -> None:
-    # M_n = M_inf * cos(Lambda) ~ 0.703
-    assert config.CRUISE.mach_normal == pytest.approx(0.703, abs=0.001)
+    # M_n = M_inf * cos(Lambda_c/2) = 0.77 * cos(28.024 deg) ~ 0.680
+    assert config.CRUISE.mach_normal == pytest.approx(0.6797, abs=0.0005)
 
 
 def test_cruise_v_freestream_matches_hand_derivation() -> None:
@@ -50,14 +51,36 @@ def test_cruise_v_freestream_matches_hand_derivation() -> None:
     assert config.CRUISE.v_freestream == pytest.approx(228.4, abs=0.1)
 
 
-def test_sweep_angle_matches_expected_value() -> None:
-    assert math.degrees(config.SWEEP_RAD) == pytest.approx(24.02, abs=0.01)
+def test_planform_matches_hand_derivation() -> None:
+    # S = 66.7, AR = 9.5, taper 0.4: b = sqrt(S AR) = 25.17 m,
+    # c_r = 2S / (b (1 + taper)) = 3.785 m, MAC = 2/3 c_r (1+t+t^2)/(1+t) = 2.812 m,
+    # y_MAC = b/6 (1+2t)/(1+t) = 5.394 m.
+    assert config.planform.B == pytest.approx(25.172, abs=0.001)
+    assert config.planform.C_ROOT == pytest.approx(3.785, abs=0.001)
+    assert config.planform.MAC == pytest.approx(2.812, abs=0.001)
+    assert config.planform.Y_MAC == pytest.approx(5.394, abs=0.001)
+
+
+def test_sweep_lines_match_hand_derivation() -> None:
+    # tan(L_x) = tan(L_c/4) - (4/AR)(x - 1/4)(1 - t)/(1 + t), L_c/4 = 30 deg
+    sweep_le = math.degrees(config.planform.sweep_at(0.0))
+    sweep_c2 = math.degrees(config.planform.sweep_at(0.5))
+    assert math.degrees(config.planform.sweep_at(0.25)) == pytest.approx(30.0, abs=1e-9)
+    assert sweep_le == pytest.approx(31.901, abs=0.001)
+    assert sweep_c2 == pytest.approx(28.024, abs=0.001)
+
+
+def test_section_conditions_use_half_chord_sweep_and_mac() -> None:
+    assert config.SECTION_SWEEP_RAD == pytest.approx(config.planform.sweep_at(0.5))
+    for cond in (config.CRUISE, config.LANDING):
+        assert cond.sweep_rad == pytest.approx(config.SECTION_SWEEP_RAD)
+        assert cond.chord_m == pytest.approx(config.planform.MAC)
 
 
 def test_cl_normal_raises_without_cl_wing() -> None:
     cond = config.FlightCondition(
         name="test", altitude_m=0.0, mach_freestream=0.5,
-        sweep_rad=config.SWEEP_RAD, ncrit=9.0,
+        sweep_rad=config.SECTION_SWEEP_RAD, ncrit=9.0,
     )
     with pytest.raises(ValueError, match="cl_wing is not set"):
         _ = cond.cl_normal
@@ -66,7 +89,7 @@ def test_cl_normal_raises_without_cl_wing() -> None:
 def test_reynolds_normal_raises_without_chord() -> None:
     cond = config.FlightCondition(
         name="test", altitude_m=0.0, mach_freestream=0.5,
-        sweep_rad=config.SWEEP_RAD, ncrit=9.0,
+        sweep_rad=config.SECTION_SWEEP_RAD, ncrit=9.0,
     )
     with pytest.raises(ValueError, match="chord_m is not set"):
         _ = cond.reynolds_normal

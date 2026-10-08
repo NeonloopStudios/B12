@@ -47,7 +47,6 @@ VSPAERO_ALPHA_NPTS = 15
 VSPAERO_WAKE_ITER = 5
 VSPAERO_N_CPU = 4
 
-KORN_SWEEP_LOC = 0.5  # chord fraction of the sweep line used in the Korn equation
 SWEEP_DRAG_MODE = "friction"  # baseline, see b12wp2.wing.viscous_correction.sweep_drag_factor
 SWEEP_DRAG_MODE_SENSITIVITY = "cos3"
 

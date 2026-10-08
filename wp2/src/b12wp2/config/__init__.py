@@ -28,7 +28,7 @@ from b12wp2.config.mission import (
     FT_TO_M,
     LANDING,
     LANDING_SPEED_MS,
-    SWEEP_RAD,
+    SECTION_SWEEP_RAD,
     FlightCondition,
     level_flight_cl,
 )
@@ -52,7 +52,7 @@ __all__ = [
     "LANDING_SPEED_MS",
     "RESULTS_DIR",
     "SCORING_WEIGHTS",
-    "SWEEP_RAD",
+    "SECTION_SWEEP_RAD",
     "WP2_DIR",
     "discover_airfoils",
     "isa_atmosphere",

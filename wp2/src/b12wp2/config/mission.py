@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from b12wp2.config import planform
 from b12wp2.config.atmosphere import isa_atmosphere, sutherland_viscosity
 
 FT_TO_M = 0.3048
@@ -109,21 +110,25 @@ class FlightCondition:
 
 # --- Mission constants ---
 
-SWEEP_RAD = 0.419271315  # 24.02 deg, quarter-chord sweep
+# The 2D sections are analysed normal to the half-chord line (same line as the
+# 3D Korn wave-drag estimate), not the quarter-chord line the planform is
+# specified on. Derived from the planform, not typed in.
+SECTION_SWEEP_RAD = planform.SECTION_SWEEP_RAD  # 28.02 deg for 30 deg quarter-chord sweep
 
-CHORD_M = 2.649904207  # streamwise chord at the analysis station (WP1 sizing);
-# fixed wing geometry -- same value for cruise and landing, only V/rho/sweep
-# effects differ between flight conditions.
+# Streamwise MAC of the current planform. Re_n uses the normal chord,
+# CHORD_M * cos(SECTION_SWEEP_RAD); same value for cruise and landing.
+CHORD_M = planform.MAC
 
 CRUISE = FlightCondition(
     name="cruise",
     altitude_m=35_000 * FT_TO_M,
     mach_freestream=0.77,
-    sweep_rad=SWEEP_RAD,
+    sweep_rad=SECTION_SWEEP_RAD,
     ncrit=8.0,
     chord_m=CHORD_M,
     # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
-    # eq. 8.13), computed externally from WP1 cruise weight and wing area.
+    # eq. 8.13), computed externally from WP1 cruise weight and wing area;
+    # unchanged by the WP3 redesign (same W, S, altitude and Mach).
     # Locates the cruise operating point on the polar; used by cl_cd_cruise,
     # stall_margin, pitching_moment, and mcrit_sweep.py's Mach-critical sweep.
     cl_wing=0.489433403,
@@ -138,51 +143,11 @@ LANDING = FlightCondition(
     name="landing",
     altitude_m=0.0,  # sea level
     mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
-    sweep_rad=SWEEP_RAD,
+    sweep_rad=SECTION_SWEEP_RAD,
     ncrit=8.0,
     chord_m=CHORD_M,
     # cl_wing intentionally left unset and NOT required: "Cl max landing" in
     # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
-    # point -- none of the 6 scoring criteria need a required-Cl at landing.
-    cl_wing=None,
-)
-
-# --- Mission constants ---
-
-SWEEP_RAD = 0.419271315  # 24.02 deg, quarter-chord sweep
-
-CHORD_M = 2.649904207  # streamwise chord at the analysis station (WP1 sizing);
-# fixed wing geometry -- same value for cruise and landing, only V/rho/sweep
-# effects differ between flight conditions.
-
-CRUISE = FlightCondition(
-    name="cruise",
-    altitude_m=35_000 * FT_TO_M,
-    mach_freestream=0.77,
-    sweep_rad=SWEEP_RAD,
-    ncrit=8.0,
-    chord_m=CHORD_M,
-    # Required 3D wing Cl at cruise, Cl = 2W/(rho V^2 S) (level-flight trim,
-    # eq. 8.13), computed externally from WP1 cruise weight and wing area.
-    # Locates the cruise operating point on the polar; used by cl_cd_cruise,
-    # stall_margin, pitching_moment, and mcrit_sweep.py's Mach-critical sweep.
-    cl_wing=0.489433403,
-)
-
-# Landing: sea level, 65 m/s approach speed. Mach is derived (V / speed of
-# sound at sea level), not a separately-given number, so it stays
-# consistent with isa_atmosphere by construction.
-LANDING_SPEED_MS = 65.0
-
-LANDING = FlightCondition(
-    name="landing",
-    altitude_m=0.0,  # sea level
-    mach_freestream=LANDING_SPEED_MS / isa_atmosphere(0.0)[1],
-    sweep_rad=SWEEP_RAD,
-    ncrit=8.0,
-    chord_m=CHORD_M,
-    # cl_wing intentionally left unset and NOT required: "Cl max landing" in
-    # the scorecard is the polar's Cl_max at the landing Re/M, not a trim
-    # point -- none of the 6 scoring criteria need a required-Cl at landing.
+    # point -- none of the scoring criteria need a required-Cl at landing.
     cl_wing=None,
 )

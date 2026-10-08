@@ -59,7 +59,7 @@ def clean_wing() -> tuple[hs.CleanWing, pd.DataFrame, pd.DataFrame, float]:
     )
     polar = va.read_vsp_polar()
     strips = va.read_strips()
-    strips["cl_n"] = vc.normal_cl(strips["cl"].to_numpy(), config.SWEEP_RAD)
+    strips["cl_n"] = vc.normal_cl(strips["cl"].to_numpy(), config.SECTION_SWEEP_RAD)
     strips["cl_ratio"] = strips["cl_n"] / cl_max_n
     ratio = strips.groupby("alpha")["cl_ratio"].max()
     polar["max_cl_ratio"] = polar["alpha"].map(ratio)
