@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-09-22
 """3D wing analysis at cruise: VSPAERO (VLM) + XFoil profile drag + ADSEE
-wave drag, for the wing of b12wp2.wing.geometry with NACA 25112 sections.
+wave drag, for the wing of b12wp2.wing.geometry with NASA SC(2)-0712 sections.
 
     CD = CDi (lifting line on the VLM span loading) + CD_profile (XFoil strips) + CD_wave (ADSEE)
 

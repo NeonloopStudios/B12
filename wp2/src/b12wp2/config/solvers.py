@@ -40,9 +40,11 @@ MCRIT_MACH_GRID: npt.NDArray[np.float64] = np.arange(0.30, 0.951, 0.005)
 
 # --- VSPAERO cruise sweep (scripts/vspaero_analysis.py) ---
 
-VSPAERO_ALPHA_START = -4.0  # [deg], VSPAERO angle of attack (wing incidence comes on top)
+# Starts low enough to bracket CL = 0 (alpha_0L): the aft-cambered
+# supercritical section puts it near -6 deg.
+VSPAERO_ALPHA_START = -8.0  # [deg], VSPAERO angle of attack (wing incidence comes on top)
 VSPAERO_ALPHA_END = 10.0
-VSPAERO_ALPHA_NPTS = 15
+VSPAERO_ALPHA_NPTS = 19
 
 VSPAERO_WAKE_ITER = 5
 VSPAERO_N_CPU = 4
@@ -57,9 +59,9 @@ SWEEP_DRAG_MODE_SENSITIVITY = "cos3"
 
 # --- VSPAERO landing sweep for the clean wing (scripts/hld_analysis.py) ---
 
-HLD_ALPHA_START = -4.0
+HLD_ALPHA_START = -8.0  # must bracket CL = 0, see VSPAERO_ALPHA_START
 HLD_ALPHA_END = 20.0
-HLD_ALPHA_NPTS = 25
+HLD_ALPHA_NPTS = 29
 HLD_LINEAR_RANGE = (-4.0, 6.0)  # alpha range for the CL_alpha fit [deg]
 
 # --- Lift-curve slope fit (scripts/lift_slope.py) ---

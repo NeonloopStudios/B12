@@ -36,7 +36,7 @@ Z_ROOT = 0.3  # [m]
 
 # --- sections ---
 
-AIRFOIL_ROOT = AIRFOILS_DIR / "NACA_25112.dat"
+AIRFOIL_ROOT = AIRFOILS_DIR / "NASA_SC(2)-0712.dat"
 AIRFOIL_TIP = AIRFOIL_ROOT
 
 # --- VLM mesh ---

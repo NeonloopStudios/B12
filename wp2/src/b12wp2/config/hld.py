@@ -61,11 +61,13 @@ DALPHA_0L_AIRFOIL_TAKEOFF = -10.0
 
 # Stall angle beyond the linear-lift intercept of CL_max [deg], high-AR wings:
 #     alpha_s = CL_max / CL_alpha + alpha_0L + dalpha_CLmax
-# Read off the DATCOM chart (course Figure 3, 0.2 <= M <= 0.6) for
-# sharpness dY = 26 t/c = 3.12 (NACA 25112, 5-digit, t/c = 0.12) and
-# Lambda_LE = 26.1 deg: between the dY = 3 and dY = 4 curves, close to 3.
-# Manual chart reading: re-read it if the airfoil, t/c or sweep change.
-DALPHA_CLMAX_DEG = 3.0
+# Read off the DATCOM chart (course Figure 3, 0.2 <= M <= 0.6) for the
+# NASA SC(2)-0712 and Lambda_LE = 31.9 deg. Sharpness dY = y_u(6% c) -
+# y_u(0.15% c) of the streamwise section, in % chord; Table 12.1 has no
+# supercritical entry, so it is taken from the .dat ordinates (spline in
+# sqrt(x)): dY = 2.97. Chart at 31.9 deg: 3.41 (dY = 3), 4.24 (dY = 2)
+# -> 3.4 deg. Manual chart reading: re-read it if the airfoil, t/c or sweep change.
+DALPHA_CLMAX_DEG = 3.4
 
 # Take-off setting as a fraction of the landing-setting dCL_max and c'/c - 1
 TAKEOFF_FRACTION = 0.7

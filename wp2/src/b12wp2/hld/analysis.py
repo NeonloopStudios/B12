@@ -67,6 +67,11 @@ def clean_wing() -> tuple[hs.CleanWing, pd.DataFrame, pd.DataFrame, float]:
     lo, hi = solvers.HLD_LINEAR_RANGE
     lin = polar[(polar["alpha"] >= lo) & (polar["alpha"] <= hi)]
     cl_alpha, _ = np.polyfit(lin["alpha"], lin["CL"], 1)
+    if not polar["CL"].min() <= 0.0 <= polar["CL"].max():
+        raise RuntimeError(
+            "clean_wing: CL = 0 not inside the alpha sweep, alpha_0L would be clamped "
+            f"-- lower config.solvers.HLD_ALPHA_START (CL range {polar['CL'].min():.3f} .. {polar['CL'].max():.3f})"
+        )
     alpha_0l = float(np.interp(0.0, polar["CL"], polar["alpha"]))
 
     up = polar[polar["alpha"] >= 0].sort_values("alpha")
