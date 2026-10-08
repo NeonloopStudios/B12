@@ -71,6 +71,8 @@ _ensure_process_setup()
 from xfoil import XFoil  # noqa: E402  (must follow the DLL-directory fix above)
 from xfoil.model import Airfoil  # noqa: E402
 
+from b12wp2.common.geometry import normal_section  # noqa: E402
+
 
 def _looks_like_float(token: str) -> bool:
     try:
@@ -184,6 +186,14 @@ def load_airfoil_dat(path: Path) -> Airfoil:
         )
 
     return Airfoil(np.array(xs, dtype=float), np.array(ys, dtype=float))
+
+
+def load_normal_section(path: Path, sweep_rad: float) -> Airfoil:
+    """Load a streamwise .dat section and return the section normal to the
+    sweep line, the one every 2D analysis runs on (see
+    b12wp2.common.geometry.normal_section).
+    """
+    return normal_section(load_airfoil_dat(path), sweep_rad)
 
 
 @contextlib.contextmanager

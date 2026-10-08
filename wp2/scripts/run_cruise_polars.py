@@ -3,8 +3,8 @@
 # Created: 2026-09-17
 """WP2 cruise polars for every candidate airfoil.
 
-For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
-CRUISE flight condition (config.CRUISE: M_n, Re_n, Ncrit) and writes the
+For each airfoil in wp2/airfoils/, takes its section normal to the sweep
+line and runs an angle-of-attack sweep at the CRUISE flight condition (config.CRUISE: M_n, Re_n, Ncrit) and writes the
 full polar to wp2/results/section/data/<airfoil>_cruise_polar.csv.
 
 This module only generates and saves the raw polar. Extracting the cruise
@@ -33,7 +33,7 @@ def run_cruise_polar(airfoil_path: Path) -> pd.DataFrame:
     see that function's docstring for why a cold start reliably fails at
     this Mach.
     """
-    airfoil = xfoil_runtime.load_airfoil_dat(airfoil_path)
+    airfoil = xfoil_runtime.load_normal_section(airfoil_path, config.CRUISE.sweep_rad)
     return xfoil_runtime.run_two_leg_polar(
         airfoil,
         mach=config.CRUISE.mach_normal,

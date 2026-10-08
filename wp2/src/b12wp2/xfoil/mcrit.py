@@ -31,8 +31,14 @@ def run_mcrit_analysis(
     """Return (M_crit, mach-sweep DataFrame, baseline Cp(x) DataFrame,
     summary dict) for one airfoil.
     """
-    airfoil = xfoil_runtime.load_airfoil_dat(airfoil_path)
+    # Everything here is in the plane normal to the sweep line: the normal
+    # section, Cl_n, M_n. The Korn equation in this plane,
+    # M_dd,n = kappa_A - (t/c)_n - Cl_n/10, is the swept Korn equation
+    # (wing.viscous_correction.korn_swept) multiplied by cos(sweep).
+    streamwise = xfoil_runtime.load_airfoil_dat(airfoil_path)
+    airfoil = geometry.normal_section(streamwise, config.CRUISE.sweep_rad)
     cl_n = config.CRUISE.cl_normal
+    thickness_to_chord_streamwise = geometry.max_thickness_to_chord(streamwise)
     thickness_to_chord = geometry.max_thickness_to_chord(airfoil)
     kappa_a = config.kappa_a(airfoil_path.stem)
 
@@ -51,7 +57,8 @@ def run_mcrit_analysis(
                 "m_crit": float("nan"),
                 "m_dd": m_dd,
                 "margin_m_dd_minus_m_n": margin,
-                "thickness_to_chord": thickness_to_chord,
+                "thickness_to_chord_streamwise": thickness_to_chord_streamwise,
+        "thickness_to_chord_normal": thickness_to_chord,
                 "cl_cruise": cl_n,
                 "kappa_a": kappa_a,
             }
@@ -67,7 +74,8 @@ def run_mcrit_analysis(
         "m_crit": float("nan") if m_crit is None else m_crit,
         "m_dd": m_dd,
         "margin_m_dd_minus_m_n": margin,
-        "thickness_to_chord": thickness_to_chord,
+        "thickness_to_chord_streamwise": thickness_to_chord_streamwise,
+        "thickness_to_chord_normal": thickness_to_chord,
         "cl_cruise": cl_n,
         "kappa_a": kappa_a,
     }

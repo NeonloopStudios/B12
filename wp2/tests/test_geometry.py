@@ -11,6 +11,8 @@ equation actually uses.
 """
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from b12wp2 import config
@@ -46,3 +48,20 @@ def test_max_thickness_all_current_candidates_covered() -> None:
     # silently skip the new airfoil
     found = {p.stem for p in config.discover_airfoils()}
     assert found == set(_XFOIL_REPORTED_MAX_THICKNESS)
+
+
+@pytest.mark.parametrize("sweep_deg", [0.0, 28.024, 45.0])
+def test_normal_section_scales_thickness_by_one_over_cos_sweep(sweep_deg: float) -> None:
+    # (t/c)_n = (t/c)_streamwise / cos(sweep); x/c unchanged
+    streamwise = xfoil_runtime.load_airfoil_dat(config.AIRFOILS_DIR / "NACA_25112.dat")
+    normal = geometry.normal_section(streamwise, math.radians(sweep_deg))
+    assert (normal.x == streamwise.x).all()
+    assert geometry.max_thickness_to_chord(normal) == pytest.approx(
+        geometry.max_thickness_to_chord(streamwise) / math.cos(math.radians(sweep_deg)), rel=1e-9
+    )
+
+
+def test_normal_section_rejects_unphysical_sweep() -> None:
+    streamwise = xfoil_runtime.load_airfoil_dat(config.AIRFOILS_DIR / "NACA_25112.dat")
+    with pytest.raises(ValueError):
+        geometry.normal_section(streamwise, math.pi / 2)

@@ -70,6 +70,17 @@ rerunning: every step discovers the current set through
 `kappa_A` classification in `config/scoring.py`, which is a design judgment
 and so raises rather than defaulting.
 
+### Section convention
+
+The `.dat` files are **streamwise** sections: that is how OpenVSP places
+them, and what the t/c bands and the swept Korn equation refer to. Every 2D
+step analyses the section **normal to the half-chord line**
+(`config.planform.SECTION_SWEEP_LOC = 0.5`, the same line the 3D Korn
+wave-drag estimate uses): y/c scaled by 1/cos(Lambda_c/2), at
+M_n = M cos(Lambda_c/2), Cl_n = CL / cos^2(Lambda_c/2) and Re_n on the normal
+MAC chord. The planform (S, AR, taper, quarter-chord sweep) lives in
+`config/planform.py`, shared by both stages.
+
 ## Installing XFoil (Windows, compiled from source)
 
 There is no working prebuilt `xfoil` wheel for modern Python/Windows, so the

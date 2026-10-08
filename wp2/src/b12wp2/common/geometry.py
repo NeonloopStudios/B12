@@ -5,9 +5,11 @@
 
 Split out from xfoil_runtime.py because this is pure geometry (no XFoil
 calls involved) -- needed by mcrit_sweep.py's Korn equation (M_dd needs
-t/c per airfoil).
+t/c per airfoil) and by the streamwise-to-normal section conversion.
 """
 from __future__ import annotations
+
+import math
 
 import numpy as np
 from xfoil.model import Airfoil
@@ -45,3 +47,18 @@ def max_thickness_to_chord(airfoil: Airfoil, n_stations: int = 400) -> float:
     upper_interp = np.interp(x_common, upper_x, upper_y)
     lower_interp = np.interp(x_common, lower_x, lower_y)
     return float((upper_interp - lower_interp).max())
+
+
+def normal_section(airfoil: Airfoil, sweep_rad: float) -> Airfoil:
+    """The section normal to a swept line, from the streamwise section.
+
+    The .dat files are streamwise sections (that is how OpenVSP places them,
+    and what the t/c bands and the swept Korn equation refer to). On a sheared
+    wing the normal chord is c cos(sweep) while the thicknesses and camber
+    ordinates are unchanged, so at the same x/c every y/c grows by
+    1/cos(sweep): (t/c)_n = (t/c)_streamwise / cos(sweep). XFoil analyses
+    this normal section at the normal Mach, Cl and Reynolds number.
+    """
+    if not (0.0 <= sweep_rad < math.pi / 2):
+        raise ValueError(f"normal_section: sweep_rad must be in [0, pi/2), got {sweep_rad}")
+    return Airfoil(airfoil.x.copy(), airfoil.y / math.cos(sweep_rad))

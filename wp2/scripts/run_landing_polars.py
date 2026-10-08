@@ -3,8 +3,8 @@
 # Created: 2026-09-17
 """WP2 landing polars for every candidate airfoil.
 
-For each airfoil in wp2/airfoils/, runs an angle-of-attack sweep at the
-LANDING flight condition (config.LANDING: M_n, Re_n, Ncrit) and writes the
+For each airfoil in wp2/airfoils/, takes its section normal to the sweep
+line and runs an angle-of-attack sweep at the LANDING flight condition (config.LANDING: M_n, Re_n, Ncrit) and writes the
 full polar to wp2/results/section/data/<airfoil>_landing_polar.csv.
 
 Unlike cruise, landing needs no required-Cl (config.LANDING.cl_wing is
@@ -26,7 +26,7 @@ from b12wp2.xfoil import polar_analysis, runtime as xfoil_runtime
 
 def run_landing_polar(airfoil_path: Path) -> pd.DataFrame:
     """Run the landing alpha sweep for one airfoil and return its polar."""
-    airfoil = xfoil_runtime.load_airfoil_dat(airfoil_path)
+    airfoil = xfoil_runtime.load_normal_section(airfoil_path, config.LANDING.sweep_rad)
     return xfoil_runtime.run_two_leg_polar(
         airfoil,
         mach=config.LANDING.mach_normal,

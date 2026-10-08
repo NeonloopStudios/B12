@@ -7,7 +7,8 @@ Runs b12wp2.xfoil.mcrit.run_mcrit_analysis over every airfoil in wp2/airfoils/
 and writes, per airfoil, the Mach sweep (mach, cp_min_corrected, cp_crit) and
 the baseline Cp(x) distribution the sweep was built from -- make_plots reads
 that back instead of re-invoking XFoil -- plus one summary row per airfoil
-(m_crit, m_dd, margin, thickness_to_chord, cl_cruise, kappa_a) in
+(m_crit, m_dd, margin, thickness_to_chord_streamwise, thickness_to_chord_normal,
+cl_cruise, kappa_a) in
 mcrit_summary.csv. File locations: config.paths.
 """
 from __future__ import annotations
@@ -47,7 +48,7 @@ def main() -> None:
         else:
             print(
                 f"  {stem}: M_crit={m_crit:.3f}, M_dd={summary['m_dd']:.3f} "
-                f"(kappa_A={summary['kappa_a']}, t/c={summary['thickness_to_chord']:.4f}), "
+                f"(kappa_A={summary['kappa_a']}, t/c_n={summary['thickness_to_chord_normal']:.4f}), "
                 f"margin(M_dd-M_n)={summary['margin_m_dd_minus_m_n']:+.3f}"
             )
         print(f"    -> {sweep_path}")
