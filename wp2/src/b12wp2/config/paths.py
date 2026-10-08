@@ -91,6 +91,11 @@ HLD_CLEAN_WING_CSV = HLD_DIR / "clean_wing.csv"
 # OpenVSP model with the high-lift devices and ailerons in colour (b12wp2.wing.hld_model)
 HLD_VSP3 = HLD_DIR / "wing_hld.vsp3"
 
+# 3D aerodynamic summary: the wing, clean-wing landing and HLD results in one
+# place (b12wp2.wing.aero_summary, b12wp2.plots.aero_summary, scripts/aero_summary_3d.py)
+AERO_SUMMARY_PDF = RESULTS_DIR / "aero_summary_3d.pdf"
+AERO_SUMMARY_CSV = RESULTS_DIR / "aero_summary_3d.csv"
+
 
 def discover_airfoils() -> list[Path]:
     """All candidate airfoil .dat files, sorted for deterministic ordering.

@@ -1,0 +1,72 @@
+section,quantity,value,unit,source,note
+Configuration,airfoil,NASA_SC(2)-0712,,config.wing,
+Configuration,S_ref,66.7,m^2,config.planform,
+Configuration,AR,9.5,-,config.planform,
+Configuration,taper,0.4,-,config.planform,
+Configuration,span,25.172405526687353,m,config.planform,
+Configuration,c_root,3.7853241393514825,m,config.planform,
+Configuration,c_tip,1.514129655740593,m,config.planform,
+Configuration,MAC,2.811955074946816,m,config.planform,
+Configuration,sweep_LE,31.90073801234116,deg,config.planform,
+Configuration,sweep_c4,29.999999999999996,deg,config.planform,
+Configuration,sweep_c2,28.023581804818225,deg,config.planform,"line of the 2D section reduction, Korn and the ADSEE Oswald formula"
+Configuration,t_c,0.1199,-,wing/NASA_SC(2)-0712/summary.csv,
+Configuration,kappa_A,0.95,-,wing/NASA_SC(2)-0712/summary.csv,supercritical section
+Configuration,incidence,2.0,deg,config.wing,
+Configuration,twist_tip,-2.0,deg,config.wing,wash-out
+Configuration,dihedral,2.0,deg,config.wing,
+Flight conditions,cruise_altitude,10668.0,m,config.mission,
+Flight conditions,cruise_mach,0.77,-,config.mission,
+Flight conditions,cruise_v,228.33226666942966,m/s,config.mission,
+Flight conditions,CL_design,0.489433403,-,wing/NASA_SC(2)-0712/summary.csv,"level-flight trim, WP1 weight and wing area"
+Flight conditions,cruise_mach_normal,0.6797208055399938,-,config.mission,normal to the half-chord line
+Flight conditions,cruise_cl_normal,0.6280785032281443,-,config.mission,
+Flight conditions,cruise_re_normal,13250004.621917967,-,config.mission,on the normal MAC
+Flight conditions,landing_v,65.0,m/s,config.mission,
+Flight conditions,landing_mach,0.19101130871291416,-,config.mission,sea level
+Flight conditions,landing_re_normal,9751129.417657869,-,config.mission,on the normal MAC
+Cruise wing (VSPAERO + XFoil + Korn),alpha_design,-1.0493187439517384,deg,wing/NASA_SC(2)-0712/summary.csv,"VSPAERO angle, the incidence comes on top"
+Cruise wing (VSPAERO + XFoil + Korn),CL_alpha_per_rad,5.692769514332847,1/rad,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),CL_alpha_per_deg,0.0993575715822667,1/deg,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),alpha_0L,-5.950042853303319,deg,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),CDi_design,0.0082450305346365,-,wing/NASA_SC(2)-0712/summary.csv,lifting line on the VLM span loading
+Cruise wing (VSPAERO + XFoil + Korn),CD_profile_design,0.0079349670312204,-,wing/NASA_SC(2)-0712/summary.csv,"XFoil strips, sweep mode 'friction'"
+Cruise wing (VSPAERO + XFoil + Korn),CD_wave_design,0.0003957428674611,-,wing/NASA_SC(2)-0712/summary.csv,swept Korn + ADSEE drag rise
+Cruise wing (VSPAERO + XFoil + Korn),CD_design,0.0165757404333181,-,wing/NASA_SC(2)-0712/summary.csv,all at CL_design
+Cruise wing (VSPAERO + XFoil + Korn),L_D_design,29.52709141223108,-,wing/NASA_SC(2)-0712/summary.csv,at CL_design
+Cruise wing (VSPAERO + XFoil + Korn),L_D_design_no_wave,30.249287801674445,-,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),L_D_design_cos3,34.71364609864066,-,wing/NASA_SC(2)-0712/summary.csv,optimistic sensitivity
+Cruise wing (VSPAERO + XFoil + Korn),L_D_max,29.551300095372014,-,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),CL_at_L_D_max,0.494363957744,-,wing/NASA_SC(2)-0712/summary.csv,
+Cruise wing (VSPAERO + XFoil + Korn),CMy_design,-0.1610980509356925,-,wing/NASA_SC(2)-0712/summary.csv,"at CL_design, inviscid"
+Cruise wing (VSPAERO + XFoil + Korn),M_dd_design,0.8511624028028268,-,wing/NASA_SC(2)-0712/summary.csv,at CL_design
+Cruise wing (VSPAERO + XFoil + Korn),CL_first_section_stall,0.9179275648078888,-,wing/NASA_SC(2)-0712/summary.csv,
+Oswald factor and span efficiency,oswald_e_adsee,0.5803768209975504,-,wing/NASA_SC(2)-0712/summary.csv,"whole aircraft, all lift-dependent drag; from AR and sweep c/2 only"
+Oswald factor and span efficiency,K_adsee,0.0577319813551987,-,wing/NASA_SC(2)-0712/summary.csv,
+Oswald factor and span efficiency,CDi_design_K_adsee,0.013829410705114792,-,computed,at CL_design
+Oswald factor and span efficiency,CDi_design_lifting_line,0.0082450305346365,-,wing/NASA_SC(2)-0712/summary.csv,"wing only, inviscid, at CL_design"
+Oswald factor and span efficiency,span_efficiency_lifting_line,0.9734675193240955,-,wing/NASA_SC(2)-0712/summary.csv,from Gamma(y) on the wing; the CDi used in the wing CD
+Oswald factor and span efficiency,CDi_design_vsp_near_field,0.007995259901468628,-,wing/NASA_SC(2)-0712/polar.csv,"wing only, inviscid, at CL_design"
+Oswald factor and span efficiency,span_efficiency_vsp_near_field,1.0038784880313512,-,wing/NASA_SC(2)-0712/polar.csv,"CDtot - CDo, surface-integrated panel forces; comparison only"
+Oswald factor and span efficiency,CDi_design_vsp_far_field,0.0099790049584064,-,wing/NASA_SC(2)-0712/summary.csv,"wing only, inviscid, at CL_design"
+Oswald factor and span efficiency,span_efficiency_vsp_far_field,0.8043156060908273,-,wing/NASA_SC(2)-0712/summary.csv,"CDiw, Trefftz plane; comparison only"
+Oswald factor and span efficiency,oswald_e_wing_polar,0.9126539566695794,-,"wing/NASA_SC(2)-0712/polar.csv, fit over CL 0.2..0.8","CD = CD0 + K CL^2 over CL 0.2-0.8; wing with profile and wave drag, no fuselage"
+Oswald factor and span efficiency,CD0_wing_polar,0.007861884292286458,-,"wing/NASA_SC(2)-0712/polar.csv, fit over CL 0.2..0.8",
+Oswald factor and span efficiency,K_wing_polar,0.03671304283946782,-,"wing/NASA_SC(2)-0712/polar.csv, fit over CL 0.2..0.8",
+Clean wing at landing (VSPAERO + DATCOM),landing_mach_hld,0.1910113087129141,-,hld/clean_wing.csv,
+Clean wing at landing (VSPAERO + DATCOM),section_cl_max_n,2.2735135555267334,-,hld/clean_wing.csv,XFoil landing polar
+Clean wing at landing (VSPAERO + DATCOM),CLmax_clean,1.5888967546400723,-,hld/clean_wing.csv,"first section reaches cl_max,n"
+Clean wing at landing (VSPAERO + DATCOM),alpha_crit_clean,14.49625017994396,deg,hld/clean_wing.csv,first section stall
+Clean wing at landing (VSPAERO + DATCOM),CL_alpha_landing_per_deg,0.0790925373170636,1/deg,hld/clean_wing.csv,
+Clean wing at landing (VSPAERO + DATCOM),alpha_0L_landing,-5.95305483751036,deg,hld/clean_wing.csv,
+Clean wing at landing (VSPAERO + DATCOM),LE_sharpness_dY,2.97,% c,config.hld,"y_u(6% c) - y_u(0.15% c), streamwise section"
+Clean wing at landing (VSPAERO + DATCOM),dalpha_CLmax,3.4,deg,hld/clean_wing.csv,DATCOM chart at the LE sweep
+Clean wing at landing (VSPAERO + DATCOM),alpha_stall_clean,17.53603078975374,deg,hld/clean_wing.csv,CL_max / CL_alpha + alpha_0L + dalpha_CLmax
+Clean wing at landing (VSPAERO + DATCOM),CL_max_L_req,2.49,-,config.hld,
+Clean wing at landing (VSPAERO + DATCOM),CL_max_TO_req,2,-,config.hld,
+High-lift devices (HLD v2 trade-off),hld_selected,Fowler,,hld_v2/tradeoff.csv,equal weights
+High-lift devices (HLD v2 trade-off),hld_score,0.5651517700040638,-,hld_v2/tradeoff.csv,
+High-lift devices (HLD v2 trade-off),hld_eta_out_te,0.75,-,hld_v2/tradeoff.csv,
+High-lift devices (HLD v2 trade-off),hld_CLmax_L,2.4951068408080435,-,hld_v2/tradeoff.csv,
+High-lift devices (HLD v2 trade-off),hld_CLmax_TO,2.223243814957652,-,hld_v2/tradeoff.csv,
+High-lift devices (HLD v2 trade-off),hld_alpha_stall_L,14.809161274003635,deg,hld_v2/tradeoff.csv,

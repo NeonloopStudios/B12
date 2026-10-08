@@ -125,3 +125,17 @@ def test_lifting_line_rejects_stations_outside_half_span() -> None:
     y = _stations()
     with pytest.raises(ValueError):
         drag_polar.induced_drag_from_loading(np.append(y, B), np.ones(y.size + 1), B, AR)
+
+
+def test_parabolic_fit_recovers_exact_polar() -> None:
+    cl = np.linspace(0.2, 0.8, 7)
+    k = drag_polar.induced_drag_factor(0.8, 9.5)
+    fit = drag_polar.fit_parabolic_polar(cl, 0.015 + k * cl**2, 9.5)
+    assert fit.cd0 == pytest.approx(0.015, abs=1e-12)
+    assert fit.k == pytest.approx(k, rel=1e-9)
+    assert fit.oswald == pytest.approx(0.8, rel=1e-9)
+
+
+def test_parabolic_fit_rejects_single_cl() -> None:
+    with pytest.raises(ValueError):
+        drag_polar.fit_parabolic_polar([0.5, 0.5], [0.02, 0.02], 9.5)

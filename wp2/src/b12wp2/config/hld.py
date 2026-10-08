@@ -67,6 +67,7 @@ DALPHA_0L_AIRFOIL_TAKEOFF = -10.0
 # supercritical entry, so it is taken from the .dat ordinates (spline in
 # sqrt(x)): dY = 2.97. Chart at 31.9 deg: 3.41 (dY = 3), 4.24 (dY = 2)
 # -> 3.4 deg. Manual chart reading: re-read it if the airfoil, t/c or sweep change.
+LE_SHARPNESS_DY = 2.97  # [% chord], the chart parameter above
 DALPHA_CLMAX_DEG = 3.4
 
 # Take-off setting as a fraction of the landing-setting dCL_max and c'/c - 1

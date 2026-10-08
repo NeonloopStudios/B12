@@ -61,6 +61,7 @@ them.)
 | `python -m scripts.vspaero_analysis` | 3D wing polar (OpenVSP env) | `results/wing/<airfoil>/` |
 | `python -m scripts.hld_analysis` | high-lift device comparison (OpenVSP env) | `results/hld/` |
 | `python -m scripts.hld_analysis_v2` | HLD trade-off: performance, occupied space, complexity (needs `results/hld/clean_wing.csv`) | `results/hld_v2/` |
+| `python -m scripts.aero_summary_3d` | 3D aerodynamic summary: wing polar, every Oswald / span-efficiency figure, clean wing at landing, HLD selection (needs the three steps above) | `results/aero_summary_3d.pdf`, `.csv` |
 
 The steps read what earlier ones wrote, so order matters; `run_all` is that
 order. The two OpenVSP steps are deliberately not in it -- they need a

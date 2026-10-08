@@ -104,3 +104,31 @@ def induced_drag_from_loading(
     cdi = math.pi * aspect_ratio * float(np.sum(n * a_n**2))
     span_eff = cl**2 / (math.pi * aspect_ratio * cdi) if cdi > 0.0 else float("nan")
     return LiftingLine(float(cl), cdi, span_eff)
+
+
+class ParabolicPolar(NamedTuple):
+    """Least-squares parabolic drag polar CD = CD0 + K CL^2."""
+
+    cd0: float
+    k: float
+    oswald: float  # effective Oswald factor 1 / (pi AR K)
+
+
+def fit_parabolic_polar(
+    cl: npt.ArrayLike, cd: npt.ArrayLike, aspect_ratio: float
+) -> ParabolicPolar:
+    """Fit CD = CD0 + K CL^2 to a computed polar and return CD0, K and the
+    effective Oswald factor e = 1 / (pi AR K) it implies -- the form of the
+    ADSEE drag polar, so e is comparable with oswald_factor().
+    """
+    cl_arr = np.asarray(cl, dtype=np.float64)
+    cd_arr = np.asarray(cd, dtype=np.float64)
+    if cl_arr.shape != cd_arr.shape or cl_arr.ndim != 1:
+        raise ValueError("fit_parabolic_polar: cl and cd must be 1D arrays of the same length")
+    if np.unique(cl_arr**2).size < 2:
+        raise ValueError("fit_parabolic_polar: needs at least 2 distinct CL^2 values")
+    if aspect_ratio <= 0.0:
+        raise ValueError(f"fit_parabolic_polar: aspect_ratio must be > 0, got {aspect_ratio}")
+    k, cd0 = np.polyfit(cl_arr**2, cd_arr, 1)
+    oswald = 1.0 / (math.pi * aspect_ratio * k) if k > 0.0 else float("nan")
+    return ParabolicPolar(float(cd0), float(k), oswald)

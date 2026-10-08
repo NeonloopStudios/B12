@@ -70,3 +70,10 @@ HLD_LINEAR_RANGE = (-4.0, 6.0)  # alpha range for the CL_alpha fit [deg]
 # the middle of the polar, and the slope is defined on the linear part.
 LIFT_SLOPE_ALPHA_LO_DEG = -3.0
 LIFT_SLOPE_ALPHA_HI_DEG = 3.0
+
+# --- 3D aerodynamic summary (scripts/aero_summary_3d.py) ---
+
+# CL range of the CD = CD0 + K CL^2 fit to the wing polar that gives its
+# effective Oswald factor: around CL_design = 0.489, below the first section
+# stall (CL ~ 0.92).
+OSWALD_FIT_CL_RANGE = (0.2, 0.8)
