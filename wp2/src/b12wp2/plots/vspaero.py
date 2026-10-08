@@ -105,7 +105,7 @@ def plot_drag_breakdown(polar: pd.DataFrame, summary: dict[str, float], out_dir:
     ax.stackplot(
         p["CL"], p["CDi"], p["CD_profile"], p["CD_wave"],
         colors=[C_INDUCED, C_PROFILE, C_WAVE], edgecolor="white", linewidth=1.5,
-        labels=["induced (VSPAERO)", "profile (XFoil strips)", "wave (ADSEE)"],
+        labels=["induced (lifting line, VLM loads)", "profile (XFoil strips)", "wave (ADSEE)"],
     )
     cl_d = summary["CL_design"]
     _design_line(ax, cl_d, horizontal=False)

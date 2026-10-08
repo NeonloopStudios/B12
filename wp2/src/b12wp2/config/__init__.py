@@ -8,6 +8,7 @@
     mission     flight conditions, sweep, chord -- the sweep-theory reduction
     wing        planform design variables and the VLM mesh
     hld         high-lift device table, span/chord fractions, requirements
+    hld_v2      HLD trade-off: device chords, aileron limit, weights
     solvers     alpha/Mach sweep ranges and solver settings, per stage
     scoring     scorecard criteria, weights and per-airfoil Korn kappa_A
 

@@ -21,6 +21,7 @@ RESULTS_DIR = WP2_DIR / "results"
 #   section/   2D XFoil work: polars, Mach-critical sweeps and their figures
 #   wing/      3D VSPAERO work, one subdirectory per airfoil
 #   hld/       high-lift device comparison
+#   hld_v2/    high-lift device trade-off (performance, occupied space, complexity)
 #   scorecard/ the weighted selection tables
 
 SECTION_DIR = RESULTS_DIR / "section"
@@ -29,6 +30,7 @@ PLOTS_DIR = SECTION_DIR / "plots"  # per-airfoil section figures + the compariso
 
 WING_DIR = RESULTS_DIR / "wing"  # 3D wing analysis, one subdirectory per airfoil
 HLD_DIR = RESULTS_DIR / "hld"  # high-lift device comparison
+HLD_V2_DIR = RESULTS_DIR / "hld_v2"  # high-lift device trade-off
 SCORECARD_DIR = RESULTS_DIR / "scorecard"
 
 SCORECARD_CSV = SCORECARD_DIR / "scorecard.csv"
@@ -82,6 +84,9 @@ def wing_run_dir(airfoil_stem: str) -> Path:
 
 
 HLD_RUN_DIR = HLD_DIR / RUN_SUBDIR
+
+# clean-wing lift at the landing condition: written by hld_analysis, read by hld_analysis_v2
+HLD_CLEAN_WING_CSV = HLD_DIR / "clean_wing.csv"
 
 # OpenVSP model with the high-lift devices and ailerons in colour (b12wp2.wing.hld_model)
 HLD_VSP3 = HLD_DIR / "wing_hld.vsp3"

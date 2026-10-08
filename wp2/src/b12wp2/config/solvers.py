@@ -47,6 +47,11 @@ VSPAERO_ALPHA_NPTS = 15
 VSPAERO_WAKE_ITER = 5
 VSPAERO_N_CPU = 4
 
+# Odd Fourier terms (n = 1, 3, ..., 13) of the lifting-line fit that gives the
+# induced drag from the VSPAERO span loading, see
+# b12wp2.common.drag_polar.induced_drag_from_loading
+LIFTING_LINE_N_TERMS = 7
+
 SWEEP_DRAG_MODE = "friction"  # baseline, see b12wp2.wing.viscous_correction.sweep_drag_factor
 SWEEP_DRAG_MODE_SENSITIVITY = "cos3"
 
