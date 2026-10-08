@@ -26,7 +26,7 @@ from b12wp2.config.paths import AIRFOILS_DIR
 
 SWEEP_DEG = SWEEP_C4_DEG  # quarter-chord sweep, from config/planform.py
 
-DIHEDRAL_DEG = 2.6
+DIHEDRAL_DEG = 2.0
 TWIST_TIP_DEG = -2.0  # tip twist relative to the root (negative = wash-out)
 TWIST_LOC = 0.25  # twist axis as a chord fraction
 INCIDENCE_DEG = 2.0  # wing incidence, added on top of the VSPAERO angle of attack
