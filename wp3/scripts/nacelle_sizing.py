@@ -3,7 +3,7 @@
 # Created: 2026-10-15
 """WP3.1 nacelle sizing: Torenbeek Type B nacelle of the selected engine.
 
-Run from wp3/:  python -m scripts.nacelle_sizing
+Run from wp3/:  python -m scripts.nacelle_sizing  (or as a file / Run button)
 
 Reads configs/propulsion.yaml, sizes one nacelle (textbook equations
 8.22-8.30), compares it with the engine datasheet, and writes
@@ -15,14 +15,21 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 
-import pandas as pd
+if __package__ in (None, ""):
+    # run as a file (e.g. the editor's Run button) instead of
+    # `python -m scripts.nacelle_sizing`: make wp3/src/ importable so
+    # `from b12wp3 import ...` resolves (same as wp2's OpenVSP scripts)
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from b12wp3.config.paths import NACELLE_CSV, NACELLE_PNG
-from b12wp3.config.propulsion import load_propulsion
-from b12wp3.config.yaml_io import ConfigError
-from b12wp3.plots.nacelle import plot_nacelle_outline
-from b12wp3.propulsion.nacelle import (
+import pandas as pd  # noqa: E402
+
+from b12wp3.config.paths import NACELLE_CSV, NACELLE_PNG  # noqa: E402
+from b12wp3.config.propulsion import load_propulsion  # noqa: E402
+from b12wp3.config.yaml_io import ConfigError  # noqa: E402
+from b12wp3.plots.nacelle import plot_nacelle_outline  # noqa: E402
+from b12wp3.propulsion.nacelle import (  # noqa: E402
     NacelleGeometry,
     gas_generator_function,
     size_type_b_nacelle,
