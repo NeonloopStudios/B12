@@ -18,9 +18,12 @@ Conventions (repeated in the YAML header):
   exposed area S_exp is the planform outside it.
 * x_c_max_thickness is the chord position of the maximum thickness, (x/c)_m
   in the form-factor equation.
-* Bodies (fuselage, nacelle) are a nose of length L1, a cylinder of length
-  L2 and a tail cone of length L3, all with the maximum diameter D. This is
-  the geometry of the ADSEE-II fuselage wetted-area formula.
+* The fuselage is a nose of length L1, a cylinder of length L2 and a tail
+  cone of length L3, all with the maximum diameter D. This is the geometry
+  of the ADSEE-II fuselage wetted-area formula.
+* A nacelle is the Torenbeek Type B outline: highlight diameter D_h, maximum
+  diameter D_n at the fraction beta of the length l_n, exit diameter D_ef
+  (scripts/nacelle_sizing.py computes them).
 * Flap eta_in / eta_out are fractions of the wing semi-span from the
   centreline, as in WP2. The flapped area S_flap is the wing planform area
   between them, both halves.
@@ -30,20 +33,15 @@ Conventions (repeated in the YAML header):
 
 from __future__ import annotations
 
-import dataclasses
-import logging
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
-
-import yaml
+from typing import Final
 
 from b12wp3.common.planform import TrapezoidalPlanform
 from b12wp3.config.paths import GEOMETRY_YAML
-
-logger = logging.getLogger(__name__)
+from b12wp3.config.yaml_io import ConfigError, build_section, number, read_mapping
 
 # ============================================================
 #  INPUT TYPES
@@ -133,6 +131,50 @@ class BodyInputs:
     def max_frontal_area_m2(self) -> float:
         """Maximum cross-section area A_max = pi D^2 / 4 [m^2]."""
         return math.pi * self.diameter_m**2 / 4.0
+
+
+@dataclass(frozen=True)
+class NacelleInputs:
+    """Outer geometry of one nacelle (Torenbeek Type B outline).
+
+    Attributes:
+        length_m: Nacelle length l_n, without the cone [m].
+        highlight_diameter_m: Highlight diameter D_h [m].
+        max_diameter_m: Maximum diameter D_n [m].
+        max_diameter_position: Position of D_n as a fraction beta of l_n [-].
+        exit_diameter_m: Exit diameter D_ef [m].
+    """
+
+    length_m: float
+    highlight_diameter_m: float
+    max_diameter_m: float
+    max_diameter_position: float
+    exit_diameter_m: float
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("length_m", self.length_m),
+            ("highlight_diameter_m", self.highlight_diameter_m),
+            ("exit_diameter_m", self.exit_diameter_m),
+        ):
+            if value <= 0.0:
+                raise ValueError(f"{name} must be > 0, got {value}")
+        if not 0.0 < self.max_diameter_position < 1.0:
+            raise ValueError(
+                "max_diameter_position must be in (0, 1), "
+                f"got {self.max_diameter_position}"
+            )
+        largest = max(self.highlight_diameter_m, self.exit_diameter_m)
+        if self.max_diameter_m < largest:
+            raise ValueError(
+                f"max_diameter_m {self.max_diameter_m} is smaller than the "
+                f"highlight or exit diameter {largest}"
+            )
+
+    @property
+    def max_frontal_area_m2(self) -> float:
+        """Maximum cross-section area pi D_n^2 / 4 [m^2]."""
+        return math.pi * self.max_diameter_m**2 / 4.0
 
 
 @dataclass(frozen=True)
@@ -228,7 +270,7 @@ class AircraftGeometry:
     horizontal_tail: LiftingSurfaceInputs
     vertical_tail: LiftingSurfaceInputs
     fuselage: BodyInputs
-    nacelle: BodyInputs
+    nacelle: NacelleInputs
     pylon: LiftingSurfaceInputs
     engine_count: int
     fuselage_aft: FuselageAftInputs
@@ -253,7 +295,7 @@ _SECTIONS: Final[Mapping[str, type]] = {
     "vertical_tail": LiftingSurfaceInputs,
     "fuselage": BodyInputs,
     "fuselage_aft": FuselageAftInputs,
-    "nacelle": BodyInputs,
+    "nacelle": NacelleInputs,
     "pylon": LiftingSurfaceInputs,
     "te_flap": FlapInputs,
     "le_flap": FlapInputs,
@@ -263,74 +305,34 @@ _SECTIONS: Final[Mapping[str, type]] = {
 _ENGINE_COUNT_KEY: Final[str] = "engine_count"
 
 
-class GeometryConfigError(ValueError):
+class GeometryConfigError(ConfigError):
     """The geometry YAML file has a wrong structure, a wrong type or nulls."""
 
 
-def _number(name: str, value: object, field_type: object) -> float | int:
-    """One YAML value, checked against the dataclass field type (int or float)."""
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise GeometryConfigError(f"{name} must be a number, got {value!r}")
-    if field_type == "int":
-        if not isinstance(value, int):
-            raise GeometryConfigError(f"{name} must be an integer, got {value!r}")
-        return value
-    return float(value)
-
-
 def _section[T](
-    raw: Mapping[str, object],
-    section: str,
-    cls: type[T],
-    missing: list[str],
+    raw: Mapping[str, object], section: str, cls: type[T], missing: list[str]
 ) -> T | None:
-    """Build one input dataclass from its YAML section.
-
-    Null keys are added to `missing` as "section.key"; the section is then
-    not built and None is returned.
-    """
-    content = raw[section]
-    if not isinstance(content, Mapping):
-        raise GeometryConfigError(f"section {section!r} must be a mapping")
-    fields = {f.name: f.type for f in dataclasses.fields(cls)}  # type: ignore[arg-type]  # cls is always a dataclass from _SECTIONS
-    keys = set(content)
-    if keys != set(fields):
-        raise GeometryConfigError(
-            f"section {section!r}: missing keys {sorted(set(fields) - keys)}, "
-            f"unknown keys {sorted(keys - set(fields))}"
-        )
-    nulls = [f"{section}.{key}" for key in fields if content[key] is None]
-    if nulls:
-        missing.extend(nulls)
-        return None
-    values: dict[str, Any] = {
-        key: _number(f"{section}.{key}", content[key], field_type)
-        for key, field_type in fields.items()
-    }
-    return cls(**values)
+    """build_section with the geometry error type."""
+    try:
+        return build_section(raw, section, cls, missing)
+    except ConfigError as error:
+        raise GeometryConfigError(str(error)) from error
 
 
 def _read_yaml(path: Path) -> Mapping[str, object]:
-    """Read the YAML file and check its top-level sections."""
+    """read_mapping with the geometry sections and error type."""
     try:
-        with path.open(encoding="utf-8") as stream:
-            raw = yaml.safe_load(stream)
-    except OSError as error:
-        logger.error("cannot read geometry file %s: %s", path, error)
-        raise GeometryConfigError(f"cannot read geometry file {path}") from error
-    except yaml.YAMLError as error:
-        logger.error("invalid YAML in %s: %s", path, error)
-        raise GeometryConfigError(f"invalid YAML in {path}") from error
-    if not isinstance(raw, Mapping):
-        raise GeometryConfigError(f"{path}: the top level must be a mapping")
-    expected = set(_SECTIONS) | {_ENGINE_COUNT_KEY}
-    keys = set(raw)
-    if keys != expected:
-        raise GeometryConfigError(
-            f"{path}: missing sections {sorted(expected - keys)}, "
-            f"unknown sections {sorted(keys - expected)}"
-        )
-    return raw
+        return read_mapping(path, set(_SECTIONS) | {_ENGINE_COUNT_KEY})
+    except ConfigError as error:
+        raise GeometryConfigError(str(error)) from error
+
+
+def _engine_count(value: object) -> float | int:
+    """The engine_count scalar, checked as an integer."""
+    try:
+        return number(_ENGINE_COUNT_KEY, value, "int")
+    except ConfigError as error:
+        raise GeometryConfigError(str(error)) from error
 
 
 def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
@@ -355,7 +357,7 @@ def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
     vertical_tail = _section(raw, "vertical_tail", LiftingSurfaceInputs, missing)
     fuselage = _section(raw, "fuselage", BodyInputs, missing)
     fuselage_aft = _section(raw, "fuselage_aft", FuselageAftInputs, missing)
-    nacelle = _section(raw, "nacelle", BodyInputs, missing)
+    nacelle = _section(raw, "nacelle", NacelleInputs, missing)
     pylon = _section(raw, "pylon", LiftingSurfaceInputs, missing)
     te_flap = _section(raw, "te_flap", FlapInputs, missing)
     le_flap = _section(raw, "le_flap", FlapInputs, missing)
@@ -363,9 +365,7 @@ def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
     nose_gear = _section(raw, "nose_gear", GearInputs, missing)
     engine_count_raw = raw[_ENGINE_COUNT_KEY]
     engine_count = (
-        None
-        if engine_count_raw is None
-        else int(_number(_ENGINE_COUNT_KEY, engine_count_raw, "int"))
+        None if engine_count_raw is None else int(_engine_count(engine_count_raw))
     )
     if engine_count is None:
         missing.append(_ENGINE_COUNT_KEY)

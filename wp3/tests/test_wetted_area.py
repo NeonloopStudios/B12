@@ -20,7 +20,12 @@ import math
 
 import pytest
 
-from b12wp3.drag.wetted_area import body_wetted_area, tail_wetted_area, wing_wetted_area
+from b12wp3.drag.wetted_area import (
+    body_wetted_area,
+    nacelle_wetted_area,
+    tail_wetted_area,
+    wing_wetted_area,
+)
 
 
 def _paraboloid_area(radius: float, height: float) -> float:
@@ -115,3 +120,24 @@ def test_body_wetted_area_invalid_input_raises(
 ) -> None:
     with pytest.raises(ValueError):
         body_wetted_area(d, l1, l2, l3)
+
+
+def test_nacelle_wetted_area_two_frustums_returns_hand_value() -> None:
+    # pi (1.0+1.2)/2 sqrt(2^2 + 0.1^2) + pi (1.2+0.8)/2 sqrt(3^2 + 0.2^2)
+    wetted = nacelle_wetted_area(5.0, 1.0, 1.2, 0.4, 0.8)
+
+    assert wetted == pytest.approx(16.365836517128407)
+
+
+def test_nacelle_wetted_area_constant_diameter_returns_cylinder() -> None:
+    wetted = nacelle_wetted_area(4.0, 1.5, 1.5, 0.35, 1.5)
+
+    assert wetted == pytest.approx(math.pi * 1.5 * 4.0)
+
+
+@pytest.mark.parametrize(("length", "position"), [(0.0, 0.35), (4.0, 0.0), (4.0, 1.0)])
+def test_nacelle_wetted_area_invalid_input_raises(
+    length: float, position: float
+) -> None:
+    with pytest.raises(ValueError):
+        nacelle_wetted_area(length, 1.0, 1.2, position, 0.8)

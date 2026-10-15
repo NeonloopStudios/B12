@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mateusz Suszynski
+# Created: 2026-10-15
+#
+# Engine inputs of the nacelle sizing (scripts/nacelle_sizing.py). Loaded and
+# validated by b12wp3.config.propulsion.load_propulsion(). Every key is
+# required; null is allowed only while a value is unknown.
+#
+# Selected engine (WP3.1, Table 3.1): GE CF34-8C5B1, two engines,
+# total take-off thrust 122.6 kN. Nacelle installation: Type B.
+
+engine:
+  takeoff_thrust_per_engine_n: 61300.0   # datasheet, 61.3 kN
+  bypass_ratio: 5.0                      # datasheet
+  turbine_inlet_temperature_k: 1830.0    # assumption: low end of 1830-1970 K
+  nozzle_efficiency: 0.98                # assumption: middle of 0.97-0.99
+  turbine_fan_efficiency: 0.75           # textbook typical value
+
+# Datasheet dimensions, for comparison with the sizing result only.
+reference:
+  fan_diameter_m: 1.17                   # 117 cm
+  nacelle_length_m: 3.25                 # 325 cm

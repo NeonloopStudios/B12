@@ -20,6 +20,7 @@ from b12wp3.config.geometry import (
     FuselageAftInputs,
     GearInputs,
     LiftingSurfaceInputs,
+    NacelleInputs,
 )
 from b12wp3.config.mission import FlightCondition, FlowRegime
 
@@ -68,7 +69,7 @@ def sample_geometry() -> AircraftGeometry:
         horizontal_tail=surface(15.0, 2, 0.0),
         vertical_tail=surface(10.0, 1, 0.0),
         fuselage=BodyInputs(4.0, 20.0, 8.0, 3.0),
-        nacelle=BodyInputs(0.5, 2.0, 1.0, 1.5),
+        nacelle=NacelleInputs(4.0, 1.07, 1.34, 0.35, 0.90),
         pylon=surface(2.0, 1, 0.0),
         engine_count=2,
         fuselage_aft=FuselageAftInputs(upsweep_deg=5.0, base_area_m2=0.1),

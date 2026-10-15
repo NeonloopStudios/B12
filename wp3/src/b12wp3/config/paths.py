@@ -24,12 +24,12 @@ DRAG_DIR: Final[Path] = RESULTS_DIR / "drag"  # class II drag (WP3.3a)
 DRAG_BUILDUP_CSV: Final[Path] = DRAG_DIR / "cd0_buildup.csv"
 DRAG_BREAKDOWN_PNG: Final[Path] = DRAG_DIR / "cd0_breakdown.png"
 
-<<<<<<< HEAD
 # --- inputs ---
 
 CONFIGS_DIR: Final[Path] = WP3_DIR / "configs"
 GEOMETRY_YAML: Final[Path] = CONFIGS_DIR / "geometry.yaml"  # every geometric input
-=======
+PROPULSION_YAML: Final[Path] = CONFIGS_DIR / "propulsion.yaml"  # engine inputs
+
 # drag due to lift at cruise (WP3.3a)
 INDUCED_DRAG_CSV: Final[Path] = DRAG_DIR / "induced_drag.csv"
 INDUCED_DRAG_PNG: Final[Path] = DRAG_DIR / "induced_drag.png"
@@ -41,4 +41,7 @@ ITERATION_DIR: Final[Path] = RESULTS_DIR / "iteration"  # WP3.4 inputs and resul
 # Oswald factor and K of the clean, take-off and landing configurations,
 # for the wing-loading diagram of WP3.4
 OSWALD_CONFIGURATIONS_CSV: Final[Path] = ITERATION_DIR / "oswald_configurations.csv"
->>>>>>> e2a97674cc76c9266c85c4a6c536a737d5c4b0db
+
+PROPULSION_DIR: Final[Path] = RESULTS_DIR / "propulsion"  # WP3.1 nacelle sizing
+NACELLE_CSV: Final[Path] = PROPULSION_DIR / "nacelle.csv"
+NACELLE_PNG: Final[Path] = PROPULSION_DIR / "nacelle.png"
