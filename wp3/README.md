@@ -1,0 +1,83 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Mateusz Suszynski
+Created: 2026-10-15
+-->
+
+# WP3 — Further Aircraft Design
+
+Propulsion, external layout, class II drag and weight, and the iteration to
+the final concept. The structure is the same as `wp2/`.
+
+## Layout
+
+```
+wp3/
+  scripts/      the runnable steps, one file per step
+  src/b12wp3/   the analysis library every step calls
+    config/     every input: paths, atmosphere, mission, geometry, drag settings
+    common/     trapezoidal planform (wing, tails, pylons)
+    drag/       WP3.3a class II drag: component drag build-up (ADSEE-II)
+    propulsion/ WP3.1  engine configuration and selection
+    fuselage/   WP3.2a fuselage external dimensions
+    landing_gear/ WP3.2b landing gear dimensions and position
+    empennage/  WP3.2c/d empennage trade-off and tail sizing
+    weight/     WP3.3b class II weight estimation
+    iteration/  WP3.4a class I / class II iteration, wing-loading diagram
+    concept/    WP3.4b/d parameter table, compliance matrix
+    plots/      the figures, one module per stage
+  tests/        pytest suite over src/b12wp3/
+  results/      generated CSVs and plots, one directory per stage
+```
+
+wp3 does not import the wp2 package. Values taken from WP2 (the wing
+planform, the cruise condition) are typed into `config/` with their source.
+
+## Inputs
+
+All geometric inputs are in `src/b12wp3/config/geometry.py`, one constant per
+quantity. An input that is not designed yet is `None`.
+`geometry.aircraft_geometry()` raises one error that names every unset input.
+
+Class II drag settings are in `src/b12wp3/config/drag.py`:
+
+| Setting | Value | Source |
+|---|---|---|
+| Laminar fraction | civil jet, classic production metal: 5 % fuselage, 10 % wing and tails | ADSEE-II table |
+| Surface roughness k | smooth paint, 0.634e-5 m | ADSEE-II table |
+| Interference factors | not set | to be added |
+| Miscellaneous drag | not set | to be added |
+
+Nacelles use the fuselage laminar fraction and the fuselage wetted-area
+formula. Pylons use the wing-and-tail laminar fraction and the tail
+wetted-area formula.
+
+## Class II drag method (WP3.3a)
+
+```
+CD0 = (1 / S_ref) * sum_c( Cf_c * FF_c * IF_c * S_wet,c ) + sum CD_misc
+```
+
+| Term | Module | Equation |
+|---|---|---|
+| S_wet | `drag/wetted_area.py` | wing 1.07·2·S_exp; tails, pylon 1.05·2·S_exp; body: ADSEE-II fuselage formula |
+| Re | `drag/skin_friction.py` | min(ρVl/μ, cutoff); cutoff 38.21(l/k)^1.053 subsonic, 44.62(l/k)^1.053·M^1.16 transonic |
+| Cf | `drag/skin_friction.py` | x_lam·1.328/√Re + (1−x_lam)·0.455/((log10 Re)^2.58 (1+0.144M²)^0.65) |
+| FF | `drag/form_factor.py` | lifting surface, fuselage, nacelle formulas; f = l/√(4A_max/π) |
+| CD0 | `drag/buildup.py` | `aircraft_drag_buildup()` |
+
+The characteristic length l is the MAC for a lifting surface and the total
+length for a body. The flow regime of the cutoff is set per flight condition
+in `config/mission.py`. Cruise (M = 0.77) uses the transonic cutoff.
+
+## Running the tests
+
+From the repo root (the paths are in `pyproject.toml`):
+
+```
+python -m pytest wp3/tests
+python -m mypy --strict wp3/src
+```
+
+pytest runs with `--import-mode=importlib`, because wp2 and wp3 both have a
+top-level `tests` package.
