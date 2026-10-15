@@ -10,9 +10,14 @@ roughness: ADSEE-II slide tables.
 
 from __future__ import annotations
 
-import pytest
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
-from b12wp3.config import drag, drag_tables, geometry, mission
+import pytest
+import yaml
+
+from b12wp3.config import drag, drag_tables, geometry, mission, paths
 
 
 def test_isa_cruise_altitude_returns_reference_values() -> None:
@@ -56,57 +61,117 @@ def test_laminar_fraction_out_of_range_raises(
         drag_tables.LaminarFraction(fuselage, wing_and_tail)
 
 
-def test_aircraft_geometry_unset_input_raises_with_its_name(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(geometry, "FUSELAGE_DIAMETER_M", None)
-    monkeypatch.setattr(geometry, "ENGINE_COUNT", None)
+def _filled_geometry_dict() -> dict[str, Any]:
+    """The real geometry YAML with every null replaced by a valid test value."""
+    raw: dict[str, Any] = yaml.safe_load(
+        paths.GEOMETRY_YAML.read_text(encoding="utf-8")
+    )
+    fills = {
+        "area_m2": 10.0,
+        "aspect_ratio": 4.0,
+        "taper": 0.5,
+        "sweep_c4_deg": 20.0,
+        "thickness_to_chord": 0.1,
+        "x_c_max_thickness": 0.35,
+        "covered_span_m": 0.0,
+        "nose_length_m": 1.0,
+        "cylinder_length_m": 5.0,
+        "tail_length_m": 2.0,
+        "diameter_m": 1.5,
+        "upsweep_deg": 5.0,
+        "base_area_m2": 0.0,
+        "count": 2,
+        "frontal_area_m2": 0.3,
+        "tire_width_m": 0.4,
+        "tire_diameter_m": 1.0,
+    }
+    for section in raw.values():
+        if isinstance(section, dict):
+            for key, value in section.items():
+                if value is None:
+                    section[key] = fills[key]
+    raw["engine_count"] = 2
+    return raw
 
-    with pytest.raises(ValueError) as error:
-        geometry.aircraft_geometry()
 
-    assert "FUSELAGE_DIAMETER_M" in str(error.value)
-    assert "ENGINE_COUNT" in str(error.value)
+def _write(tmp_path: Path, raw: dict[str, Any]) -> Path:
+    path = tmp_path / "geometry.yaml"
+    path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    return path
 
 
-def test_aircraft_geometry_all_inputs_set_returns_geometry(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    values: dict[str, float] = {}
-    for surface in ("WING", "HORIZONTAL_TAIL", "VERTICAL_TAIL", "PYLON"):
-        values |= {
-            f"{surface}_AREA_M2": 10.0,
-            f"{surface}_ASPECT_RATIO": 4.0,
-            f"{surface}_TAPER": 0.5,
-            f"{surface}_SWEEP_C4_DEG": 20.0,
-            f"{surface}_THICKNESS_TO_CHORD": 0.1,
-            f"{surface}_X_C_MAX_THICKNESS": 0.35,
-            f"{surface}_COVERED_SPAN_M": 0.0,
-        }
-    for body in ("FUSELAGE", "NACELLE"):
-        values |= {
-            f"{body}_NOSE_LENGTH_M": 1.0,
-            f"{body}_CYLINDER_LENGTH_M": 5.0,
-            f"{body}_TAIL_LENGTH_M": 2.0,
-            f"{body}_DIAMETER_M": 1.5,
-        }
-    values |= {"FUSELAGE_UPSWEEP_DEG": 5.0, "FUSELAGE_BASE_AREA_M2": 0.0}
-    for gear in ("MAIN_GEAR", "NOSE_GEAR"):
-        values |= {
-            f"{gear}_FRONTAL_AREA_M2": 0.3,
-            f"{gear}_TIRE_WIDTH_M": 0.4,
-            f"{gear}_TIRE_DIAMETER_M": 1.0,
-        }
-    for name, value in values.items():
-        monkeypatch.setattr(geometry, name, value)
-    for name in ("ENGINE_COUNT", "MAIN_GEAR_COUNT", "NOSE_GEAR_COUNT"):
-        monkeypatch.setattr(geometry, name, 2)
+def test_load_geometry_null_inputs_raise_with_their_names(tmp_path: Path) -> None:
+    raw = _filled_geometry_dict()
+    raw["wing"]["covered_span_m"] = None
+    raw["fuselage"]["diameter_m"] = None
+    raw["engine_count"] = None
+    path = _write(tmp_path, raw)
 
-    result = geometry.aircraft_geometry()
+    with pytest.raises(geometry.GeometryConfigError) as error:
+        geometry.load_geometry(path)
+
+    message = str(error.value)
+    assert "wing.covered_span_m" in message
+    assert "fuselage.diameter_m" in message
+    assert "engine_count" in message
+    assert "wing.area_m2" not in message
+
+
+def test_load_geometry_repo_file_has_valid_structure() -> None:
+    # the repo file may still hold nulls, but never a structure or type error
+    try:
+        geometry.load_geometry()
+    except geometry.GeometryConfigError as error:
+        assert "not set (null)" in str(error)
+
+
+def test_load_geometry_all_inputs_set_returns_geometry(tmp_path: Path) -> None:
+    path = _write(tmp_path, _filled_geometry_dict())
+
+    result = geometry.load_geometry(path)
 
     assert result.engine_count == 2
-    assert result.fuselage.length_m == pytest.approx(8.0)
+    assert result.wing.area_m2 == pytest.approx(66.7)
+    assert result.fuselage.length_m == pytest.approx(28.68125)
     assert result.vertical_tail.panels == 1
+    assert result.te_flap.chord_ratio == pytest.approx(0.30)
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda raw: raw["wing"].update(span_m=30.0),
+        lambda raw: raw["wing"].pop("taper"),
+        lambda raw: raw.pop("nose_gear"),
+        lambda raw: raw.update(extra_section={}),
+        lambda raw: raw["wing"].update(taper="0.4"),
+        lambda raw: raw["main_gear"].update(count=2.5),
+        lambda raw: raw.update(engine_count=True),
+    ],
+)
+def test_load_geometry_bad_structure_or_type_raises(
+    tmp_path: Path, mutate: Callable[[dict[str, Any]], object]
+) -> None:
+    raw = _filled_geometry_dict()
+    mutate(raw)
+    path = _write(tmp_path, raw)
+
+    with pytest.raises(geometry.GeometryConfigError):
+        geometry.load_geometry(path)
+
+
+def test_load_geometry_unphysical_value_raises(tmp_path: Path) -> None:
+    raw = _filled_geometry_dict()
+    raw["fuselage"]["diameter_m"] = -1.0
+    path = _write(tmp_path, raw)
+
+    with pytest.raises(ValueError):
+        geometry.load_geometry(path)
+
+
+def test_load_geometry_missing_file_raises(tmp_path: Path) -> None:
+    with pytest.raises(geometry.GeometryConfigError):
+        geometry.load_geometry(tmp_path / "absent.yaml")
 
 
 def test_interference_table_has_every_slide_row() -> None:

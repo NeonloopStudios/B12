@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mateusz Suszynski
+# Created: 2026-10-15
+#
+# Every geometric input of the aircraft. Loaded and validated by
+# b12wp3.config.geometry.load_geometry().
+#
+# * An input that is not designed yet is null. load_geometry() raises one error
+#   that names every null input.
+# * Every section and every key below is required; an unknown key is an error.
+# * Lifting surfaces are trapezoidal. area_m2 is the planform area of all
+#   panels, aspect_ratio = b^2 / S. For a one-panel surface (vertical tail,
+#   pylon), b is the panel height.
+# * covered_span_m is the span length inside the fuselage (or nacelle); the
+#   exposed area S_exp is the planform outside it.
+# * x_c_max_thickness is the chord position of the maximum thickness, (x/c)_m.
+# * Bodies are a nose (L1), a cylinder (L2) and a tail cone (L3) with the
+#   maximum diameter D: the ADSEE-II fuselage wetted-area geometry.
+# * Flap eta_in / eta_out are fractions of the wing semi-span from the
+#   centreline, as in WP2.
+# * Landing gear inputs are per gear unit; d x w is the drag reference area.
+
+# --- wing: WP2 final planform (wp2/results/aero_summary_3d.csv) ---
+wing:
+  area_m2: 66.7
+  aspect_ratio: 9.5
+  taper: 0.4
+  sweep_c4_deg: 30.0
+  thickness_to_chord: 0.1199     # NASA SC(2)-0712
+  x_c_max_thickness: 0.37        # from wp2/airfoils/NASA_SC(2)-0712.dat
+  covered_span_m: 3.01           # fuselage outer diameter (WP3 fuselage sheet)
+  panels: 2
+
+# --- tails: WP3 tail sizing sheet (cruciform; V_h = 1, V_v = 0.105, l = 13.5531 m) ---
+# Check: b_h = sqrt(13.84148 * 4) = 7.4408 m, c_r = 2.5658 m, c_t = 1.1546 m;
+#        b_v = sqrt(13.01033 * 1.8) = 4.8393 m, c_r = 3.7083 m, c_t = 1.6687 m.
+horizontal_tail:
+  area_m2: 13.84148
+  aspect_ratio: 4.0
+  taper: 0.45
+  sweep_c4_deg: 30.0             # sheet "Sweep", read as quarter-chord sweep
+  thickness_to_chord: 0.12       # NACA 0012
+  x_c_max_thickness: 0.30        # NACA 0012
+  # Cruciform: the HT passes through the fin. Estimate: fin thickness at
+  # mid-height, 0.12 * c_v(h/2) = 0.12 * 2.69 m = 0.32 m.
+  covered_span_m: 0.3
+  panels: 2
+
+vertical_tail:
+  area_m2: 13.01033
+  aspect_ratio: 1.8              # h^2 / S_v, one panel
+  taper: 0.45
+  sweep_c4_deg: 35.0             # sheet "Sweep", read as quarter-chord sweep
+  thickness_to_chord: 0.12       # NACA 0012
+  x_c_max_thickness: 0.30        # NACA 0012
+  # The fin span is measured from the fuselage centreline. Estimate of the part
+  # inside the fuselage: tail-cone radius at the fin root quarter chord, with the
+  # fin trailing edge at the fuselage end (x = 28.68 m, root LE at 24.97 m):
+  # r(25.90 m) = 1.505 * (28.68 - 25.90) / 10.535 = 0.40 m.
+  covered_span_m: 0.4
+  panels: 1
+
+# --- fuselage: WP3 fuselage sizing sheet (4 abreast, 1 aisle, 64 passengers) ---
+# l_fus = l_n + l_cabin + l_t = 3.5 + 17.28 + 0.75 * 10.535 = 28.68125 m.
+# The tail cone (taper) is l_tc = 3.5 * d_fus = 10.535 m long, so it starts
+# l_tc - l_t = 2.634 m inside the cabin. The constant-diameter part is
+# L2 = l_fus - l_n - l_tc = 28.68125 - 3.5 - 10.535 = 14.64625 m.
+fuselage:
+  nose_length_m: 3.5             # L1 = l_n
+  cylinder_length_m: 14.64625    # L2, constant diameter
+  tail_length_m: 10.535          # L3 = l_tc = 3.5 * d_fus
+  diameter_m: 3.01               # D = outer diameter
+
+fuselage_aft:
+  upsweep_deg: 5.0               # u, aft-body upsweep angle
+  base_area_m2: 0.0              # A_base: closed tail cone
+
+# --- one nacelle and one pylon per engine ---
+nacelle:
+  nose_length_m: null
+  cylinder_length_m: null
+  tail_length_m: null
+  diameter_m: null
+
+pylon:
+  area_m2: null
+  aspect_ratio: null
+  taper: null
+  sweep_c4_deg: null
+  thickness_to_chord: null
+  x_c_max_thickness: null
+  covered_span_m: null
+  panels: 1
+
+engine_count: 2                  # WP1: N_eng = 2 (CS 25.119 climb case)
+
+# --- flaps: WP2 high-lift devices (wp2/src/b12wp2/config/hld.py, hld_v2.py) ---
+te_flap:                         # Fowler flap
+  chord_ratio: 0.30              # c_f / c
+  eta_in: 0.12
+  eta_out: 0.75
+
+le_flap:                         # nose flap, unslotted
+  chord_ratio: 0.15
+  eta_in: 0.12
+  eta_out: 0.95
+
+# --- landing gear, per unit (one unit = one strut with its wheels) ---
+# WP3 landing gear sheet: main 2 struts x 2 wheels (dual), nose 1 strut x 2
+# wheels (twin). Tire sizes from the tire selection (Assignment 9.6).
+main_gear:
+  count: 2                       # main gear struts
+  frontal_area_m2: null          # S_A, from the front-view drawing
+  tire_width_m: 0.3683           # w
+  tire_diameter_m: 1.016         # d
+
+nose_gear:
+  count: 1                       # nose gear strut
+  frontal_area_m2: null
+  tire_width_m: 0.14605
+  tire_diameter_m: 0.5588

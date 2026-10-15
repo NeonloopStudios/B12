@@ -13,6 +13,7 @@ the final concept. The structure is the same as `wp2/`.
 
 ```
 wp3/
+  configs/      input files: geometry.yaml (every geometric input)
   scripts/      the runnable steps, one file per step
   src/b12wp3/   the analysis library every step calls
     config/     every input: paths, atmosphere, mission, geometry, drag settings
@@ -35,9 +36,14 @@ planform, the cruise condition) are typed into `config/` with their source.
 
 ## Inputs
 
-All geometric inputs are in `src/b12wp3/config/geometry.py`, one constant per
-quantity. An input that is not designed yet is `None`.
-`geometry.aircraft_geometry()` raises one error that names every unset input.
+All geometric inputs are in `configs/geometry.yaml`, one key per quantity,
+grouped by component. An input that is not designed yet is `null`.
+`b12wp3.config.geometry.load_geometry()` reads the file and checks it:
+
+1. Missing or unknown sections and keys raise `GeometryConfigError`.
+2. A value that is not a number (or not an integer for a count) raises.
+3. One error names every `null` input as `section.key`.
+4. The frozen dataclasses then check that each value is physical.
 
 The ADSEE-II method tables (laminar fraction, roughness, interference
 factor, flap factor, landing gear fit, excrescence fraction) are in

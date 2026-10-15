@@ -1,26 +1,27 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-10-15
-"""Every geometric input of the aircraft, in one list.
+"""Geometric inputs of the aircraft: the input types and their YAML loader.
 
-Each input is one module constant below. Nothing is read from another file
-and nothing is derived here. An input that is not designed yet is None.
-aircraft_geometry() collects the inputs into frozen dataclasses. If an input
-is None, it raises one error that names every unset input.
+The values are in wp3/configs/geometry.yaml, one key per quantity. Each YAML
+section maps to one frozen dataclass below; its keys are the dataclass field
+names. load_geometry() reads the file, checks the structure, collects every
+null (not designed yet) input into one error, and builds the dataclasses,
+which run their own physical checks.
 
-Conventions:
+Conventions (repeated in the YAML header):
 
-* Lifting surfaces are trapezoidal (b12wp3.common.planform). AREA is the
+* Lifting surfaces are trapezoidal (b12wp3.common.planform). area_m2 is the
   planform area of all panels, AR = b^2 / S. For the vertical tail and a
   pylon (one panel), b is the panel height.
-* COVERED_SPAN is the span length inside the fuselage (or nacelle). The
+* covered_span_m is the span length inside the fuselage (or nacelle). The
   exposed area S_exp is the planform outside it.
-* X_C_MAX_THICKNESS is the chord position of the maximum thickness, (x/c)_m
+* x_c_max_thickness is the chord position of the maximum thickness, (x/c)_m
   in the form-factor equation.
 * Bodies (fuselage, nacelle) are a nose of length L1, a cylinder of length
   L2 and a tail cone of length L3, all with the maximum diameter D. This is
   the geometry of the ADSEE-II fuselage wetted-area formula.
-* Flap ETA_IN / ETA_OUT are fractions of the wing semi-span from the
+* Flap eta_in / eta_out are fractions of the wing semi-span from the
   centreline, as in WP2. The flapped area S_flap is the wing planform area
   between them, both halves.
 * Landing gear inputs are per gear unit. The drag reference area of one unit
@@ -29,96 +30,20 @@ Conventions:
 
 from __future__ import annotations
 
+import dataclasses
+import logging
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Final
+from pathlib import Path
+from typing import Any, Final
+
+import yaml
 
 from b12wp3.common.planform import TrapezoidalPlanform
+from b12wp3.config.paths import GEOMETRY_YAML
 
-# ============================================================
-#  INPUTS
-# ============================================================
-
-# --- wing (WP2 final planform, wp2/results/aero_summary_3d.csv) ---
-WING_AREA_M2: Final[float | None] = 66.7
-WING_ASPECT_RATIO: Final[float | None] = 9.5
-WING_TAPER: Final[float | None] = 0.4
-WING_SWEEP_C4_DEG: Final[float | None] = 30.0
-WING_THICKNESS_TO_CHORD: Final[float | None] = 0.1199  # NASA SC(2)-0712
-# Max-thickness location of NASA_SC(2)-0712.dat (wp2/airfoils), streamwise.
-WING_X_C_MAX_THICKNESS: Final[float | None] = 0.37
-WING_COVERED_SPAN_M: Final[float | None] = None  # fuselage width at the wing
-WING_PANELS: Final[int] = 2
-
-# --- horizontal tail ---
-HORIZONTAL_TAIL_AREA_M2: Final[float | None] = None
-HORIZONTAL_TAIL_ASPECT_RATIO: Final[float | None] = None
-HORIZONTAL_TAIL_TAPER: Final[float | None] = None
-HORIZONTAL_TAIL_SWEEP_C4_DEG: Final[float | None] = None
-HORIZONTAL_TAIL_THICKNESS_TO_CHORD: Final[float | None] = None
-HORIZONTAL_TAIL_X_C_MAX_THICKNESS: Final[float | None] = None
-HORIZONTAL_TAIL_COVERED_SPAN_M: Final[float | None] = None
-HORIZONTAL_TAIL_PANELS: Final[int] = 2
-
-# --- vertical tail ---
-VERTICAL_TAIL_AREA_M2: Final[float | None] = None
-VERTICAL_TAIL_ASPECT_RATIO: Final[float | None] = None
-VERTICAL_TAIL_TAPER: Final[float | None] = None
-VERTICAL_TAIL_SWEEP_C4_DEG: Final[float | None] = None
-VERTICAL_TAIL_THICKNESS_TO_CHORD: Final[float | None] = None
-VERTICAL_TAIL_X_C_MAX_THICKNESS: Final[float | None] = None
-VERTICAL_TAIL_COVERED_SPAN_M: Final[float | None] = None
-VERTICAL_TAIL_PANELS: Final[int] = 1
-
-# --- fuselage ---
-FUSELAGE_NOSE_LENGTH_M: Final[float | None] = None  # L1
-FUSELAGE_CYLINDER_LENGTH_M: Final[float | None] = None  # L2
-FUSELAGE_TAIL_LENGTH_M: Final[float | None] = None  # L3
-FUSELAGE_DIAMETER_M: Final[float | None] = None  # D
-FUSELAGE_UPSWEEP_DEG: Final[float | None] = None  # u, aft-body upsweep angle
-FUSELAGE_BASE_AREA_M2: Final[float | None] = None  # A_base, 0 for a closed cone
-
-# --- trailing-edge flap (WP2 Fowler flap, wp2/src/b12wp2/config/hld*.py) ---
-TE_FLAP_CHORD_RATIO: Final[float | None] = 0.30  # c_f / c
-TE_FLAP_ETA_IN: Final[float | None] = 0.12  # fraction of the semi-span
-TE_FLAP_ETA_OUT: Final[float | None] = 0.75
-
-# --- leading-edge flap (WP2 nose flap, unslotted) ---
-LE_FLAP_CHORD_RATIO: Final[float | None] = 0.15
-LE_FLAP_ETA_IN: Final[float | None] = 0.12
-LE_FLAP_ETA_OUT: Final[float | None] = 0.95
-
-# --- main landing gear (per unit; d x w is the drag reference area) ---
-MAIN_GEAR_COUNT: Final[int | None] = None  # number of main gear units
-MAIN_GEAR_FRONTAL_AREA_M2: Final[float | None] = None  # S_A
-MAIN_GEAR_TIRE_WIDTH_M: Final[float | None] = None  # w
-MAIN_GEAR_TIRE_DIAMETER_M: Final[float | None] = None  # d
-
-# --- nose landing gear (per unit) ---
-NOSE_GEAR_COUNT: Final[int | None] = None
-NOSE_GEAR_FRONTAL_AREA_M2: Final[float | None] = None
-NOSE_GEAR_TIRE_WIDTH_M: Final[float | None] = None
-NOSE_GEAR_TIRE_DIAMETER_M: Final[float | None] = None
-
-# --- nacelle (one engine; body of revolution, same formula as the fuselage) ---
-NACELLE_NOSE_LENGTH_M: Final[float | None] = None
-NACELLE_CYLINDER_LENGTH_M: Final[float | None] = None
-NACELLE_TAIL_LENGTH_M: Final[float | None] = None
-NACELLE_DIAMETER_M: Final[float | None] = None
-
-# --- pylon (one engine; thin lifting surface, same formula as the tails) ---
-PYLON_AREA_M2: Final[float | None] = None
-PYLON_ASPECT_RATIO: Final[float | None] = None
-PYLON_TAPER: Final[float | None] = None
-PYLON_SWEEP_C4_DEG: Final[float | None] = None
-PYLON_THICKNESS_TO_CHORD: Final[float | None] = None
-PYLON_X_C_MAX_THICKNESS: Final[float | None] = None
-PYLON_COVERED_SPAN_M: Final[float | None] = None
-PYLON_PANELS: Final[int] = 1
-
-# --- engines ---
-ENGINE_COUNT: Final[int | None] = None  # one nacelle and one pylon per engine
-
+logger = logging.getLogger(__name__)
 
 # ============================================================
 #  INPUT TYPES
@@ -318,288 +243,149 @@ class AircraftGeometry:
 
 
 # ============================================================
-#  ASSEMBLY
+#  YAML LOADER
 # ============================================================
 
+# YAML section -> input type. engine_count is the one top-level scalar.
+_SECTIONS: Final[Mapping[str, type]] = {
+    "wing": LiftingSurfaceInputs,
+    "horizontal_tail": LiftingSurfaceInputs,
+    "vertical_tail": LiftingSurfaceInputs,
+    "fuselage": BodyInputs,
+    "fuselage_aft": FuselageAftInputs,
+    "nacelle": BodyInputs,
+    "pylon": LiftingSurfaceInputs,
+    "te_flap": FlapInputs,
+    "le_flap": FlapInputs,
+    "main_gear": GearInputs,
+    "nose_gear": GearInputs,
+}
+_ENGINE_COUNT_KEY: Final[str] = "engine_count"
 
-def _lifting_surface(
-    prefix: str,
-    area: float | None,
-    aspect_ratio: float | None,
-    taper: float | None,
-    sweep_c4_deg: float | None,
-    thickness_to_chord: float | None,
-    x_c_max: float | None,
-    covered_span: float | None,
-    panels: int,
+
+class GeometryConfigError(ValueError):
+    """The geometry YAML file has a wrong structure, a wrong type or nulls."""
+
+
+def _number(name: str, value: object, field_type: object) -> float | int:
+    """One YAML value, checked against the dataclass field type (int or float)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise GeometryConfigError(f"{name} must be a number, got {value!r}")
+    if field_type == "int":
+        if not isinstance(value, int):
+            raise GeometryConfigError(f"{name} must be an integer, got {value!r}")
+        return value
+    return float(value)
+
+
+def _section[T](
+    raw: Mapping[str, object],
+    section: str,
+    cls: type[T],
     missing: list[str],
-) -> LiftingSurfaceInputs | None:
-    """Build one lifting surface, or add its unset input names to `missing`."""
-    if (
-        area is None
-        or aspect_ratio is None
-        or taper is None
-        or sweep_c4_deg is None
-        or thickness_to_chord is None
-        or x_c_max is None
-        or covered_span is None
-    ):
-        named = (
-            ("AREA_M2", area),
-            ("ASPECT_RATIO", aspect_ratio),
-            ("TAPER", taper),
-            ("SWEEP_C4_DEG", sweep_c4_deg),
-            ("THICKNESS_TO_CHORD", thickness_to_chord),
-            ("X_C_MAX_THICKNESS", x_c_max),
-            ("COVERED_SPAN_M", covered_span),
+) -> T | None:
+    """Build one input dataclass from its YAML section.
+
+    Null keys are added to `missing` as "section.key"; the section is then
+    not built and None is returned.
+    """
+    content = raw[section]
+    if not isinstance(content, Mapping):
+        raise GeometryConfigError(f"section {section!r} must be a mapping")
+    fields = {f.name: f.type for f in dataclasses.fields(cls)}  # type: ignore[arg-type]  # cls is always a dataclass from _SECTIONS
+    keys = set(content)
+    if keys != set(fields):
+        raise GeometryConfigError(
+            f"section {section!r}: missing keys {sorted(set(fields) - keys)}, "
+            f"unknown keys {sorted(keys - set(fields))}"
         )
-        missing.extend(f"{prefix}_{name}" for name, value in named if value is None)
+    nulls = [f"{section}.{key}" for key in fields if content[key] is None]
+    if nulls:
+        missing.extend(nulls)
         return None
-    return LiftingSurfaceInputs(
-        area_m2=area,
-        aspect_ratio=aspect_ratio,
-        taper=taper,
-        sweep_c4_deg=sweep_c4_deg,
-        thickness_to_chord=thickness_to_chord,
-        x_c_max_thickness=x_c_max,
-        covered_span_m=covered_span,
-        panels=panels,
-    )
+    values: dict[str, Any] = {
+        key: _number(f"{section}.{key}", content[key], field_type)
+        for key, field_type in fields.items()
+    }
+    return cls(**values)
 
 
-def _body(
-    prefix: str,
-    nose: float | None,
-    cylinder: float | None,
-    tail: float | None,
-    diameter: float | None,
-    missing: list[str],
-) -> BodyInputs | None:
-    """Build one body, or add its unset input names to `missing`."""
-    if nose is None or cylinder is None or tail is None or diameter is None:
-        named = (
-            ("NOSE_LENGTH_M", nose),
-            ("CYLINDER_LENGTH_M", cylinder),
-            ("TAIL_LENGTH_M", tail),
-            ("DIAMETER_M", diameter),
+def _read_yaml(path: Path) -> Mapping[str, object]:
+    """Read the YAML file and check its top-level sections."""
+    try:
+        with path.open(encoding="utf-8") as stream:
+            raw = yaml.safe_load(stream)
+    except OSError as error:
+        logger.error("cannot read geometry file %s: %s", path, error)
+        raise GeometryConfigError(f"cannot read geometry file {path}") from error
+    except yaml.YAMLError as error:
+        logger.error("invalid YAML in %s: %s", path, error)
+        raise GeometryConfigError(f"invalid YAML in {path}") from error
+    if not isinstance(raw, Mapping):
+        raise GeometryConfigError(f"{path}: the top level must be a mapping")
+    expected = set(_SECTIONS) | {_ENGINE_COUNT_KEY}
+    keys = set(raw)
+    if keys != expected:
+        raise GeometryConfigError(
+            f"{path}: missing sections {sorted(expected - keys)}, "
+            f"unknown sections {sorted(keys - expected)}"
         )
-        missing.extend(f"{prefix}_{name}" for name, value in named if value is None)
-        return None
-    return BodyInputs(
-        nose_length_m=nose,
-        cylinder_length_m=cylinder,
-        tail_length_m=tail,
-        diameter_m=diameter,
-    )
+    return raw
 
 
-def _fuselage_aft(missing: list[str]) -> FuselageAftInputs | None:
-    """Build the aft-fuselage inputs, or add the unset names to `missing`."""
-    if FUSELAGE_UPSWEEP_DEG is None or FUSELAGE_BASE_AREA_M2 is None:
-        named = (
-            ("FUSELAGE_UPSWEEP_DEG", FUSELAGE_UPSWEEP_DEG),
-            ("FUSELAGE_BASE_AREA_M2", FUSELAGE_BASE_AREA_M2),
-        )
-        missing.extend(name for name, value in named if value is None)
-        return None
-    return FuselageAftInputs(FUSELAGE_UPSWEEP_DEG, FUSELAGE_BASE_AREA_M2)
+def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
+    """Load, validate and freeze the aircraft geometry from its YAML file.
 
-
-def _flap(
-    prefix: str,
-    chord_ratio: float | None,
-    eta_in: float | None,
-    eta_out: float | None,
-    missing: list[str],
-) -> FlapInputs | None:
-    """Build one flap, or add its unset input names to `missing`."""
-    if chord_ratio is None or eta_in is None or eta_out is None:
-        named = (
-            ("CHORD_RATIO", chord_ratio),
-            ("ETA_IN", eta_in),
-            ("ETA_OUT", eta_out),
-        )
-        missing.extend(f"{prefix}_{name}" for name, value in named if value is None)
-        return None
-    return FlapInputs(chord_ratio, eta_in, eta_out)
-
-
-def _gear(
-    prefix: str,
-    count: int | None,
-    frontal_area: float | None,
-    tire_width: float | None,
-    tire_diameter: float | None,
-    missing: list[str],
-) -> GearInputs | None:
-    """Build one landing gear type, or add its unset input names to `missing`."""
-    if (
-        count is None
-        or frontal_area is None
-        or tire_width is None
-        or tire_diameter is None
-    ):
-        named: tuple[tuple[str, float | None], ...] = (
-            ("COUNT", count),
-            ("FRONTAL_AREA_M2", frontal_area),
-            ("TIRE_WIDTH_M", tire_width),
-            ("TIRE_DIAMETER_M", tire_diameter),
-        )
-        missing.extend(f"{prefix}_{name}" for name, value in named if value is None)
-        return None
-    return GearInputs(count, frontal_area, tire_width, tire_diameter)
-
-
-_Surfaces = tuple[
-    LiftingSurfaceInputs | None,
-    LiftingSurfaceInputs | None,
-    LiftingSurfaceInputs | None,
-    LiftingSurfaceInputs | None,
-]
-
-
-def _surfaces(missing: list[str]) -> _Surfaces:
-    """Wing, horizontal tail, vertical tail and pylon from the module inputs."""
-    return (
-        _lifting_surface(
-            "WING",
-            WING_AREA_M2,
-            WING_ASPECT_RATIO,
-            WING_TAPER,
-            WING_SWEEP_C4_DEG,
-            WING_THICKNESS_TO_CHORD,
-            WING_X_C_MAX_THICKNESS,
-            WING_COVERED_SPAN_M,
-            WING_PANELS,
-            missing,
-        ),
-        _lifting_surface(
-            "HORIZONTAL_TAIL",
-            HORIZONTAL_TAIL_AREA_M2,
-            HORIZONTAL_TAIL_ASPECT_RATIO,
-            HORIZONTAL_TAIL_TAPER,
-            HORIZONTAL_TAIL_SWEEP_C4_DEG,
-            HORIZONTAL_TAIL_THICKNESS_TO_CHORD,
-            HORIZONTAL_TAIL_X_C_MAX_THICKNESS,
-            HORIZONTAL_TAIL_COVERED_SPAN_M,
-            HORIZONTAL_TAIL_PANELS,
-            missing,
-        ),
-        _lifting_surface(
-            "VERTICAL_TAIL",
-            VERTICAL_TAIL_AREA_M2,
-            VERTICAL_TAIL_ASPECT_RATIO,
-            VERTICAL_TAIL_TAPER,
-            VERTICAL_TAIL_SWEEP_C4_DEG,
-            VERTICAL_TAIL_THICKNESS_TO_CHORD,
-            VERTICAL_TAIL_X_C_MAX_THICKNESS,
-            VERTICAL_TAIL_COVERED_SPAN_M,
-            VERTICAL_TAIL_PANELS,
-            missing,
-        ),
-        _lifting_surface(
-            "PYLON",
-            PYLON_AREA_M2,
-            PYLON_ASPECT_RATIO,
-            PYLON_TAPER,
-            PYLON_SWEEP_C4_DEG,
-            PYLON_THICKNESS_TO_CHORD,
-            PYLON_X_C_MAX_THICKNESS,
-            PYLON_COVERED_SPAN_M,
-            PYLON_PANELS,
-            missing,
-        ),
-    )
-
-
-def _bodies(missing: list[str]) -> tuple[BodyInputs | None, BodyInputs | None]:
-    """Fuselage and nacelle from the module inputs."""
-    return (
-        _body(
-            "FUSELAGE",
-            FUSELAGE_NOSE_LENGTH_M,
-            FUSELAGE_CYLINDER_LENGTH_M,
-            FUSELAGE_TAIL_LENGTH_M,
-            FUSELAGE_DIAMETER_M,
-            missing,
-        ),
-        _body(
-            "NACELLE",
-            NACELLE_NOSE_LENGTH_M,
-            NACELLE_CYLINDER_LENGTH_M,
-            NACELLE_TAIL_LENGTH_M,
-            NACELLE_DIAMETER_M,
-            missing,
-        ),
-    )
-
-
-def _flaps(missing: list[str]) -> tuple[FlapInputs | None, FlapInputs | None]:
-    """Trailing-edge and leading-edge flap from the module inputs."""
-    return (
-        _flap("TE_FLAP", TE_FLAP_CHORD_RATIO, TE_FLAP_ETA_IN, TE_FLAP_ETA_OUT, missing),
-        _flap("LE_FLAP", LE_FLAP_CHORD_RATIO, LE_FLAP_ETA_IN, LE_FLAP_ETA_OUT, missing),
-    )
-
-
-def _gears(missing: list[str]) -> tuple[GearInputs | None, GearInputs | None]:
-    """Main and nose landing gear from the module inputs."""
-    return (
-        _gear(
-            "MAIN_GEAR",
-            MAIN_GEAR_COUNT,
-            MAIN_GEAR_FRONTAL_AREA_M2,
-            MAIN_GEAR_TIRE_WIDTH_M,
-            MAIN_GEAR_TIRE_DIAMETER_M,
-            missing,
-        ),
-        _gear(
-            "NOSE_GEAR",
-            NOSE_GEAR_COUNT,
-            NOSE_GEAR_FRONTAL_AREA_M2,
-            NOSE_GEAR_TIRE_WIDTH_M,
-            NOSE_GEAR_TIRE_DIAMETER_M,
-            missing,
-        ),
-    )
-
-
-def aircraft_geometry() -> AircraftGeometry:
-    """Collect the module inputs into an AircraftGeometry.
+    Args:
+        path: Geometry YAML file. Default: wp3/configs/geometry.yaml.
 
     Returns:
         The validated aircraft geometry.
 
     Raises:
-        ValueError: If one or more inputs are None. The message names all of
-            them. Also if a set input is not physical.
+        GeometryConfigError: If the file cannot be read, has a wrong
+            structure or type, or has null inputs. One error names every
+            null input, as "section.key".
+        ValueError: If a set input is not physical (dataclass checks).
     """
+    raw = _read_yaml(path)
     missing: list[str] = []
-    wing, horizontal_tail, vertical_tail, pylon = _surfaces(missing)
-    fuselage, nacelle = _bodies(missing)
-    fuselage_aft = _fuselage_aft(missing)
-    te_flap, le_flap = _flaps(missing)
-    main_gear, nose_gear = _gears(missing)
-    if ENGINE_COUNT is None:
-        missing.append("ENGINE_COUNT")
+    wing = _section(raw, "wing", LiftingSurfaceInputs, missing)
+    horizontal_tail = _section(raw, "horizontal_tail", LiftingSurfaceInputs, missing)
+    vertical_tail = _section(raw, "vertical_tail", LiftingSurfaceInputs, missing)
+    fuselage = _section(raw, "fuselage", BodyInputs, missing)
+    fuselage_aft = _section(raw, "fuselage_aft", FuselageAftInputs, missing)
+    nacelle = _section(raw, "nacelle", BodyInputs, missing)
+    pylon = _section(raw, "pylon", LiftingSurfaceInputs, missing)
+    te_flap = _section(raw, "te_flap", FlapInputs, missing)
+    le_flap = _section(raw, "le_flap", FlapInputs, missing)
+    main_gear = _section(raw, "main_gear", GearInputs, missing)
+    nose_gear = _section(raw, "nose_gear", GearInputs, missing)
+    engine_count_raw = raw[_ENGINE_COUNT_KEY]
+    engine_count = (
+        None
+        if engine_count_raw is None
+        else int(_number(_ENGINE_COUNT_KEY, engine_count_raw, "int"))
+    )
+    if engine_count is None:
+        missing.append(_ENGINE_COUNT_KEY)
     if (
         missing
         or wing is None
         or horizontal_tail is None
         or vertical_tail is None
-        or pylon is None
         or fuselage is None
-        or nacelle is None
         or fuselage_aft is None
+        or nacelle is None
+        or pylon is None
         or te_flap is None
         or le_flap is None
         or main_gear is None
         or nose_gear is None
-        or ENGINE_COUNT is None
+        or engine_count is None
     ):
-        raise ValueError(
-            "geometry inputs not set in b12wp3/config/geometry.py: "
-            + ", ".join(missing)
+        raise GeometryConfigError(
+            f"geometry inputs not set (null) in {path}: " + ", ".join(missing)
         )
     return AircraftGeometry(
         wing=wing,
@@ -608,7 +394,7 @@ def aircraft_geometry() -> AircraftGeometry:
         fuselage=fuselage,
         nacelle=nacelle,
         pylon=pylon,
-        engine_count=ENGINE_COUNT,
+        engine_count=engine_count,
         fuselage_aft=fuselage_aft,
         te_flap=te_flap,
         le_flap=le_flap,
