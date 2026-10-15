@@ -1,94 +1,32 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-10-15
-"""Class II drag settings (ADSEE-II, component drag build-up).
+"""Class II drag settings: the selected row of each ADSEE-II table and the
+method inputs that are not geometry.
 
-The two tables are copied from the ADSEE-II slides "Flat plate skin friction
-coefficient": the laminar-flow fraction per aircraft category, and the
-equivalent sand roughness k per surface finish. The selected row of each
-table is set below.
-
-The interference factors and the miscellaneous drag are not on the slides
-used so far. They stay unset (None) until their values are known. The drag
-build-up takes them as required arguments, so an unset value cannot enter a
-result.
+The tables themselves are in b12wp3.config.drag_tables. Everything the drag
+build-up needs from here is collected in DRAG_SETTINGS.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
-from types import MappingProxyType
 from typing import Final
 
-
-class AircraftCategory(Enum):
-    """Rows of the ADSEE-II laminar-flow table."""
-
-    GA_CLASSIC_METAL = "General aviation - classic production metal"
-    GA_SMOOTH_METAL = "General aviation - smooth metal (no rivets or cracks)"
-    GA_SMOOTH_COMPOSITE = "General aviation - smooth molded composites"
-    SAILPLANE_SMOOTH_COMPOSITE = "Sailplane - smooth molded composites"
-    CIVIL_JET_CLASSIC_METAL = "Civil jet - classic production metal"
-    MILITARY = "Military aircraft"
-
-
-@dataclass(frozen=True)
-class LaminarFraction:
-    """Fraction of the wetted area with laminar flow, for one category.
-
-    Attributes:
-        fuselage: Laminar fraction of the fuselage [-], 0 to 1.
-        wing_and_tail: Laminar fraction of the wing and tails [-], 0 to 1.
-    """
-
-    fuselage: float
-    wing_and_tail: float
-
-    def __post_init__(self) -> None:
-        for name, value in (
-            ("fuselage", self.fuselage),
-            ("wing_and_tail", self.wing_and_tail),
-        ):
-            if not 0.0 <= value <= 1.0:
-                raise ValueError(
-                    f"LaminarFraction.{name} must be in [0, 1], got {value}"
-                )
-
-
-LAMINAR_FRACTION_TABLE: Final[Mapping[AircraftCategory, LaminarFraction]] = (
-    MappingProxyType(
-        {
-            AircraftCategory.GA_CLASSIC_METAL: LaminarFraction(0.00, 0.10),
-            AircraftCategory.GA_SMOOTH_METAL: LaminarFraction(0.10, 0.35),
-            AircraftCategory.GA_SMOOTH_COMPOSITE: LaminarFraction(0.25, 0.50),
-            AircraftCategory.SAILPLANE_SMOOTH_COMPOSITE: LaminarFraction(0.35, 0.70),
-            AircraftCategory.CIVIL_JET_CLASSIC_METAL: LaminarFraction(0.05, 0.10),
-            AircraftCategory.MILITARY: LaminarFraction(0.00, 0.00),
-        }
-    )
-)
-
-
-class SurfaceFinish(Enum):
-    """Rows of the ADSEE-II surface roughness table."""
-
-    CAMOUFLAGE_PAINT_ON_ALUMINUM = "Camouflage paint on aluminum"
-    SMOOTH_PAINT = "Smooth paint"
-    PRODUCTION_SHEET_METAL = "Production sheet metal"
-    POLISHED_SHEET_METAL = "Polished sheet metal"
-    SMOOTH_MOLDED_COMPOSITE = "Smooth molded composite"
-
-
-ROUGHNESS_TABLE_M: Final[Mapping[SurfaceFinish, float]] = MappingProxyType(
-    {
-        SurfaceFinish.CAMOUFLAGE_PAINT_ON_ALUMINUM: 1.015e-5,
-        SurfaceFinish.SMOOTH_PAINT: 0.634e-5,
-        SurfaceFinish.PRODUCTION_SHEET_METAL: 0.405e-5,
-        SurfaceFinish.POLISHED_SHEET_METAL: 0.152e-5,
-        SurfaceFinish.SMOOTH_MOLDED_COMPOSITE: 0.052e-5,
-    }
+from b12wp3.config.drag_tables import (
+    EXCRESCENCE_FRACTION_TABLE,
+    FLAP_FACTOR_TABLE,
+    LAMINAR_FRACTION_TABLE,
+    ROUGHNESS_TABLE_M,
+    WHEEL_WELL_COEFF_TABLE,
+    AircraftCategory,
+    ExcrescenceCategory,
+    FlapType,
+    InterferenceCase,
+    InterferenceChoice,
+    LaminarFraction,
+    SurfaceFinish,
+    WheelWells,
 )
 
 
@@ -125,8 +63,62 @@ class InterferenceFactors:
                 raise ValueError(f"InterferenceFactors.{name} must be > 0, got {value}")
 
 
-# --- selected settings ---
+@dataclass(frozen=True)
+class DragSettings:
+    """Everything the drag build-up needs that is not geometry.
 
+    Attributes:
+        laminar: Laminar fractions of the selected aircraft category.
+        roughness_m: Equivalent sand roughness k [m].
+        interference: Interference factor of each component.
+        kappa_a: Korn technology factor k_a of the wing airfoil [-].
+        wing_mach_critical_normal: Critical Mach number of the wing section
+            normal to the wave-drag sweep line [-].
+        wave_sweep_chord_fraction: Chord line whose sweep the drag-divergence
+            equation uses [-].
+        te_flap_factor: F_flap of the trailing-edge flap [-].
+        le_flap_factor: F_flap of the leading-edge flap [-].
+        wheel_well_coeff: Coefficient of the landing gear drag fit [-].
+        excrescence_fraction: Excrescence and leakage drag as a fraction of
+            the total CD0 [-].
+    """
+
+    laminar: LaminarFraction
+    roughness_m: float
+    interference: InterferenceFactors
+    kappa_a: float
+    wing_mach_critical_normal: float
+    wave_sweep_chord_fraction: float
+    te_flap_factor: float
+    le_flap_factor: float
+    wheel_well_coeff: float
+    excrescence_fraction: float
+
+    def __post_init__(self) -> None:
+        if self.roughness_m <= 0.0:
+            raise ValueError(f"roughness_m must be > 0, got {self.roughness_m}")
+        if not 0.0 < self.wing_mach_critical_normal < 1.0:
+            raise ValueError(
+                "wing_mach_critical_normal must be in (0, 1), "
+                f"got {self.wing_mach_critical_normal}"
+            )
+        if not 0.0 <= self.wave_sweep_chord_fraction <= 1.0:
+            raise ValueError(
+                "wave_sweep_chord_fraction must be in [0, 1], "
+                f"got {self.wave_sweep_chord_fraction}"
+            )
+        if not 0.0 <= self.excrescence_fraction < 1.0:
+            raise ValueError(
+                "excrescence_fraction must be in [0, 1), "
+                f"got {self.excrescence_fraction}"
+            )
+
+
+# ============================================================
+#  SELECTED SETTINGS
+# ============================================================
+
+# --- skin friction ---
 # Civil jet, classic production metal: 5 % laminar on the fuselage, 10 % on the
 # wing and tails. Nacelles use the fuselage value (body of revolution); pylons
 # use the wing-and-tail value (lifting surface).
@@ -136,6 +128,69 @@ LAMINAR_FRACTION: Final[LaminarFraction] = LAMINAR_FRACTION_TABLE[AIRCRAFT_CATEG
 SURFACE_FINISH: Final[SurfaceFinish] = SurfaceFinish.SMOOTH_PAINT
 ROUGHNESS_M: Final[float] = ROUGHNESS_TABLE_M[SURFACE_FINISH]
 
-# Not on the slides used so far: set them when the values are known.
-INTERFERENCE_FACTORS: Final[InterferenceFactors | None] = None
-CD_MISC: Final[float | None] = None
+# --- interference factors ---
+# Wing: conservative upper end of the un-filleted low wing range.
+WING_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(
+    InterferenceCase.UNFILLETED_LOW_WING, 1.4
+)
+# Cruciform tail: the same row for the horizontal and the vertical tail.
+HORIZONTAL_TAIL_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(
+    InterferenceCase.CRUCIFORM_TAIL
+)
+VERTICAL_TAIL_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(
+    InterferenceCase.CRUCIFORM_TAIL
+)
+# The fuselage has no row in the table: it is the reference body, IF = 1.0.
+FUSELAGE_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(None, 1.0)
+# Pylon-mounted nacelle, more than about one diameter away from the surface.
+NACELLE_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(
+    InterferenceCase.NACELLE_UNDER_FUSELAGE_FAR
+)
+# The pylon has no row in the table: IF = 1.0.
+PYLON_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(None, 1.0)
+
+# --- wave drag (Korn / Mason drag-divergence Mach number) ---
+# k_a of a supercritical section, the same value as WP2
+# (wp2/src/b12wp2/config/scoring.py, KAPPA_A_SUPERCRITICAL).
+KAPPA_A: Final[float] = 0.95
+# M_crit of NASA SC(2)-0712 normal to the half-chord line, at the cruise Cl_n
+# (wp2/results/section/data/mcrit_summary.csv). The drag build-up converts it
+# to the streamwise (free-stream) value M_crit,n / cos(sweep).
+WING_MACH_CRITICAL_NORMAL: Final[float] = 0.56
+# Half chord: the same sweep line as the WP2 section reduction and Korn estimate.
+WAVE_SWEEP_CHORD_FRACTION: Final[float] = 0.5
+
+# --- flaps ---
+# Trailing edge: Fowler flap, a slotted flap. Leading edge: unslotted nose flap.
+TE_FLAP_TYPE: Final[FlapType] = FlapType.SLOTTED
+LE_FLAP_TYPE: Final[FlapType] = FlapType.PLAIN
+
+# --- landing gear ---
+# The gear doors are open while the gear is down.
+WHEEL_WELLS: Final[WheelWells] = WheelWells.OPEN
+
+# --- excrescence and leakage ---
+EXCRESCENCE_CATEGORY: Final[ExcrescenceCategory] = ExcrescenceCategory.JET_TRANSPORT
+EXCRESCENCE_FRACTION: Final[float] = EXCRESCENCE_FRACTION_TABLE[
+    EXCRESCENCE_CATEGORY
+].select(0.035)
+
+DRAG_SETTINGS: Final[DragSettings] = DragSettings(
+    laminar=LAMINAR_FRACTION,
+    roughness_m=ROUGHNESS_M,
+    interference=InterferenceFactors(
+        wing=WING_INTERFERENCE.factor,
+        horizontal_tail=HORIZONTAL_TAIL_INTERFERENCE.factor,
+        vertical_tail=VERTICAL_TAIL_INTERFERENCE.factor,
+        fuselage=FUSELAGE_INTERFERENCE.factor,
+        nacelle=NACELLE_INTERFERENCE.factor,
+        pylon=PYLON_INTERFERENCE.factor,
+    ),
+    kappa_a=KAPPA_A,
+    wing_mach_critical_normal=WING_MACH_CRITICAL_NORMAL,
+    wave_sweep_chord_fraction=WAVE_SWEEP_CHORD_FRACTION,
+    te_flap_factor=FLAP_FACTOR_TABLE[TE_FLAP_TYPE],
+    le_flap_factor=FLAP_FACTOR_TABLE[LE_FLAP_TYPE],
+    wheel_well_coeff=WHEEL_WELL_COEFF_TABLE[WHEEL_WELLS],
+    excrescence_fraction=EXCRESCENCE_FRACTION,
+)

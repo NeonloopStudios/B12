@@ -124,3 +124,29 @@ def test_exposed_area_decreases_with_covered_span(
     assert exposed_large > 0.0
     assert exposed_large <= exposed_small + tolerance
     assert exposed_small <= wing.area_m2 + tolerance
+
+
+@pytest.mark.parametrize("panels", [1, 2])
+def test_area_between_full_span_returns_total_area(panels: int) -> None:
+    surface = TrapezoidalPlanform(20.0, 4.0, 0.6, 0.3, panels=panels)
+
+    area = surface.area_between(0.0, 1.0)
+
+    assert area == pytest.approx(20.0)
+
+
+def test_area_between_rectangular_wing_returns_chord_times_strip() -> None:
+    # taper 1: chord 2 m, semi-span 10 m; strip 0.2..0.7 of the semi-span, both halves
+    wing = TrapezoidalPlanform(40.0, 10.0, 1.0, 0.0, panels=2)
+
+    area = wing.area_between(0.2, 0.7)
+
+    assert area == pytest.approx(2 * 2.0 * 5.0)
+
+
+@pytest.mark.parametrize(("eta_in", "eta_out"), [(0.5, 0.5), (-0.1, 0.5), (0.2, 1.1)])
+def test_area_between_invalid_stations_raises(eta_in: float, eta_out: float) -> None:
+    wing = _wp2_wing()
+
+    with pytest.raises(ValueError):
+        wing.area_between(eta_in, eta_out)

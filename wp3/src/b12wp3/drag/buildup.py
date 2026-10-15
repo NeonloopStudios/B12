@@ -5,6 +5,13 @@
 
     CD0 = (1 / S_ref) * sum_c( Cf_c * FF_c * IF_c * S_wet,c ) + sum CD_misc
 
+Miscellaneous terms (b12wp3.drag.miscellaneous), per configuration:
+
+* every configuration: wing wave drag, fuselage upsweep and base drag
+* flaps: trailing-edge and leading-edge flap drag (zero at 10 deg or less)
+* gear down: main and nose landing gear drag
+* last: excrescence and leakage, a fraction of the final total CD0
+
 Characteristic length l of each component (Reynolds number):
 
 * wing, tails, pylon: mean aerodynamic chord
@@ -22,14 +29,30 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from b12wp3.config.drag import InterferenceFactors, LaminarFraction
-from b12wp3.config.geometry import AircraftGeometry, BodyInputs, LiftingSurfaceInputs
-from b12wp3.config.mission import FlightCondition
+from b12wp3.config.drag import DragSettings
+from b12wp3.config.geometry import (
+    AircraftGeometry,
+    BodyInputs,
+    FlapInputs,
+    GearInputs,
+    LiftingSurfaceInputs,
+)
+from b12wp3.config.mission import DragConfiguration, FlightCondition
 from b12wp3.drag.form_factor import (
     fineness_ratio,
     fuselage_form_factor,
     lifting_surface_form_factor,
     nacelle_form_factor,
+)
+from b12wp3.drag.miscellaneous import (
+    base_drag_area,
+    drag_divergence_mach,
+    excrescence_drag,
+    flap_drag,
+    landing_gear_drag,
+    streamwise_critical_mach,
+    upsweep_drag_area,
+    wave_drag,
 )
 from b12wp3.drag.skin_friction import (
     cf_mixed,
@@ -90,18 +113,35 @@ class ComponentDrag:
 
 
 @dataclass(frozen=True)
+class MiscDrag:
+    """One miscellaneous drag term.
+
+    Attributes:
+        name: Term label.
+        delta_cd: Drag coefficient on S_ref [-], >= 0.
+    """
+
+    name: str
+    delta_cd: float
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.delta_cd) or self.delta_cd < 0.0:
+            raise ValueError(f"{self.name}: delta_cd must be >= 0, got {self.delta_cd}")
+
+
+@dataclass(frozen=True)
 class DragBuildup:
-    """Zero-lift drag coefficient from its components.
+    """Zero-lift drag coefficient from its components and miscellaneous terms.
 
     Attributes:
         components: Drag terms of each component type.
         reference_area_m2: Reference area S_ref [m^2].
-        cd_misc: Sum of the miscellaneous drag coefficients [-].
+        misc: Miscellaneous drag terms.
     """
 
     components: tuple[ComponentDrag, ...]
     reference_area_m2: float
-    cd_misc: float
+    misc: tuple[MiscDrag, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.components:
@@ -110,20 +150,28 @@ class DragBuildup:
             raise ValueError(
                 f"reference_area_m2 must be > 0, got {self.reference_area_m2}"
             )
-        if self.cd_misc < 0.0:
-            raise ValueError(f"cd_misc must be >= 0, got {self.cd_misc}")
 
     def contribution(self, component: ComponentDrag) -> float:
         """CD0 contribution of one component type [-]."""
         return component.drag_area_m2 / self.reference_area_m2
 
     @property
+    def cd_components(self) -> float:
+        """Sum of the component contributions [-]."""
+        return sum(self.contribution(c) for c in self.components)
+
+    @property
+    def cd_misc(self) -> float:
+        """Sum of the miscellaneous terms [-]."""
+        return sum(m.delta_cd for m in self.misc)
+
+    @property
     def cd0(self) -> float:
         """Total zero-lift drag coefficient [-]."""
-        return sum(self.contribution(c) for c in self.components) + self.cd_misc
+        return self.cd_components + self.cd_misc
 
     def to_dataframe(self) -> pd.DataFrame:
-        """One row per component, then a miscellaneous row and a total row."""
+        """One row per component, one per miscellaneous term, then a total row."""
         nan = math.nan
         rows: list[tuple[str | int | float, ...]] = [
             (
@@ -142,7 +190,7 @@ class DragBuildup:
             for c in self.components
         ]
         no_terms = (nan,) * 8
-        rows.append(("miscellaneous", 1, *no_terms, self.cd_misc))
+        rows.extend((m.name, 1, *no_terms, m.delta_cd) for m in self.misc)
         rows.append(("total", 1, *no_terms, self.cd0))
         frame = pd.DataFrame(
             rows,
@@ -318,35 +366,22 @@ def body_drag(
     )
 
 
-def aircraft_drag_buildup(
+def _components(
     geometry: AircraftGeometry,
     condition: FlightCondition,
-    *,
-    interference: InterferenceFactors,
-    cd_misc: float,
-    laminar: LaminarFraction,
-    roughness_m: float,
-) -> DragBuildup:
-    """CD0 build-up of the full aircraft.
+    settings: DragSettings,
+) -> tuple[ComponentDrag, ...]:
+    """Skin-friction drag terms of every component.
 
-    Components: wing, horizontal tail, vertical tail, fuselage, and one
-    nacelle and one pylon per engine. Nacelles use the fuselage laminar
-    fraction; the pylons use the wing-and-tail laminar fraction.
-
-    Args:
-        geometry: All geometric inputs.
-        condition: Flight condition.
-        interference: Interference factor of each component.
-        cd_misc: Sum of the miscellaneous drag coefficients [-].
-        laminar: Laminar fractions of the selected aircraft category.
-        roughness_m: Equivalent sand roughness k [m].
-
-    Returns:
-        The drag build-up. S_ref is the wing planform area.
+    Nacelles use the fuselage laminar fraction; the pylons use the
+    wing-and-tail laminar fraction.
     """
-    lifting = laminar.wing_and_tail
+    lifting = settings.laminar.wing_and_tail
+    body = settings.laminar.fuselage
+    interference = settings.interference
+    roughness = settings.roughness_m
     engines = geometry.engine_count
-    components = (
+    return (
         lifting_surface_drag(
             "wing",
             geometry.wing,
@@ -355,7 +390,7 @@ def aircraft_drag_buildup(
             interference_factor=interference.wing,
             laminar_fraction=lifting,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
         lifting_surface_drag(
             "horizontal_tail",
@@ -365,7 +400,7 @@ def aircraft_drag_buildup(
             interference_factor=interference.horizontal_tail,
             laminar_fraction=lifting,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
         lifting_surface_drag(
             "vertical_tail",
@@ -375,7 +410,7 @@ def aircraft_drag_buildup(
             interference_factor=interference.vertical_tail,
             laminar_fraction=lifting,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
         body_drag(
             "fuselage",
@@ -383,9 +418,9 @@ def aircraft_drag_buildup(
             form_factor_fn=fuselage_form_factor,
             count=1,
             interference_factor=interference.fuselage,
-            laminar_fraction=laminar.fuselage,
+            laminar_fraction=body,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
         body_drag(
             "nacelle",
@@ -393,9 +428,9 @@ def aircraft_drag_buildup(
             form_factor_fn=nacelle_form_factor,
             count=engines,
             interference_factor=interference.nacelle,
-            laminar_fraction=laminar.fuselage,
+            laminar_fraction=body,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
         lifting_surface_drag(
             "pylon",
@@ -405,13 +440,149 @@ def aircraft_drag_buildup(
             interference_factor=interference.pylon,
             laminar_fraction=lifting,
             condition=condition,
-            roughness_m=roughness_m,
+            roughness_m=roughness,
         ),
     )
-    buildup = DragBuildup(
-        components=components,
-        reference_area_m2=geometry.wing.area_m2,
-        cd_misc=cd_misc,
+
+
+def wing_wave_drag(
+    geometry: AircraftGeometry,
+    configuration: DragConfiguration,
+    settings: DragSettings,
+) -> float:
+    """Wave drag of the wing, ADSEE-II three-branch relation.
+
+    M_cr is the streamwise value of the sweep-normal section M_cr. M_DD is
+    only computed if M >= M_cr, so a low-speed configuration needs no C_L.
+
+    Args:
+        geometry: All geometric inputs.
+        configuration: Aircraft configuration.
+        settings: Drag settings.
+
+    Returns:
+        Delta C_D of the wave drag [-].
+
+    Raises:
+        ValueError: If M >= M_cr and the configuration has no C_L.
+    """
+    wing = geometry.wing
+    sweep = wing.planform().sweep_at(settings.wave_sweep_chord_fraction)
+    mach = configuration.condition.mach
+    mach_critical = streamwise_critical_mach(settings.wing_mach_critical_normal, sweep)
+    if mach < mach_critical:
+        return 0.0
+    if configuration.lift_coefficient is None:
+        raise ValueError(
+            f"DragConfiguration({configuration.name!r}): M = {mach} >= M_cr = "
+            f"{mach_critical}, so the wave drag needs a lift_coefficient"
+        )
+    mach_dd = drag_divergence_mach(
+        settings.kappa_a,
+        wing.thickness_to_chord,
+        configuration.lift_coefficient,
+        sweep,
     )
-    logger.info("Class II drag at %s: CD0 = %.5f", condition.name, buildup.cd0)
+    logger.debug("wave drag: M=%.4f M_cr=%.4f M_DD=%.4f", mach, mach_critical, mach_dd)
+    return wave_drag(mach, mach_critical, mach_dd)
+
+
+def _flap_term(
+    flap: FlapInputs,
+    flap_factor: float,
+    deflection_deg: float,
+    geometry: AircraftGeometry,
+) -> float:
+    """Flap drag of one flap; S_flap is the wing strip between its ends."""
+    flap_area = geometry.wing.planform().area_between(flap.eta_in, flap.eta_out)
+    return flap_drag(
+        flap_factor,
+        flap.chord_ratio,
+        flap_area,
+        geometry.wing.area_m2,
+        deflection_deg,
+    )
+
+
+def _gear_term(
+    gear: GearInputs, settings: DragSettings, reference_area: float
+) -> float:
+    """Drag of every unit of one landing gear type, on S_ref."""
+    unit = landing_gear_drag(
+        settings.wheel_well_coeff,
+        gear.frontal_area_m2,
+        gear.tire_width_m,
+        gear.tire_diameter_m,
+        reference_area,
+    )
+    return gear.count * unit
+
+
+def _miscellaneous(
+    geometry: AircraftGeometry,
+    configuration: DragConfiguration,
+    settings: DragSettings,
+) -> tuple[MiscDrag, ...]:
+    """Every miscellaneous term except excrescence and leakage."""
+    reference_area = geometry.wing.area_m2
+    fuselage_aft = geometry.fuselage_aft
+    upsweep = upsweep_drag_area(
+        math.radians(fuselage_aft.upsweep_deg), geometry.fuselage.max_frontal_area_m2
+    )
+    base = base_drag_area(configuration.condition.mach, fuselage_aft.base_area_m2)
+    te_flap = _flap_term(
+        geometry.te_flap,
+        settings.te_flap_factor,
+        configuration.te_flap_deflection_deg,
+        geometry,
+    )
+    le_flap = _flap_term(
+        geometry.le_flap,
+        settings.le_flap_factor,
+        configuration.le_flap_deflection_deg,
+        geometry,
+    )
+    terms = [
+        MiscDrag("wave_drag", wing_wave_drag(geometry, configuration, settings)),
+        MiscDrag("fuselage_upsweep", upsweep / reference_area),
+        MiscDrag("fuselage_base", base / reference_area),
+        MiscDrag("te_flap", te_flap),
+        MiscDrag("le_flap", le_flap),
+    ]
+    if configuration.gear_down:
+        main = _gear_term(geometry.main_gear, settings, reference_area)
+        nose = _gear_term(geometry.nose_gear, settings, reference_area)
+        terms.extend((MiscDrag("main_gear", main), MiscDrag("nose_gear", nose)))
+    return tuple(terms)
+
+
+def aircraft_drag_buildup(
+    geometry: AircraftGeometry,
+    configuration: DragConfiguration,
+    settings: DragSettings,
+) -> DragBuildup:
+    """CD0 build-up of the full aircraft in one configuration.
+
+    Args:
+        geometry: All geometric inputs.
+        configuration: Flight condition, flap deflections and gear state.
+        settings: Laminar fraction, roughness, interference factors and the
+            miscellaneous-drag method inputs.
+
+    Returns:
+        The drag build-up. S_ref is the wing planform area. The last
+        miscellaneous term is excrescence and leakage, a fraction
+        settings.excrescence_fraction of the returned CD0.
+    """
+    components = _components(geometry, configuration.condition, settings)
+    misc = _miscellaneous(geometry, configuration, settings)
+    without = DragBuildup(components, geometry.wing.area_m2, misc)
+    leakage = MiscDrag(
+        "excrescence_leakage",
+        excrescence_drag(without.cd0, settings.excrescence_fraction),
+    )
+    buildup = DragBuildup(components, geometry.wing.area_m2, (*misc, leakage))
+    logger.info(
+        "Class II drag, %s configuration: CD0 = %.5f", configuration.name, buildup.cd0
+    )
     return buildup

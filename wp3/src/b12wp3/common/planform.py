@@ -132,3 +132,25 @@ class TrapezoidalPlanform:
         exposed_panel_span = self.panel_span_m - y0
         mean_chord = 0.5 * (self.chord_at(y0) + self.tip_chord_m)
         return self.panels * exposed_panel_span * mean_chord
+
+    def area_between(self, eta_in: float, eta_out: float) -> float:
+        """Planform area of the strip between two span stations, all panels.
+
+        Args:
+            eta_in: Inboard station, fraction of the panel span from the root [-].
+            eta_out: Outboard station, fraction of the panel span [-].
+
+        Returns:
+            Strip area of all panels [m^2].
+
+        Raises:
+            ValueError: Unless 0 <= eta_in < eta_out <= 1.
+        """
+        if not 0.0 <= eta_in < eta_out <= 1.0:
+            raise ValueError(
+                f"need 0 <= eta_in < eta_out <= 1, got {eta_in}, {eta_out}"
+            )
+        y_in = eta_in * self.panel_span_m
+        y_out = eta_out * self.panel_span_m
+        mean_chord = 0.5 * (self.chord_at(y_in) + self.chord_at(y_out))
+        return self.panels * (y_out - y_in) * mean_chord

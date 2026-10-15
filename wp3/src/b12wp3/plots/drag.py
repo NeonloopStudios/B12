@@ -21,7 +21,9 @@ FIGURE_DPI: Final[int] = 150
 
 
 def plot_cd0_breakdown(buildup: DragBuildup, out_path: Path) -> Path:
-    """Horizontal bar chart of the CD0 contribution of each component.
+    """Horizontal bar chart of the CD0 contribution of each term.
+
+    Components are drawn first, then the miscellaneous terms.
 
     Args:
         buildup: The drag build-up.
@@ -30,13 +32,14 @@ def plot_cd0_breakdown(buildup: DragBuildup, out_path: Path) -> Path:
     Returns:
         out_path.
     """
-    labels = [c.name for c in buildup.components] + ["miscellaneous"]
+    labels = [c.name for c in buildup.components] + [m.name for m in buildup.misc]
     counts = [buildup.contribution(c) / DRAG_COUNT for c in buildup.components]
-    counts.append(buildup.cd_misc / DRAG_COUNT)
+    counts.extend(m.delta_cd / DRAG_COUNT for m in buildup.misc)
+    colors = ["#4C72B0"] * len(buildup.components) + ["#DD8452"] * len(buildup.misc)
 
     fig, ax = plt.subplots(figsize=(7.0, 0.5 * len(labels) + 1.5))
     try:
-        bars = ax.barh(labels, counts, color="#4C72B0")
+        bars = ax.barh(labels, counts, color=colors)
         ax.bar_label(bars, fmt="%.1f", padding=3)
         ax.invert_yaxis()
         ax.set_xlabel("CD0 contribution [drag counts]")

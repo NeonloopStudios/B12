@@ -85,3 +85,131 @@ CRUISE: Final[FlightCondition] = FlightCondition(
     mach=0.77,
     regime=FlowRegime.TRANSONIC,
 )
+
+# Landing: sea level, 65 m/s approach speed, as in WP2 (config/mission.py).
+LANDING_SPEED_M_S: Final[float] = 65.0
+LANDING: Final[FlightCondition] = FlightCondition(
+    name="landing",
+    altitude_m=0.0,
+    mach=LANDING_SPEED_M_S / isa_atmosphere(0.0)[1],
+    regime=FlowRegime.SUBSONIC,
+)
+
+
+# ============================================================
+#  DRAG CONFIGURATIONS
+# ============================================================
+
+
+@dataclass(frozen=True)
+class DragConfiguration:
+    """One aircraft configuration for the drag build-up.
+
+    Attributes:
+        name: Label used in result files.
+        condition: Flight condition.
+        lift_coefficient: Wing C_L for the drag-divergence Mach number [-].
+            Only needed if M >= M_crit; None otherwise.
+        te_flap_deflection_deg: Trailing-edge flap deflection [deg].
+        le_flap_deflection_deg: Leading-edge flap deflection [deg].
+        gear_down: True if the landing gear is extended.
+    """
+
+    name: str
+    condition: FlightCondition
+    lift_coefficient: float | None
+    te_flap_deflection_deg: float
+    le_flap_deflection_deg: float
+    gear_down: bool
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("te_flap_deflection_deg", self.te_flap_deflection_deg),
+            ("le_flap_deflection_deg", self.le_flap_deflection_deg),
+        ):
+            if not 0.0 <= value < 90.0:
+                raise ValueError(
+                    f"DragConfiguration({self.name!r}): {label} must be in [0, 90), "
+                    f"got {value}"
+                )
+
+
+# Cruise C_L: level-flight trim at the WP1 cruise weight and the WP2 wing area
+# (wp2/results/aero_summary_3d.csv, CL_design).
+CRUISE_LIFT_COEFFICIENT: Final[float] = 0.489433403
+
+CRUISE_CONFIGURATION: Final[DragConfiguration] = DragConfiguration(
+    name="cruise",
+    condition=CRUISE,
+    lift_coefficient=CRUISE_LIFT_COEFFICIENT,
+    te_flap_deflection_deg=0.0,
+    le_flap_deflection_deg=0.0,
+    gear_down=False,
+)
+
+# --- take-off and landing inputs, not set yet ---
+TAKEOFF_SPEED_M_S: Final[float | None] = None  # sea level
+TAKEOFF_TE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+TAKEOFF_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+LANDING_TE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+LANDING_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+
+
+def _raise_if_unset(
+    configuration: str, named: tuple[tuple[str, float | None], ...]
+) -> None:
+    """Raise one error that names every unset input of a configuration."""
+    missing = [name for name, value in named if value is None]
+    if missing:
+        raise ValueError(
+            f"{configuration} inputs not set in b12wp3/config/mission.py: "
+            + ", ".join(missing)
+        )
+
+
+def takeoff_configuration() -> DragConfiguration:
+    """Take-off configuration: sea level, take-off flaps, gear down.
+
+    Raises:
+        ValueError: If a take-off input is None. The message names all of them.
+    """
+    speed = TAKEOFF_SPEED_M_S
+    te = TAKEOFF_TE_FLAP_DEFLECTION_DEG
+    le = TAKEOFF_LE_FLAP_DEFLECTION_DEG
+    _raise_if_unset(
+        "take-off",
+        (
+            ("TAKEOFF_SPEED_M_S", speed),
+            ("TAKEOFF_TE_FLAP_DEFLECTION_DEG", te),
+            ("TAKEOFF_LE_FLAP_DEFLECTION_DEG", le),
+        ),
+    )
+    if speed is None or te is None or le is None:
+        raise AssertionError("unreachable: _raise_if_unset checked the inputs")
+    condition = FlightCondition(
+        name="takeoff",
+        altitude_m=0.0,
+        mach=speed / isa_atmosphere(0.0)[1],
+        regime=FlowRegime.SUBSONIC,
+    )
+    return DragConfiguration("takeoff", condition, None, te, le, gear_down=True)
+
+
+def landing_configuration() -> DragConfiguration:
+    """Landing configuration: sea level, 65 m/s, landing flaps, gear down.
+
+    Raises:
+        ValueError: If a landing input is None. The message names all of them.
+    """
+    te = LANDING_TE_FLAP_DEFLECTION_DEG
+    le = LANDING_LE_FLAP_DEFLECTION_DEG
+    _raise_if_unset(
+        "landing",
+        (
+            ("LANDING_TE_FLAP_DEFLECTION_DEG", te),
+            ("LANDING_LE_FLAP_DEFLECTION_DEG", le),
+        ),
+    )
+    if te is None or le is None:
+        raise AssertionError("unreachable: _raise_if_unset checked the inputs")
+    return DragConfiguration("landing", LANDING, None, te, le, gear_down=True)

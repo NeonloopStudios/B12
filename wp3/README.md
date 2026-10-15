@@ -39,14 +39,28 @@ All geometric inputs are in `src/b12wp3/config/geometry.py`, one constant per
 quantity. An input that is not designed yet is `None`.
 `geometry.aircraft_geometry()` raises one error that names every unset input.
 
-Class II drag settings are in `src/b12wp3/config/drag.py`:
+The ADSEE-II method tables (laminar fraction, roughness, interference
+factor, flap factor, landing gear fit, excrescence fraction) are in
+`src/b12wp3/config/drag_tables.py`. The selected rows are in
+`src/b12wp3/config/drag.py`:
 
 | Setting | Value | Source |
 |---|---|---|
 | Laminar fraction | civil jet, classic production metal: 5 % fuselage, 10 % wing and tails | ADSEE-II table |
 | Surface roughness k | smooth paint, 0.634e-5 m | ADSEE-II table |
-| Interference factors | not set | to be added |
-| Miscellaneous drag | not set | to be added |
+| IF wing | un-filleted low wing, 1.4 (upper end, conservative) | ADSEE-II table |
+| IF horizontal and vertical tail | cruciform tail, 1.06 | ADSEE-II table |
+| IF nacelle | more than about 1 diameter away, 1.0 | ADSEE-II table |
+| IF fuselage, pylon | 1.0 (no table row) | assumption |
+| k_a (Korn) | 0.95, supercritical | same as WP2 |
+| M_cr | 0.56 normal to the half chord (WP2), converted to free stream | WP2 M_crit sweep |
+| Flap factor | Fowler TE flap: slotted, 0.0074; nose flap: plain, 0.0144 | ADSEE-II |
+| Landing gear | open wheel wells, 0.05328 | ADSEE-II fit |
+| Excrescence and leakage | jet transport, 3.5 % of the total CD0 | ADSEE-II range 2-5 % |
+
+Configurations are in `src/b12wp3/config/mission.py`: `CRUISE_CONFIGURATION`,
+`takeoff_configuration()` and `landing_configuration()`. The take-off speed
+and the flap deflections are unset (`None`).
 
 Nacelles use the fuselage laminar fraction and the fuselage wetted-area
 formula. Pylons use the wing-and-tail laminar fraction and the tail
@@ -64,7 +78,12 @@ CD0 = (1 / S_ref) * sum_c( Cf_c * FF_c * IF_c * S_wet,c ) + sum CD_misc
 | Re | `drag/skin_friction.py` | min(ρVl/μ, cutoff); cutoff 38.21(l/k)^1.053 subsonic, 44.62(l/k)^1.053·M^1.16 transonic |
 | Cf | `drag/skin_friction.py` | x_lam·1.328/√Re + (1−x_lam)·0.455/((log10 Re)^2.58 (1+0.144M²)^0.65) |
 | FF | `drag/form_factor.py` | lifting surface, fuselage, nacelle formulas; f = l/√(4A_max/π) |
-| CD0 | `drag/buildup.py` | `aircraft_drag_buildup()` |
+| Wave drag | `drag/miscellaneous.py` | Mason M_DD; 0 / 0.002[1+2.5(M_DD−M)/0.05]^-1 / 0.002[1+(M−M_DD)/0.05]^2.5 |
+| Upsweep, base | `drag/miscellaneous.py` | D/q = 3.83u^2.5·A_max; D/q = [0.139+0.419(M−0.161)²]·A_base |
+| Flaps | `drag/miscellaneous.py` | F_flap(c_f/c)(S_flap/S_ref)(δ−10), δ > 10° only |
+| Landing gear | `drag/miscellaneous.py` | coeff·e^{5.615 S_A/(d w)}·(d w)/S_ref per unit, main and nose |
+| Excrescence | `drag/miscellaneous.py` | f/(1−f)·CD0_rest, so it is f of the total |
+| CD0 | `drag/buildup.py` | `aircraft_drag_buildup(geometry, configuration, settings)` |
 
 The characteristic length l is the MAC for a lifting surface and the total
 length for a body. The flow regime of the cutoff is set per flight condition

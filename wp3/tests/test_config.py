@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from b12wp3.config import drag, geometry, mission
+from b12wp3.config import drag, drag_tables, geometry, mission
 
 
 def test_isa_cruise_altitude_returns_reference_values() -> None:
@@ -53,7 +53,7 @@ def test_laminar_fraction_out_of_range_raises(
     fuselage: float, wing_and_tail: float
 ) -> None:
     with pytest.raises(ValueError):
-        drag.LaminarFraction(fuselage, wing_and_tail)
+        drag_tables.LaminarFraction(fuselage, wing_and_tail)
 
 
 def test_aircraft_geometry_unset_input_raises_with_its_name(
@@ -90,12 +90,110 @@ def test_aircraft_geometry_all_inputs_set_returns_geometry(
             f"{body}_TAIL_LENGTH_M": 2.0,
             f"{body}_DIAMETER_M": 1.5,
         }
+    values |= {"FUSELAGE_UPSWEEP_DEG": 5.0, "FUSELAGE_BASE_AREA_M2": 0.0}
+    for gear in ("MAIN_GEAR", "NOSE_GEAR"):
+        values |= {
+            f"{gear}_FRONTAL_AREA_M2": 0.3,
+            f"{gear}_TIRE_WIDTH_M": 0.4,
+            f"{gear}_TIRE_DIAMETER_M": 1.0,
+        }
     for name, value in values.items():
         monkeypatch.setattr(geometry, name, value)
-    monkeypatch.setattr(geometry, "ENGINE_COUNT", 2)
+    for name in ("ENGINE_COUNT", "MAIN_GEAR_COUNT", "NOSE_GEAR_COUNT"):
+        monkeypatch.setattr(geometry, name, 2)
 
     result = geometry.aircraft_geometry()
 
     assert result.engine_count == 2
     assert result.fuselage.length_m == pytest.approx(8.0)
     assert result.vertical_tail.panels == 1
+
+
+def test_interference_table_has_every_slide_row() -> None:
+    table = drag_tables.INTERFERENCE_TABLE
+
+    assert len(table) == 20
+    assert table[drag_tables.InterferenceCase.CRUCIFORM_TAIL].low == 1.06
+    assert table[drag_tables.InterferenceCase.UNFILLETED_LOW_WING] == (
+        drag_tables.ValueRange(1.1, 1.4)
+    )
+
+
+def test_selected_interference_factors_match_choices() -> None:
+    factors = drag.DRAG_SETTINGS.interference
+
+    result = (
+        factors.wing,
+        factors.horizontal_tail,
+        factors.vertical_tail,
+        factors.fuselage,
+        factors.nacelle,
+        factors.pylon,
+    )
+
+    assert result == (1.4, 1.06, 1.06, 1.0, 1.0, 1.0)
+
+
+@pytest.mark.parametrize(
+    ("case", "value"),
+    [
+        (drag_tables.InterferenceCase.UNFILLETED_LOW_WING, None),
+        (drag_tables.InterferenceCase.UNFILLETED_LOW_WING, 1.5),
+        (drag_tables.InterferenceCase.CRUCIFORM_TAIL, 1.04),
+        (None, None),
+        (None, 0.0),
+    ],
+)
+def test_interference_choice_outside_table_raises(
+    case: drag_tables.InterferenceCase | None, value: float | None
+) -> None:
+    with pytest.raises(ValueError):
+        drag_tables.InterferenceChoice(case, value)
+
+
+def test_selected_drag_settings_match_decisions() -> None:
+    settings = drag.DRAG_SETTINGS
+
+    result = (
+        settings.kappa_a,
+        settings.wing_mach_critical_normal,
+        settings.te_flap_factor,
+        settings.le_flap_factor,
+        settings.wheel_well_coeff,
+        settings.excrescence_fraction,
+    )
+
+    assert result == (0.95, 0.56, 0.0074, 0.0144, 0.05328, 0.035)
+
+
+def test_excrescence_fraction_outside_jet_range_raises() -> None:
+    jet = drag_tables.EXCRESCENCE_FRACTION_TABLE[
+        drag_tables.ExcrescenceCategory.JET_TRANSPORT
+    ]
+
+    with pytest.raises(ValueError):
+        jet.select(0.06)
+
+
+def test_landing_configuration_unset_deflection_raises_with_its_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mission, "LANDING_TE_FLAP_DEFLECTION_DEG", None)
+
+    with pytest.raises(ValueError) as error:
+        mission.landing_configuration()
+
+    assert "LANDING_TE_FLAP_DEFLECTION_DEG" in str(error.value)
+
+
+def test_takeoff_configuration_all_inputs_set_returns_gear_down(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mission, "TAKEOFF_SPEED_M_S", 75.0)
+    monkeypatch.setattr(mission, "TAKEOFF_TE_FLAP_DEFLECTION_DEG", 15.0)
+    monkeypatch.setattr(mission, "TAKEOFF_LE_FLAP_DEFLECTION_DEG", 10.0)
+
+    configuration = mission.takeoff_configuration()
+
+    assert configuration.gear_down
+    assert configuration.condition.velocity_m_s == pytest.approx(75.0)
