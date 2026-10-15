@@ -14,8 +14,10 @@
 # * covered_span_m is the span length inside the fuselage (or nacelle); the
 #   exposed area S_exp is the planform outside it.
 # * x_c_max_thickness is the chord position of the maximum thickness, (x/c)_m.
-# * Bodies are a nose (L1), a cylinder (L2) and a tail cone (L3) with the
+# * The fuselage is a nose (L1), a cylinder (L2) and a tail cone (L3) with the
 #   maximum diameter D: the ADSEE-II fuselage wetted-area geometry.
+# * A nacelle is the Torenbeek Type B outline: D_h at the inlet, D_n at
+#   beta * l_n, D_ef at the exit; its wetted area is the two frustums.
 # * Flap eta_in / eta_out are fractions of the wing semi-span from the
 #   centreline, as in WP2.
 # * Landing gear inputs are per gear unit; d x w is the drag reference area.
@@ -76,11 +78,14 @@ fuselage_aft:
   base_area_m2: 0.0              # A_base: closed tail cone
 
 # --- one nacelle and one pylon per engine ---
+# Nacelle: Torenbeek Type B outline from scripts/nacelle_sizing.py
+# (results/propulsion/nacelle.csv), GE CF34-8C5B1 inputs in propulsion.yaml.
 nacelle:
-  nose_length_m: null
-  cylinder_length_m: null
-  tail_length_m: null
-  diameter_m: null
+  length_m: 4.0710               # l_n, without the cone (datasheet 3.25 m)
+  highlight_diameter_m: 1.0698   # D_h = D_i (datasheet fan diameter 1.17 m)
+  max_diameter_m: 1.3440         # D_n
+  max_diameter_position: 0.35    # beta, D_n at beta * l_n (Table 8.1, Type B)
+  exit_diameter_m: 0.8960        # D_ef = 2/3 D_n
 
 pylon:
   area_m2: null

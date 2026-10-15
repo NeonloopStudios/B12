@@ -13,13 +13,14 @@ the final concept. The structure is the same as `wp2/`.
 
 ```
 wp3/
-  configs/      input files: geometry.yaml (every geometric input)
+  configs/      input files: geometry.yaml (every geometric input),
+                propulsion.yaml (engine inputs of the nacelle sizing)
   scripts/      the runnable steps, one file per step
   src/b12wp3/   the analysis library every step calls
     config/     every input: paths, atmosphere, mission, geometry, drag settings
     common/     trapezoidal planform (wing, tails, pylons)
     drag/       WP3.3a class II drag: component drag build-up (ADSEE-II)
-    propulsion/ WP3.1  engine configuration and selection
+    propulsion/ WP3.1  nacelle sizing of the selected engine (Torenbeek)
     fuselage/   WP3.2a fuselage external dimensions
     landing_gear/ WP3.2b landing gear dimensions and position
     empennage/  WP3.2c/d empennage trade-off and tail sizing
@@ -126,6 +127,25 @@ writes `results/drag/induced_drag.csv/.png`, the WP3.4 input
 `results/iteration/oswald_configurations.csv` (e and K of the clean,
 take-off and landing configurations), and `results/drag/drag_polar.csv/.png`
 once every class II CD0 input is set.
+
+## Nacelle sizing (WP3.1)
+
+Selected engine: GE CF34-8C5B1, two engines, 61.3 kN take-off thrust each,
+bypass ratio 5. Nacelle installation: Type B (the fan cowl covers the whole
+nacelle). The inputs are in `configs/propulsion.yaml`; `T_t4 = 1830 K` and
+`eta_noz = 0.98` are assumptions, `eta_tf = 0.75` is the textbook value.
+
+```
+python -m scripts.nacelle_sizing
+```
+
+The script follows the textbook section 8.3 (Torenbeek), equations 8.22-8.30
+with the Type B row of Table 8.1 (C_l = 9.8, Delta l = 0.05 m, beta = 0.35,
+phi = 1). It writes `results/propulsion/nacelle.csv` (with the datasheet
+comparison) and `nacelle.png`, and logs the `nacelle` block of
+`configs/geometry.yaml`. The drag build-up uses that outline: the nacelle
+wetted area is two conical frustums (D_h -> D_n -> D_ef), and the form factor
+uses f = l_n / D_n.
 
 ## Running the tests
 

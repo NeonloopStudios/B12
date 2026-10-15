@@ -150,15 +150,9 @@ CRUISE_CONFIGURATION: Final[DragConfiguration] = DragConfiguration(
 # --- take-off and landing inputs, not set yet ---
 TAKEOFF_SPEED_M_S: Final[float | None] = None  # sea level
 TAKEOFF_TE_FLAP_DEFLECTION_DEG: Final[float | None] = 15.0  # WP1 value, kept in WP3
-<<<<<<< HEAD
 TAKEOFF_LE_FLAP_DEFLECTION_DEG: Final[float | None] = 30.0  # nose flap
 LANDING_TE_FLAP_DEFLECTION_DEG: Final[float | None] = 40.0  # WP2 Fowler maximum
 LANDING_LE_FLAP_DEFLECTION_DEG: Final[float | None] = 30.0  # nose flap
-=======
-TAKEOFF_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
-LANDING_TE_FLAP_DEFLECTION_DEG: Final[float | None] = 40.0  # WP2 Fowler maximum
-LANDING_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
->>>>>>> e2a97674cc76c9266c85c4a6c536a737d5c4b0db
 
 
 def _raise_if_unset(

@@ -15,7 +15,7 @@ Miscellaneous terms (b12wp3.drag.miscellaneous), per configuration:
 Characteristic length l of each component (Reynolds number):
 
 * wing, tails, pylon: mean aerodynamic chord
-* fuselage, nacelle: total body length L1 + L2 + L3
+* fuselage: total body length L1 + L2 + L3; nacelle: nacelle length l_n
 
 The reference area S_ref is the wing planform area.
 """
@@ -36,6 +36,7 @@ from b12wp3.config.geometry import (
     FlapInputs,
     GearInputs,
     LiftingSurfaceInputs,
+    NacelleInputs,
 )
 from b12wp3.config.mission import DragConfiguration, FlightCondition
 from b12wp3.drag.form_factor import (
@@ -60,7 +61,12 @@ from b12wp3.drag.skin_friction import (
     reynolds_actual,
     reynolds_cutoff,
 )
-from b12wp3.drag.wetted_area import body_wetted_area, tail_wetted_area, wing_wetted_area
+from b12wp3.drag.wetted_area import (
+    body_wetted_area,
+    nacelle_wetted_area,
+    tail_wetted_area,
+    wing_wetted_area,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -330,7 +336,7 @@ def body_drag(
     condition: FlightCondition,
     roughness_m: float,
 ) -> ComponentDrag:
-    """Drag terms of a fuselage or nacelle.
+    """Drag terms of a body of revolution (the fuselage).
 
     Args:
         name: Component label.
@@ -359,6 +365,50 @@ def body_drag(
         wetted_area_m2=wetted,
         reference_length_m=body.length_m,
         form_factor=form_factor_fn(fineness),
+        interference_factor=interference_factor,
+        laminar_fraction=laminar_fraction,
+        condition=condition,
+        roughness_m=roughness_m,
+    )
+
+
+def nacelle_drag(
+    nacelle: NacelleInputs,
+    *,
+    count: int,
+    interference_factor: float,
+    laminar_fraction: float,
+    condition: FlightCondition,
+    roughness_m: float,
+) -> ComponentDrag:
+    """Drag terms of the nacelles (Type B outline).
+
+    Args:
+        nacelle: Outer geometry of one nacelle.
+        count: Number of nacelles.
+        interference_factor: IF [-].
+        laminar_fraction: Laminar fraction x_lam [-].
+        condition: Flight condition.
+        roughness_m: Equivalent sand roughness k [m].
+
+    Returns:
+        The component drag terms. l is the nacelle length; FF uses the
+        nacelle formula with f = l_n / D_n.
+    """
+    wetted = nacelle_wetted_area(
+        nacelle.length_m,
+        nacelle.highlight_diameter_m,
+        nacelle.max_diameter_m,
+        nacelle.max_diameter_position,
+        nacelle.exit_diameter_m,
+    )
+    fineness = fineness_ratio(nacelle.length_m, nacelle.max_frontal_area_m2)
+    return component_drag(
+        "nacelle",
+        count=count,
+        wetted_area_m2=wetted,
+        reference_length_m=nacelle.length_m,
+        form_factor=nacelle_form_factor(fineness),
         interference_factor=interference_factor,
         laminar_fraction=laminar_fraction,
         condition=condition,
@@ -422,10 +472,8 @@ def _components(
             condition=condition,
             roughness_m=roughness,
         ),
-        body_drag(
-            "nacelle",
+        nacelle_drag(
             geometry.nacelle,
-            form_factor_fn=nacelle_form_factor,
             count=engines,
             interference_factor=interference.nacelle,
             laminar_fraction=body,

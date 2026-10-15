@@ -1,0 +1,12 @@
+quantity,value,unit,datasheet,ratio_to_datasheet
+gas_generator_function_G,1.7999999999999998,-,,
+mass_flow_per_engine,166.98457325927356,kg/s,,
+spinner_ratio_Ds_Di,0.1874819955928592,-,,
+spinner_diameter_Ds,0.20056268852230322,m,,
+inlet_diameter_Di,1.0697703952215785,m,1.17,0.9143336711295543
+highlight_diameter_Dh,1.0697703952215785,m,,
+nacelle_length_ln,4.071033947422043,m,3.25,1.2526258299760131
+fan_cowl_length_lf,4.071033947422043,m,,
+max_diameter_Dn,1.344032432066901,m,,
+max_diameter_position_beta,0.35,-,,
+exit_diameter_Def,0.8960216213779342,m,,
