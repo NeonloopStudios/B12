@@ -112,7 +112,8 @@ would also silently skip the diagnostics patch. Build from
   install cannot provide, MSVC has no Fortran compiler).
 - **CMake** (standalone Windows installer or `mingw-w64-x86_64-cmake`; this
   project used the standalone installer at `C:\Program Files\CMake`).
-- Python venv with `numpy` (already in [`requirements.txt`](requirements.txt)).
+- The project venv with `numpy` (in the repo-root
+  [`requirements.txt`](../requirements.txt)).
 
 Install the MinGW toolchain from an MSYS2 shell:
 
@@ -298,14 +299,14 @@ from the aborted iteration, not a placeholder value.
   by every build.
 - The compiled package ends up in the project venv at
   `venv/Lib/site-packages/xfoil/` (gitignored, like the rest of `venv/`).
-- `wp2/requirements.txt` covers the analysis dependencies (`numpy`, `matplotlib`,
-  `pandas`, `scipy`) — it deliberately does **not** include `xfoil`, since that
-  install is the multi-step process above, not a single pip line.
+- The repo-root `requirements.txt` covers the analysis, test and type-check
+  dependencies of wp2 and wp3 — it deliberately does **not** include `xfoil`,
+  since that install is the multi-step process above, not a single pip line.
 
 ## Development
 
-`wp2/requirements-dev.txt` adds `pytest` and `mypy`. Config lives in the repo
-root `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.mypy]`); tests belong
+The repo-root `requirements.txt` includes `pytest` and `mypy`. Config lives in
+the repo root `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.mypy]`); tests belong
 in `wp2/tests/`, type-checked source is `wp2/src/` and `wp2/scripts/`.
 
 `b12wp2` is imported straight from the working tree, not pip-installed:
@@ -313,7 +314,7 @@ in `wp2/tests/`, type-checked source is `wp2/src/` and `wp2/scripts/`.
 `scripts/__init__.py` does the same for `python -m scripts.<name>`.
 
 ```
-pip install -r wp2/requirements.txt -r wp2/requirements-dev.txt
+pip install -r requirements.txt
 pytest
 mypy
 ```
@@ -361,11 +362,10 @@ Anaconda, Python 3.11.
    named `vsppytools` instead of `openvsp` and installs everything in
    editable mode.
 
-4. Add the analysis dependencies from this repo (and pytest if you want to
-   run the tests from this env):
+4. Add the analysis and test dependencies from this repo:
 
    ```
-   pip install -r <repo>\wp2\requirements.txt pytest
+   pip install -r <repo>\requirements.txt
    ```
 
 5. Make the `b12wp2` package importable from anywhere in this env, by
