@@ -1,0 +1,38 @@
+section,quantity,value,unit,note
+reference,A320neo h,2.43,m,"Airbus A320 AC, Rev. Jun 01/24, FIGURE-2-2-0-991-009-A01"
+reference,A320neo b,35.8,m,"Airbus A320 AC, Rev. Jun 01/24, FIGURE-2-2-0-991-009-A01"
+reference,A320neo h/b,0.06787709497206705,-,
+reference,CRJ900 h,1.31826,m,"Bombardier CRJ900 APM, CSP C-020 Rev. 11, 00-02-02 Figure 1"
+reference,CRJ900 b,23.24608,m,"Bombardier CRJ900 APM, CSP C-020 Rev. 11, 00-02-02 Figure 1"
+reference,CRJ900 h/b,0.05670891608391609,-,
+winglet,h/b (mean),0.062293005527991566,-,mean of the references
+winglet,span b,25.172405526687353,m,"wing, sqrt(S AR)"
+winglet,height h,1.5680647966267807,m,(h/b) b
+winglet,tip chord c_t,1.514129655740593,m,wing tip
+wing,AR,9.5,-,
+wing,sweep c/2,28.023581804818225,deg,
+wing,AR_eff,10.624388749780248,-,AR + 1.9 (h/b) AR
+cruise,CL,0.489433403,-,WP3 chapter 1
+no winglet,e,0.5803768209975504,-,Brandt at AR_eff; h = 0.000 m
+no winglet,K,0.0577319813551987,-,1 / (pi AR_eff e)
+no winglet,CDi at cruise CL,0.013829410705114792,-,K CL^2
+winglet,e,0.5592600186184964,-,Brandt at AR_eff; h = 1.568 m
+winglet,K,0.05357132661889329,-,1 / (pi AR_eff e)
+winglet,CDi at cruise CL,0.01283274643342568,-,K CL^2
+comparison,sweep LE,31.90073801234116,deg,Raymer swept
+comparison,Brandt e(AR),0.5803768209975504,-,no winglet
+comparison,Brandt e(AR_eff),0.5592600186184964,-,winglet
+comparison,Brandt CDi no winglet,0.013829410705114792,-,cruise CL
+comparison,Brandt CDi winglet,0.01283274643342568,-,cruise CL
+comparison,Brandt CDi change,-7.206845562266051,%,winglet vs no winglet
+comparison,Raymer swept e(AR),0.4625358438181766,-,no winglet
+comparison,Raymer swept e(AR_eff),0.3885912913283387,-,winglet
+comparison,Raymer swept CDi no winglet,0.017352751205286374,-,cruise CL
+comparison,Raymer swept CDi winglet,0.018468869914071352,-,cruise CL
+comparison,Raymer swept CDi change,6.431940938823355,%,winglet vs no winglet
+comparison,Raymer straight e(AR),0.7697589510636401,-,no winglet
+comparison,Raymer straight e(AR_eff),0.740497773260803,-,winglet
+comparison,Raymer straight CDi no winglet,0.01042699069652058,-,cruise CL
+comparison,Raymer straight CDi winglet,0.009691915719990164,-,cruise CL
+comparison,Raymer straight CDi change,-7.049732736173874,%,winglet vs no winglet
+winglet,CDi change at cruise CL,-7.206845562266051,%,with vs without winglet

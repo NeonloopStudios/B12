@@ -2,13 +2,15 @@
 # Copyright (C) 2026 Kajetan R. Gulaj
 
 [tool.pytest.ini_options]
-testpaths = ["wp2/tests"]
-addopts = "-ra"
-pythonpath = ["wp2", "wp2/src"]
+testpaths = ["wp2/tests", "wp3/tests"]
+# importlib mode: wp2 and wp3 both have a top-level "tests" package
+addopts = "-ra --import-mode=importlib"
+pythonpath = ["wp2", "wp2/src", "wp3/src"]
 
 [tool.mypy]
 python_version = "3.13"
-files = ["wp2/src", "wp2/scripts"]
+# wp3/scripts is left out: mypy cannot hold two top-level "scripts" packages
+files = ["wp2/src", "wp2/scripts", "wp3/src"]
 ignore_missing_imports = true
 disallow_untyped_defs = true
 warn_unused_ignores = true
