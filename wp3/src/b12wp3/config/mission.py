@@ -149,9 +149,9 @@ CRUISE_CONFIGURATION: Final[DragConfiguration] = DragConfiguration(
 
 # --- take-off and landing inputs, not set yet ---
 TAKEOFF_SPEED_M_S: Final[float | None] = None  # sea level
-TAKEOFF_TE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+TAKEOFF_TE_FLAP_DEFLECTION_DEG: Final[float | None] = 15.0  # WP1 value, kept in WP3
 TAKEOFF_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
-LANDING_TE_FLAP_DEFLECTION_DEG: Final[float | None] = None
+LANDING_TE_FLAP_DEFLECTION_DEG: Final[float | None] = 40.0  # WP2 Fowler maximum
 LANDING_LE_FLAP_DEFLECTION_DEG: Final[float | None] = None
 
 
