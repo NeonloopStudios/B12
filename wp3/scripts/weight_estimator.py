@@ -36,9 +36,10 @@ def W_wing(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw):
     #S_csw control surface area
     #tc_r t/c ratio root
 
-def W_htail(K_uht, F_w, B_h, W_dg, N_z, S_ht, L_t, sweep_ht, A_h, S_e):
+def W_htail(allmoving_tail, F_w, B_h, W_dg, N_z, S_ht, L_t, sweep_ht, A_h, S_e):
+    K_uht = 1.0
+    if allmoving_tail: K_uht = 1.143
     return Kg(0.0379 * K_uht * pow(1 + Feet(F_w, 1)/Feet(B_h, 1), -0.25) * pow(Lbs(W_dg), 0.639) * pow(1.5 * N_z, 0.1) * pow(Feet(S_ht, 2), 0.75) * pow(Feet(L_t, 1), -1) * pow(0.3 * Feet(L_t, 1), 0.704) * pow(m.cos(m.radians(sweep_ht)), -1.0) * pow(A_h, 0.166) * pow(1 + S_e/S_ht, 0.1))
-    #K_uht 1.143 for all-moving htail or 1.0 otherwise
     #F_w fuselage width at htail intersection
     #B_h htail span
     #S_ht horizontal tail area
@@ -161,7 +162,30 @@ def W_antiice(W_dg):
     return Kg(0.002*Lbs(W_dg))
     #print(f" {Lbs(10)} \n {Kg(Lbs(10))} \n {Feet(100, 1)} \n {Feet(100, 2)} \n {Meter(Feet(100, 3), 3)}")
 
-def OemEstimator(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw):
-    return W_wing(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw)
+def OemEstimator(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw, allmoving_tail, F_w, B_h, S_ht, L_t, sweep_ht, A_h, S_e):
+    mass = W_wing(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw) \
+        + W_htail(allmoving_tail, F_w, B_h, W_dg, N_z, S_ht, L_t, sweep_ht, A_h, S_e)
+    return mass
 
-print(f" {OemEstimator(1, 1, 1, 1, 1, 1, 1, 1)} ")
+#General design
+OEM_design = 32900 #kg
+limit_load_factor = 2.5 #g
+wing_area = 66.7 #m^2
+aspect_ratio = 9.5
+tc_ratio_root = 0.12
+taper_ratio = 0.4
+sweep_angle = 30 #deg
+
+#Control surface
+control_surface_area = 10 #m^2
+elevator_area = 1 #m^2
+unitary_tail = False
+fuselage_width_at_htail = 1 #m
+htail_span = 1 #m
+htail_area = 1 #m^2
+tail_length = 1 #m, from wing quarter MAC to htail quarter MAC
+htail_sweep = 1 #deg
+htail_aspect = 1
+
+print(f"The calculated operating empty mass is {OemEstimator(OEM_design, limit_load_factor, wing_area, aspect_ratio, tc_ratio_root, taper_ratio, sweep_angle, \
+                                                              control_surface_area, unitary_tail, fuselage_width_at_htail, htail_span, htail_area, tail_length, htail_sweep, htail_aspect, elevator_area)} kg.")
