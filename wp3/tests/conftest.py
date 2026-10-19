@@ -37,7 +37,7 @@ def unit_settings() -> DragSettings:
     return DragSettings(
         laminar=LaminarFraction(0.05, 0.10),
         roughness_m=0.634e-5,
-        interference=InterferenceFactors(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+        interference=InterferenceFactors(1.0, 1.0, 1.0, 1.0, 1.0),
         kappa_a=0.95,
         wing_mach_critical_normal=0.56,
         wave_sweep_chord_fraction=0.5,
@@ -70,7 +70,6 @@ def sample_geometry() -> AircraftGeometry:
         vertical_tail=surface(10.0, 1, 0.0),
         fuselage=BodyInputs(4.0, 20.0, 8.0, 3.0),
         nacelle=NacelleInputs(4.0, 1.07, 1.34, 0.35, 0.90),
-        pylon=surface(2.0, 1, 0.0),
         engine_count=2,
         fuselage_aft=FuselageAftInputs(upsweep_deg=5.0, base_area_m2=0.1),
         te_flap=FlapInputs(0.30, 0.12, 0.75),

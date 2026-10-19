@@ -2,9 +2,6 @@
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-10-15
 """Engine inputs of the nacelle sizing, loaded from wp3/configs/propulsion.yaml.
-
-The Type B nacelle constants of the textbook Table 8.1 (Torenbeek) are module
-constants here: they are method data, not design choices.
 """
 
 from __future__ import annotations

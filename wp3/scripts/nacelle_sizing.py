@@ -7,8 +7,8 @@ Run from wp3/:  python -m scripts.nacelle_sizing  (or as a file / Run button)
 
 Reads configs/propulsion.yaml, sizes one nacelle (textbook equations
 8.22-8.30), compares it with the engine datasheet, and writes
-results/propulsion/nacelle.csv and nacelle.png. It logs the nacelle block
-for configs/geometry.yaml.
+results/propulsion/nacelle.csv, nacelle.png and nacelle_report.txt (everything
+it prints, including the nacelle block for configs/geometry.yaml).
 """
 
 from __future__ import annotations
@@ -25,8 +25,13 @@ if __package__ in (None, ""):
 
 import pandas as pd  # noqa: E402
 
-from b12wp3.config.paths import NACELLE_CSV, NACELLE_PNG  # noqa: E402
-from b12wp3.config.propulsion import load_propulsion  # noqa: E402
+from b12wp3.config.paths import (  # noqa: E402
+    NACELLE_CSV,
+    NACELLE_PNG,
+    NACELLE_REPORT_TXT,
+    WP3_DIR,
+)
+from b12wp3.config.propulsion import EngineInputs, load_propulsion  # noqa: E402
 from b12wp3.config.yaml_io import ConfigError  # noqa: E402
 from b12wp3.plots.nacelle import plot_nacelle_outline  # noqa: E402
 from b12wp3.propulsion.nacelle import (  # noqa: E402
@@ -54,6 +59,7 @@ def _result_table(
         ("max_diameter_Dn", nacelle.max_diameter_m, "m", None),
         ("max_diameter_position_beta", nacelle.max_diameter_position, "-", None),
         ("exit_diameter_Def", nacelle.exit_diameter_m, "m", None),
+        ("wetted_area_one_nacelle", nacelle.wetted_area_m2, "m^2", None),
     ]
     frame = pd.DataFrame(rows, columns=["quantity", "value", "unit", "datasheet"])
     frame["ratio_to_datasheet"] = frame["value"] / frame["datasheet"]
@@ -70,6 +76,26 @@ def _geometry_block(nacelle: NacelleGeometry) -> str:
         f"  max_diameter_position: {nacelle.max_diameter_position}\n"
         f"  exit_diameter_m: {nacelle.exit_diameter_m:.4f}\n"
     )
+
+
+def _report(engine: EngineInputs, table: pd.DataFrame, nacelle: NacelleGeometry) -> str:
+    """The full text report: inputs, results, geometry.yaml block, files."""
+    files = (NACELLE_CSV, NACELLE_PNG, NACELLE_REPORT_TXT)
+    sections = [
+        "NACELLE SIZING (WP3.1) - Torenbeek, Type B nacelle, textbook eq. 8.22-8.30",
+        "INPUTS (configs/propulsion.yaml)\n"
+        f"  take-off thrust per engine  {engine.takeoff_thrust_per_engine_n:.0f} N\n"
+        f"  bypass ratio B              {engine.bypass_ratio}\n"
+        f"  turbine inlet temp. T_t4    {engine.turbine_inlet_temperature_k} K\n"
+        f"  nozzle efficiency           {engine.nozzle_efficiency}\n"
+        f"  turbine x fan efficiency    {engine.turbine_fan_efficiency}",
+        "RESULTS\n" + table.to_string(index=False, na_rep="-"),
+        "BLOCK FOR configs/geometry.yaml\n" + _geometry_block(nacelle),
+        # relative to wp3/: the report is shared, the absolute path is local
+        "FILES (relative to wp3/)\n"
+        + "\n".join(f"  {path.relative_to(WP3_DIR).as_posix()}" for path in files),
+    ]
+    return "\n\n".join(sections) + "\n"
 
 
 def main() -> int:
@@ -97,9 +123,9 @@ def main() -> int:
     NACELLE_CSV.parent.mkdir(parents=True, exist_ok=True)
     table.to_csv(NACELLE_CSV, index=False)
     plot_nacelle_outline(nacelle, NACELLE_PNG)
-    logger.info("wrote %s and %s", NACELLE_CSV, NACELLE_PNG)
-    logger.info("results:\n%s", table.to_string(index=False))
-    logger.info("block for configs/geometry.yaml:\n%s", _geometry_block(nacelle))
+    report = _report(engine, table, nacelle)
+    NACELLE_REPORT_TXT.write_text(report, encoding="utf-8")
+    logger.info("report:\n%s", report)
     return 0
 
 

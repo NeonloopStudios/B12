@@ -14,7 +14,7 @@ Miscellaneous terms (b12wp3.drag.miscellaneous), per configuration:
 
 Characteristic length l of each component (Reynolds number):
 
-* wing, tails, pylon: mean aerodynamic chord
+* wing, tails: mean aerodynamic chord
 * fuselage: total body length L1 + L2 + L3; nacelle: nacelle length l_n
 
 The reference area S_ref is the wing planform area.
@@ -107,6 +107,11 @@ class ComponentDrag:
             )
 
     @property
+    def total_wetted_area_m2(self) -> float:
+        """Wetted area of all items, count * S_wet [m^2]."""
+        return self.count * self.wetted_area_m2
+
+    @property
     def drag_area_m2(self) -> float:
         """count * Cf * FF * IF * S_wet [m^2]."""
         return (
@@ -162,6 +167,11 @@ class DragBuildup:
         return component.drag_area_m2 / self.reference_area_m2
 
     @property
+    def total_wetted_area_m2(self) -> float:
+        """Wetted area of the whole aircraft, sum of count * S_wet [m^2]."""
+        return sum(c.total_wetted_area_m2 for c in self.components)
+
+    @property
     def cd_components(self) -> float:
         """Sum of the component contributions [-]."""
         return sum(self.contribution(c) for c in self.components)
@@ -177,13 +187,18 @@ class DragBuildup:
         return self.cd_components + self.cd_misc
 
     def to_dataframe(self) -> pd.DataFrame:
-        """One row per component, one per miscellaneous term, then a total row."""
+        """One row per component, one per miscellaneous term, then a total row.
+
+        wetted_area_m2 is one item; total_wetted_area_m2 is all items (count
+        times). The total row holds the aircraft wetted area and CD0.
+        """
         nan = math.nan
         rows: list[tuple[str | int | float, ...]] = [
             (
                 c.name,
                 c.count,
                 c.wetted_area_m2,
+                c.total_wetted_area_m2,
                 c.reference_length_m,
                 c.reynolds,
                 c.laminar_fraction,
@@ -195,15 +210,16 @@ class DragBuildup:
             )
             for c in self.components
         ]
-        no_terms = (nan,) * 8
+        no_terms = (nan,) * 9
         rows.extend((m.name, 1, *no_terms, m.delta_cd) for m in self.misc)
-        rows.append(("total", 1, *no_terms, self.cd0))
+        rows.append(("total", 1, nan, self.total_wetted_area_m2, *(nan,) * 7, self.cd0))
         frame = pd.DataFrame(
             rows,
             columns=[
                 "component",
                 "count",
                 "wetted_area_m2",
+                "total_wetted_area_m2",
                 "reference_length_m",
                 "reynolds",
                 "laminar_fraction",
@@ -289,7 +305,7 @@ def lifting_surface_drag(
     condition: FlightCondition,
     roughness_m: float,
 ) -> ComponentDrag:
-    """Drag terms of a wing, tail or pylon.
+    """Drag terms of a wing or tail.
 
     Args:
         name: Component label.
@@ -423,8 +439,8 @@ def _components(
 ) -> tuple[ComponentDrag, ...]:
     """Skin-friction drag terms of every component.
 
-    Nacelles use the fuselage laminar fraction; the pylons use the
-    wing-and-tail laminar fraction.
+    Nacelles use the fuselage laminar fraction. The pylons are neglected at
+    this design stage.
     """
     lifting = settings.laminar.wing_and_tail
     body = settings.laminar.fuselage
@@ -477,16 +493,6 @@ def _components(
             count=engines,
             interference_factor=interference.nacelle,
             laminar_fraction=body,
-            condition=condition,
-            roughness_m=roughness,
-        ),
-        lifting_surface_drag(
-            "pylon",
-            geometry.pylon,
-            wetted_area_fn=tail_wetted_area,
-            count=engines,
-            interference_factor=interference.pylon,
-            laminar_fraction=lifting,
             condition=condition,
             roughness_m=roughness,
         ),

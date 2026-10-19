@@ -40,7 +40,6 @@ class InterferenceFactors:
         vertical_tail: Vertical tail.
         fuselage: Fuselage.
         nacelle: One nacelle.
-        pylon: One pylon.
     """
 
     wing: float
@@ -48,7 +47,6 @@ class InterferenceFactors:
     vertical_tail: float
     fuselage: float
     nacelle: float
-    pylon: float
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -57,7 +55,6 @@ class InterferenceFactors:
             ("vertical_tail", self.vertical_tail),
             ("fuselage", self.fuselage),
             ("nacelle", self.nacelle),
-            ("pylon", self.pylon),
         ):
             if value <= 0.0:
                 raise ValueError(f"InterferenceFactors.{name} must be > 0, got {value}")
@@ -120,8 +117,7 @@ class DragSettings:
 
 # --- skin friction ---
 # Civil jet, classic production metal: 5 % laminar on the fuselage, 10 % on the
-# wing and tails. Nacelles use the fuselage value (body of revolution); pylons
-# use the wing-and-tail value (lifting surface).
+# wing and tails. Nacelles use the fuselage value (body of revolution).
 AIRCRAFT_CATEGORY: Final[AircraftCategory] = AircraftCategory.CIVIL_JET_CLASSIC_METAL
 LAMINAR_FRACTION: Final[LaminarFraction] = LAMINAR_FRACTION_TABLE[AIRCRAFT_CATEGORY]
 
@@ -146,8 +142,6 @@ FUSELAGE_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(None, 1.0)
 NACELLE_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(
     InterferenceCase.NACELLE_UNDER_FUSELAGE_FAR
 )
-# The pylon has no row in the table: IF = 1.0.
-PYLON_INTERFERENCE: Final[InterferenceChoice] = InterferenceChoice(None, 1.0)
 
 # --- wave drag (Korn / Mason drag-divergence Mach number) ---
 # k_a of a supercritical section, the same value as WP2
@@ -184,7 +178,6 @@ DRAG_SETTINGS: Final[DragSettings] = DragSettings(
         vertical_tail=VERTICAL_TAIL_INTERFERENCE.factor,
         fuselage=FUSELAGE_INTERFERENCE.factor,
         nacelle=NACELLE_INTERFERENCE.factor,
-        pylon=PYLON_INTERFERENCE.factor,
     ),
     kappa_a=KAPPA_A,
     wing_mach_critical_normal=WING_MACH_CRITICAL_NORMAL,

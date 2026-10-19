@@ -20,6 +20,7 @@ import yaml
 from b12wp3.config import paths
 from b12wp3.config.propulsion import EngineInputs, load_propulsion
 from b12wp3.config.yaml_io import ConfigError
+from b12wp3.drag.wetted_area import nacelle_wetted_area
 from b12wp3.plots.nacelle import plot_nacelle_outline
 from b12wp3.propulsion.nacelle import (
     fan_exit_diameter,
@@ -144,3 +145,17 @@ def test_plot_nacelle_outline_writes_png(tmp_path: Path) -> None:
 
     assert out.is_file()
     assert out.stat().st_size > 0
+
+
+def test_nacelle_wetted_area_matches_drag_function() -> None:
+    nacelle = size_type_b_nacelle(_cf34())
+
+    expected = nacelle_wetted_area(
+        nacelle.length_m,
+        nacelle.highlight_diameter_m,
+        nacelle.max_diameter_m,
+        nacelle.max_diameter_position,
+        nacelle.exit_diameter_m,
+    )
+
+    assert nacelle.wetted_area_m2 == pytest.approx(expected)

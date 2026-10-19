@@ -34,6 +34,7 @@ from b12wp3.config.propulsion import (
     TYPE_B_MAX_DIAMETER_POSITION,
     EngineInputs,
 )
+from b12wp3.drag.wetted_area import nacelle_wetted_area
 
 G_TEMPERATURE_DIVISOR: Final[float] = 600.0
 G_OFFSET: Final[float] = 1.25
@@ -74,6 +75,18 @@ class NacelleGeometry:
     def spinner_diameter_m(self) -> float:
         """Spinner diameter D_s [m]."""
         return self.spinner_ratio * self.inlet_diameter_m
+
+    @property
+    def wetted_area_m2(self) -> float:
+        """Outer wetted area of one nacelle, the same two frustums the drag
+        build-up uses (b12wp3.drag.wetted_area.nacelle_wetted_area) [m^2]."""
+        return nacelle_wetted_area(
+            self.length_m,
+            self.highlight_diameter_m,
+            self.max_diameter_m,
+            self.max_diameter_position,
+            self.exit_diameter_m,
+        )
 
 
 def gas_generator_function(turbine_inlet_temperature_k: float) -> float:

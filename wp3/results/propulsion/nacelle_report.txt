@@ -1,0 +1,37 @@
+NACELLE SIZING (WP3.1) - Torenbeek, Type B nacelle, textbook eq. 8.22-8.30
+
+INPUTS (configs/propulsion.yaml)
+  take-off thrust per engine  61300 N
+  bypass ratio B              5.0
+  turbine inlet temp. T_t4    1830.0 K
+  nozzle efficiency           0.98
+  turbine x fan efficiency    0.75
+
+RESULTS
+                  quantity      value unit  datasheet  ratio_to_datasheet
+  gas_generator_function_G   1.800000    -          -                   -
+      mass_flow_per_engine 166.984573 kg/s          -                   -
+       spinner_ratio_Ds_Di   0.187482    -          -                   -
+       spinner_diameter_Ds   0.200563    m          -                   -
+         inlet_diameter_Di   1.069770    m       1.17            0.914334
+     highlight_diameter_Dh   1.069770    m          -                   -
+         nacelle_length_ln   4.071034    m       3.25            1.252626
+        fan_cowl_length_lf   4.071034    m          -                   -
+           max_diameter_Dn   1.344032    m          -                   -
+max_diameter_position_beta   0.350000    -          -                   -
+         exit_diameter_Def   0.896022    m          -                   -
+   wetted_area_one_nacelle  14.771763  m^2          -                   -
+
+BLOCK FOR configs/geometry.yaml
+nacelle:
+  length_m: 4.0710
+  highlight_diameter_m: 1.0698
+  max_diameter_m: 1.3440
+  max_diameter_position: 0.35
+  exit_diameter_m: 0.8960
+
+
+FILES (relative to wp3/)
+  results/propulsion/nacelle.csv
+  results/propulsion/nacelle.png
+  results/propulsion/nacelle_report.txt

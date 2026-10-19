@@ -18,18 +18,16 @@ wp3/
   scripts/      the runnable steps, one file per step
   src/b12wp3/   the analysis library every step calls
     config/     every input: paths, atmosphere, mission, geometry, drag settings
-    common/     trapezoidal planform (wing, tails, pylons)
+    common/     trapezoidal planform (wing, tails)
     drag/       WP3.3a class II drag: component drag build-up (ADSEE-II)
+                and drag due to lift
     propulsion/ WP3.1  nacelle sizing of the selected engine (Torenbeek)
-    fuselage/   WP3.2a fuselage external dimensions
-    landing_gear/ WP3.2b landing gear dimensions and position
-    empennage/  WP3.2c/d empennage trade-off and tail sizing
-    weight/     WP3.3b class II weight estimation
-    iteration/  WP3.4a class I / class II iteration, wing-loading diagram
-    concept/    WP3.4b/d parameter table, compliance matrix
     plots/      the figures, one module per stage
   tests/        pytest suite over src/b12wp3/
-  results/      generated CSVs and plots, one directory per stage
+  results/      generated CSVs and plots, one directory per stage:
+    drag/       class II drag, drag due to lift
+    iteration/  WP3.4 inputs (Oswald factors of the configurations)
+    propulsion/ nacelle sizing
 ```
 
 wp3 does not import the wp2 package. Values taken from WP2 (the wing
@@ -96,6 +94,27 @@ The characteristic length l is the MAC for a lifting surface and the total
 length for a body. The flow regime of the cutoff is set per flight condition
 in `config/mission.py`. Cruise (M = 0.77) uses the transonic cutoff.
 
+### Running the class II drag
+
+```
+python -m scripts.class2_drag
+```
+
+It builds CD0 for the cruise, take-off and landing configurations
+(`config/mission.py`; a configuration with unset inputs is skipped and named)
+and writes to `results/drag/`:
+
+| File | Content |
+|---|---|
+| `cd0_buildup_<configuration>.csv` | one row per component and per miscellaneous term: S_wet (one item and all items), l, Re, x_lam, Cf, FF, IF, CD0, share |
+| `cd0_breakdown_<configuration>.png` | CD0 contribution of each term, in drag counts |
+| `cd0_summary.csv` | CD0, total S_wet, S_wet/S_ref and the grouped contributions per configuration |
+| `cd0_comparison.png` | total CD0 per configuration, stacked by group |
+| `cd0_report.txt` | everything the script prints: method inputs, every table, the summary |
+
+The pylons are neglected at this design stage: their drag is small next to
+the nacelles'.
+
 ## Drag due to lift (WP3.3a)
 
 ```
@@ -143,7 +162,8 @@ The script follows the textbook section 8.3 (Torenbeek), equations 8.22-8.30
 with the Type B row of Table 8.1 (C_l = 9.8, Delta l = 0.05 m, beta = 0.35,
 phi = 1). It writes `results/propulsion/nacelle.csv` (with the datasheet
 comparison) and `nacelle.png`, and logs the `nacelle` block of
-`configs/geometry.yaml`. The drag build-up uses that outline: the nacelle
+`configs/geometry.yaml`. `nacelle_report.txt` holds everything the script
+prints. The drag build-up uses that outline: the nacelle
 wetted area is two conical frustums (D_h -> D_n -> D_ef), and the form factor
 uses f = l_n / D_n.
 

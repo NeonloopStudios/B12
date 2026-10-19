@@ -12,8 +12,8 @@ which run their own physical checks.
 Conventions (repeated in the YAML header):
 
 * Lifting surfaces are trapezoidal (b12wp3.common.planform). area_m2 is the
-  planform area of all panels, AR = b^2 / S. For the vertical tail and a
-  pylon (one panel), b is the panel height.
+  planform area of all panels, AR = b^2 / S. For the vertical tail (one
+  panel), b is the panel height.
 * covered_span_m is the span length inside the fuselage (or nacelle). The
   exposed area S_exp is the planform outside it.
 * x_c_max_thickness is the chord position of the maximum thickness, (x/c)_m
@@ -257,8 +257,7 @@ class AircraftGeometry:
         vertical_tail: Vertical tail.
         fuselage: Fuselage.
         nacelle: One nacelle.
-        pylon: One pylon.
-        engine_count: Number of engines (nacelles and pylons).
+        engine_count: Number of engines (nacelles).
         fuselage_aft: Fuselage upsweep and base area.
         te_flap: Trailing-edge flap.
         le_flap: Leading-edge flap.
@@ -271,7 +270,6 @@ class AircraftGeometry:
     vertical_tail: LiftingSurfaceInputs
     fuselage: BodyInputs
     nacelle: NacelleInputs
-    pylon: LiftingSurfaceInputs
     engine_count: int
     fuselage_aft: FuselageAftInputs
     te_flap: FlapInputs
@@ -296,7 +294,6 @@ _SECTIONS: Final[Mapping[str, type]] = {
     "fuselage": BodyInputs,
     "fuselage_aft": FuselageAftInputs,
     "nacelle": NacelleInputs,
-    "pylon": LiftingSurfaceInputs,
     "te_flap": FlapInputs,
     "le_flap": FlapInputs,
     "main_gear": GearInputs,
@@ -358,7 +355,6 @@ def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
     fuselage = _section(raw, "fuselage", BodyInputs, missing)
     fuselage_aft = _section(raw, "fuselage_aft", FuselageAftInputs, missing)
     nacelle = _section(raw, "nacelle", NacelleInputs, missing)
-    pylon = _section(raw, "pylon", LiftingSurfaceInputs, missing)
     te_flap = _section(raw, "te_flap", FlapInputs, missing)
     le_flap = _section(raw, "le_flap", FlapInputs, missing)
     main_gear = _section(raw, "main_gear", GearInputs, missing)
@@ -377,7 +373,6 @@ def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
         or fuselage is None
         or fuselage_aft is None
         or nacelle is None
-        or pylon is None
         or te_flap is None
         or le_flap is None
         or main_gear is None
@@ -393,7 +388,6 @@ def load_geometry(path: Path = GEOMETRY_YAML) -> AircraftGeometry:
         vertical_tail=vertical_tail,
         fuselage=fuselage,
         nacelle=nacelle,
-        pylon=pylon,
         engine_count=engine_count,
         fuselage_aft=fuselage_aft,
         te_flap=te_flap,

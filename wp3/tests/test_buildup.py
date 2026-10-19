@@ -30,7 +30,11 @@ from b12wp3.drag.buildup import (
     component_drag,
 )
 from b12wp3.drag.skin_friction import cf_turbulent
-from b12wp3.plots.drag import plot_cd0_breakdown
+from b12wp3.plots.drag import (
+    grouped_contributions,
+    plot_cd0_breakdown,
+    plot_cd0_comparison,
+)
 
 
 def _flat_plate(condition: FlightCondition, count: int = 1) -> ComponentDrag:
@@ -107,7 +111,6 @@ def test_cruise_buildup_terms_and_sum(
         "vertical_tail",
         "fuselage",
         "nacelle",
-        "pylon",
     ]
     assert list(misc) == [
         "wave_drag",
@@ -175,7 +178,6 @@ def test_aircraft_buildup_uses_category_laminar_fractions(
         "vertical_tail": 0.10,
         "fuselage": 0.05,
         "nacelle": 0.05,
-        "pylon": 0.10,
     }
 
 
@@ -219,6 +221,47 @@ def test_plot_cd0_breakdown_writes_png(
     )
 
     out = plot_cd0_breakdown(buildup, tmp_path / "drag" / "cd0.png")
+
+    assert out.is_file()
+    assert out.stat().st_size > 0
+
+
+def test_buildup_total_wetted_area_counts_every_item(
+    subsonic_condition: FlightCondition,
+) -> None:
+    single = _flat_plate(subsonic_condition, count=1)
+    double = _flat_plate(subsonic_condition, count=2)
+    buildup = DragBuildup((single, double), reference_area_m2=10.0)
+
+    frame = buildup.to_dataframe()
+
+    # 20 m^2 per item: 1 x 20 + 2 x 20
+    assert list(frame["total_wetted_area_m2"].iloc[:2]) == [20.0, 40.0]
+    assert buildup.total_wetted_area_m2 == pytest.approx(60.0)
+    assert frame["total_wetted_area_m2"].iloc[-1] == pytest.approx(60.0)
+
+
+def test_grouped_contributions_sum_to_cd0(
+    sample_geometry: AircraftGeometry,
+    unit_settings: DragSettings,
+    subsonic_condition: FlightCondition,
+) -> None:
+    buildup = aircraft_drag_buildup(
+        sample_geometry, _low_speed_configuration(subsonic_condition), unit_settings
+    )
+
+    groups = grouped_contributions(buildup)
+
+    assert sum(groups.values()) == pytest.approx(buildup.cd0)
+    assert groups["landing gear"] > 0.0
+
+
+def test_plot_cd0_comparison_writes_png(
+    tmp_path: Path, sample_geometry: AircraftGeometry, unit_settings: DragSettings
+) -> None:
+    cruise = aircraft_drag_buildup(sample_geometry, CRUISE_CONFIGURATION, unit_settings)
+
+    out = plot_cd0_comparison([("cruise", cruise)], tmp_path / "cd0_comparison.png")
 
     assert out.is_file()
     assert out.stat().st_size > 0

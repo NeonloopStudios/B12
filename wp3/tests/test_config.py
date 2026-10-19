@@ -198,10 +198,9 @@ def test_selected_interference_factors_match_choices() -> None:
         factors.vertical_tail,
         factors.fuselage,
         factors.nacelle,
-        factors.pylon,
     )
 
-    assert result == (1.4, 1.06, 1.06, 1.0, 1.0, 1.0)
+    assert result == (1.4, 1.06, 1.06, 1.0, 1.0)
 
 
 @pytest.mark.parametrize(

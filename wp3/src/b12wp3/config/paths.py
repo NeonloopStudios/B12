@@ -21,8 +21,22 @@ RESULTS_DIR: Final[Path] = WP3_DIR / "results"
 
 DRAG_DIR: Final[Path] = RESULTS_DIR / "drag"  # class II drag (WP3.3a)
 
-DRAG_BUILDUP_CSV: Final[Path] = DRAG_DIR / "cd0_buildup.csv"
-DRAG_BREAKDOWN_PNG: Final[Path] = DRAG_DIR / "cd0_breakdown.png"
+# class II CD0 build-up (scripts/class2_drag.py): one table and one breakdown
+# chart per configuration, plus the CD0 of every configuration side by side
+CD0_SUMMARY_CSV: Final[Path] = DRAG_DIR / "cd0_summary.csv"
+CD0_COMPARISON_PNG: Final[Path] = DRAG_DIR / "cd0_comparison.png"
+CD0_REPORT_TXT: Final[Path] = DRAG_DIR / "cd0_report.txt"  # every printed output
+
+
+def drag_buildup_csv(configuration: str) -> Path:
+    """CD0 build-up table of one configuration ("cruise", "takeoff", "landing")."""
+    return DRAG_DIR / f"cd0_buildup_{configuration}.csv"
+
+
+def drag_breakdown_png(configuration: str) -> Path:
+    """CD0 breakdown chart of one configuration."""
+    return DRAG_DIR / f"cd0_breakdown_{configuration}.png"
+
 
 # --- inputs ---
 
@@ -45,3 +59,4 @@ OSWALD_CONFIGURATIONS_CSV: Final[Path] = ITERATION_DIR / "oswald_configurations.
 PROPULSION_DIR: Final[Path] = RESULTS_DIR / "propulsion"  # WP3.1 nacelle sizing
 NACELLE_CSV: Final[Path] = PROPULSION_DIR / "nacelle.csv"
 NACELLE_PNG: Final[Path] = PROPULSION_DIR / "nacelle.png"
+NACELLE_REPORT_TXT: Final[Path] = PROPULSION_DIR / "nacelle_report.txt"

@@ -1,0 +1,90 @@
+CLASS II DRAG (WP3.3a) - ADSEE-II component drag build-up
+  S_ref = 66.7 m^2 (wing planform), 2 engines; geometry from configs/geometry.yaml
+
+METHOD INPUTS (b12wp3/config/drag.py)
+  laminar fraction     fuselage, nacelles 0.05; wing, tails 0.10
+  roughness k          6.340e-06 m
+  interference IF      wing 1.4, HT 1.06, VT 1.06, fuselage 1.0, nacelle 1.0
+  Korn k_a             0.95
+  M_cr (normal)        0.56, sweep line x/c = 0.5
+  F_flap               TE 0.0074, LE 0.0144
+  gear wheel-well fit  0.05328
+  excrescence fraction 0.035 of total CD0
+
+CONFIGURATION: cruise
+  altitude 10668 m, M = 0.7700, V = 228.33 m/s, cutoff regime transonic
+  flaps TE 0 deg, LE 0 deg, gear up
+  CD0 = 0.02129   S_wet = 405.61 m^2   S_wet/S_ref = 6.081
+
+          component  count  wetted_area_m2  total_wetted_area_m2  reference_length_m  reynolds  laminar_fraction       cf  form_factor  interference_factor       cd0  share_pct
+               wing      1           119.2                 119.2               2.812   1.7e+07               0.1  0.00239        1.496                  1.4  0.008947      42.02
+    horizontal_tail      1           27.47                 27.47               1.949 1.179e+07               0.1 0.002536        1.552                 1.06  0.001717      8.067
+      vertical_tail      1           24.28                 24.28               2.817 1.704e+07               0.1 0.002389        1.528                 1.06  0.001409      6.617
+           fuselage      1           205.1                 205.1               28.68 1.734e+08              0.05 0.001782        1.093                    1  0.005989      28.13
+            nacelle      2           14.77                 29.54               4.071 2.462e+07              0.05 0.002365        1.116                    1  0.001168      5.488
+          wave_drag      1               -                     -                   -         -                 -        -            -                    - 0.0003954      1.857
+   fuselage_upsweep      1               -                     -                   -         -                 -        -            -                    - 0.0009192      4.317
+      fuselage_base      1               -                     -                   -         -                 -        -            -                    -         0          0
+            te_flap      1               -                     -                   -         -                 -        -            -                    -         0          0
+            le_flap      1               -                     -                   -         -                 -        -            -                    -         0          0
+excrescence_leakage      1               -                     -                   -         -                 -        -            -                    - 0.0007452        3.5
+              total      1               -                 405.6                   -         -                 -        -            -                    -   0.02129        100
+
+CONFIGURATION: takeoff
+  altitude 0 m, M = 0.2660, V = 90.53 m/s, cutoff regime subsonic
+  flaps TE 15 deg, LE 30 deg, gear down
+  CD0 = 0.11714   S_wet = 405.61 m^2   S_wet/S_ref = 6.081
+
+          component  count  wetted_area_m2  total_wetted_area_m2  reference_length_m  reynolds  laminar_fraction       cf  form_factor  interference_factor       cd0  share_pct
+               wing      1           119.2                 119.2               2.812 1.743e+07               0.1 0.002493        1.236                  1.4  0.007707      6.579
+    horizontal_tail      1           27.47                 27.47               1.949 1.208e+07               0.1 0.002644        1.281                 1.06  0.001479      1.263
+      vertical_tail      1           24.28                 24.28               2.817 1.746e+07               0.1 0.002492        1.262                 1.06  0.001214      1.036
+           fuselage      1           205.1                 205.1               28.68 1.778e+08              0.05  0.00186        1.093                    1  0.006253      5.339
+            nacelle      2           14.77                 29.54               4.071 2.523e+07              0.05 0.002468        1.116                    1  0.001219      1.041
+          wave_drag      1               -                     -                   -         -                 -        -            -                    -         0          0
+   fuselage_upsweep      1               -                     -                   -         -                 -        -            -                    - 0.0009192     0.7847
+      fuselage_base      1               -                     -                   -         -                 -        -            -                    -         0          0
+            te_flap      1               -                     -                   -         -                 -        -            -                    -  0.007383      6.303
+            le_flap      1               -                     -                   -         -                 -        -            -                    -   0.03478      29.69
+          main_gear      1               -                     -                   -         -                 -        -            -                    -   0.02511      21.44
+          nose_gear      1               -                     -                   -         -                 -        -            -                    -   0.02697      23.03
+excrescence_leakage      1               -                     -                   -         -                 -        -            -                    -    0.0041        3.5
+              total      1               -                 405.6                   -         -                 -        -            -                    -    0.1171        100
+
+CONFIGURATION: landing
+  altitude 0 m, M = 0.1910, V = 65.00 m/s, cutoff regime subsonic
+  flaps TE 40 deg, LE 30 deg, gear down
+  CD0 = 0.15575   S_wet = 405.61 m^2   S_wet/S_ref = 6.081
+
+          component  count  wetted_area_m2  total_wetted_area_m2  reference_length_m  reynolds  laminar_fraction       cf  form_factor  interference_factor       cd0  share_pct
+               wing      1           119.2                 119.2               2.812 1.251e+07               0.1 0.002637        1.164                  1.4  0.007682      4.933
+    horizontal_tail      1           27.47                 27.47               1.949 8.675e+06               0.1 0.002802        1.207                 1.06  0.001476      0.948
+      vertical_tail      1           24.28                 24.28               2.817 1.254e+07               0.1 0.002637        1.189                 1.06   0.00121     0.7767
+           fuselage      1           205.1                 205.1               28.68 1.276e+08              0.05 0.001954        1.093                    1  0.006567      4.216
+            nacelle      2           14.77                 29.54               4.071 1.812e+07              0.05 0.002606        1.116                    1  0.001288     0.8267
+          wave_drag      1               -                     -                   -         -                 -        -            -                    -         0          0
+   fuselage_upsweep      1               -                     -                   -         -                 -        -            -                    - 0.0009192     0.5902
+      fuselage_base      1               -                     -                   -         -                 -        -            -                    -         0          0
+            te_flap      1               -                     -                   -         -                 -        -            -                    -    0.0443      28.44
+            le_flap      1               -                     -                   -         -                 -        -            -                    -   0.03478      22.33
+          main_gear      1               -                     -                   -         -                 -        -            -                    -   0.02511      16.12
+          nose_gear      1               -                     -                   -         -                 -        -            -                    -   0.02697      17.32
+excrescence_leakage      1               -                     -                   -         -                 -        -            -                    -  0.005451        3.5
+              total      1               -                 405.6                   -         -                 -        -            -                    -    0.1558        100
+
+SUMMARY
+configuration    mach  velocity_m_s      cd0  total_wetted_area_m2  wetted_to_reference_ratio  cd0_wing  cd0_tails  cd0_fuselage  cd0_nacelles  cd0_flaps  cd0_landing_gear  cd0_wave_excrescence
+       cruise    0.77        228.33 0.021291                405.61                     6.0811 0.0089468  0.0031262     0.0069085     0.0011684          0                 0             0.0011406
+      takeoff 0.26603         90.53  0.11714                405.61                     6.0811 0.0077069  0.0026927     0.0071726     0.0012193   0.042163          0.052082             0.0040998
+      landing 0.19101            65  0.15575                405.61                     6.0811 0.0076825  0.0026862     0.0074861     0.0012875   0.079076          0.052082             0.0054513
+
+FILES (relative to wp3/)
+  results/drag/cd0_buildup_cruise.csv
+  results/drag/cd0_buildup_takeoff.csv
+  results/drag/cd0_buildup_landing.csv
+  results/drag/cd0_breakdown_cruise.png
+  results/drag/cd0_breakdown_takeoff.png
+  results/drag/cd0_breakdown_landing.png
+  results/drag/cd0_summary.csv
+  results/drag/cd0_comparison.png
+  results/drag/cd0_report.txt
