@@ -231,16 +231,62 @@ def OemEstimator(W_dg, N_z, S_w, A, tc_r, taper, sweep, S_csw, \
 
     return round(mass, 2)
 
+def Chord(chord_tip, chord_root, halfspan_percent):
+    return (chord_tip - chord_root) * halfspan_percent + chord_root
+
+def ControlSurfaceArea(span, root_frac, tip_frac, chord_frac):
+    surface_area = (tip_frac - root_frac) * span * 0.5 * Chord(tip_chord, root_chord, root_frac + 0.5*(tip_frac - root_frac)) * chord_frac
+    return 2 * surface_area
+
+def body_wetted_area(
+    diameter_m: float,
+    nose_length_m: float,
+    cylinder_length_m: float,
+    tail_length_m: float,
+) -> float:
+    """Wetted area of a fuselage or nacelle (nose, cylinder, tail cone).
+
+    Args:
+        diameter_m: Maximum diameter D [m], > 0.
+        nose_length_m: Nose length L1 [m], > 0.
+        cylinder_length_m: Cylinder length L2 [m], >= 0.
+        tail_length_m: Tail-cone length L3 [m], >= 0.
+
+    Returns:
+        Wetted area [m^2].
+
+    Raises:
+        ValueError: If D or L1 is not positive, or L2 or L3 is negative.
+    """
+    if diameter_m <= 0.0:
+        raise ValueError(f"diameter_m must be > 0, got {diameter_m}")
+    if nose_length_m <= 0.0:
+        raise ValueError(f"nose_length_m must be > 0, got {nose_length_m}")
+    if cylinder_length_m < 0.0:
+        raise ValueError(f"cylinder_length_m must be >= 0, got {cylinder_length_m}")
+    if tail_length_m < 0.0:
+        raise ValueError(f"tail_length_m must be >= 0, got {tail_length_m}")
+    d = diameter_m
+    l1 = nose_length_m
+    nose: float = (1.0 / (3.0 * l1**2)) * (
+        (4.0 * l1**2 + d**2 / 4.0) ** 1.5 - d**3 / 8.0
+    )
+    cylinder = 4.0 * cylinder_length_m
+    cone = 2.0 * m.sqrt(tail_length_m**2 + d**2 / 4.0)
+    return m.pi * d / 4.0 * (nose - d + cylinder + cone)
+
 #General design
 OEM_design = 32900 #kg
 design_payload_mass = 7200 #kg
 maximum_payload_mass = 9302 #kg
 fuel_mass = 7792 #kg
 cruise_design_mass = OEM_design + design_payload_mass + fuel_mass
-limit_load_factor = 2.5 #g
+limit_load_factor = 3.727 #g
 wing_area = 66.7 #m^2
 aspect_ratio = 9.5
 wingspan = m.sqrt(wing_area * aspect_ratio)
+root_chord = 3.79
+tip_chord = 1.51
 tc_ratio_root = 0.12
 taper_ratio = 0.4
 sweep_angle = 30 #deg
@@ -249,49 +295,52 @@ V_approach = 65 #m/s
 V_stall = V_approach / 1.23
 
 #Control surface
-control_surface_area = 10 #m^2
-elevator_area = 1 #m^2
+control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
 unitary_tail = False
-tail_length = 1 #m, from wing quarter MAC to htail quarter MAC
+tail_length = 13.55 #m, from wing quarter MAC to htail quarter MAC
 interpolate_tail_type = 0.5 #0.0 for conventional tail and 1.0 for T tail
-fuselage_width_at_htail = 1 #m
-htail_span = 1 #m
-htail_area = 1 #m^2
-htail_sweep = 1 #deg
-htail_aspect = 1
-vtail_area = 1 #m^2
-vtail_sweep = 1 #deg
-vtail_aspect = 1
+htail_span = 7.44 #m
+htail_area = 13.84 #m^2
+htail_sweep = 30 #deg
+htail_aspect = 4
+elevator_area = 0.2 * htail_area #m^2
+vtail_area = 13.01 #m^2
+vtail_sweep = 35 #deg
+vtail_aspect = 1.8
 
 #Fuselage
 cargo_door_type = 1.06 #1.0 no cargo door, 1.06 one side cargo door, 1.12 two side cargo door or aft clamshell door, 1.25 if both two side and aft
 landing_gear_mount = 1.12 #1.12 if fuselage-mounted main landing gear, 1.0 otherwise
 total_fuselage_length = 28.68 #m
 structural_fuselage_length = 0.9 * total_fuselage_length #m (excludes radome and tail cap)
-fuselage_wetted_area = 1 #m^2
+fuselage_width_max = 3.01 #m^2
+fuselage_width_at_htail = 0.65 * fuselage_width_max #m
+nose_cone_length = 3.5 #m
+tail_cone_length = 10.53 #m
+fuselage_wetted_area = body_wetted_area(fuselage_width_max, nose_cone_length, total_fuselage_length - nose_cone_length - tail_cone_length, tail_cone_length) #m^2
 
 #Landing gear
 kneeling_landing_gear = False
-landing_design_mass = OEM_design + design_payload_mass + 0.5 * fuel_mass
-limit_landing_load_factor = 2.5
-main_landing_gear_length = 1 #m
-nr_main_ldg_wheels = 1
-nr_main_ldg_shock_struts = 1
-nose_landing_gear_length = 1 #m
-nr_nose_ldg_wheels = 1
+landing_design_mass = OEM_design + design_payload_mass + fuel_mass
+limit_landing_load_factor = 3.727
+main_landing_gear_length = 2.5 #m
+nr_main_ldg_wheels = 4
+nr_main_ldg_shock_struts = 2
+nose_landing_gear_length = 2.5 #m
+nr_nose_ldg_wheels = 2
 
 #Engine
-nacelle_width = 1 #m
-nacelle_length = 1 #m
+nacelle_width = 1.34 #m
+nacelle_length = 4.07 #m
 nr_of_engines = 2
-nacelle_wetted_area = 1 #m^2
+nacelle_wetted_area = nacelle_length * m.pi * nacelle_width #m^2
 engine_weight = 1088 #kg, each
 engine_with_propeller = False
 reciprocating_engine = False
 turboprop_engine = False
 thrust_reverser = True
 pylon_mounted_engine = True
-length_from_engine_to_cockpit = 1 #m
+length_from_engine_to_cockpit = 9.5 #m
 
 #Fuel
 fuel_mass_density = 800 #kg/m^3
@@ -301,23 +350,27 @@ integral_tank_volume = 1.0 * total_fuel_volume #m^3
 nr_of_fuel_tanks = 2
 
 #Control, Instruments, and Electronics
-functions_performed_by_controls = 4 #4-7
+functions_performed_by_controls = 5 #4-7
 nr_of_mechanical_functions = 1 #0-2
-control_surface_area = 1 #m^2
-yawing_moment_of_inertia = 1 #kg m^2
-system_electrical_rating = 1
-electric_routing_dist = 1
+radius_of_gyration = 0.25 * (wingspan + total_fuselage_length) * 0.5
+yawing_moment_of_inertia = cruise_design_mass * pow(radius_of_gyration, 2) #kg m^2
+system_electrical_rating = 60 #kV*A
+electric_routing_dist = 15
 nr_of_generators = nr_of_engines
 
 #Misc
-nr_of_crew = 5
+nr_of_crew = 7
 
-print(f"The calculated operating empty mass is {OemEstimator(cruise_design_mass, limit_load_factor, wing_area, aspect_ratio, tc_ratio_root, taper_ratio, sweep_angle, \
-                                                            control_surface_area, unitary_tail, fuselage_width_at_htail, htail_span, htail_area, tail_length, htail_sweep, htail_aspect, elevator_area, \
-                                                            interpolate_tail_type, vtail_area, vtail_sweep, vtail_aspect, \
-                                                            cargo_door_type, landing_gear_mount, structural_fuselage_length, fuselage_wetted_area, glide_ratio, wingspan, \
-                                                            kneeling_landing_gear, landing_design_mass, limit_landing_load_factor, main_landing_gear_length, nr_main_ldg_wheels, nr_main_ldg_shock_struts, V_stall, nose_landing_gear_length, nr_nose_ldg_wheels, \
-                                                            nacelle_length, nacelle_width, nr_of_engines, nacelle_wetted_area, engine_weight, engine_with_propeller, thrust_reverser, pylon_mounted_engine, \
-                                                            length_from_engine_to_cockpit, total_fuel_volume, self_sealing_tank_volume, integral_tank_volume, nr_of_fuel_tanks, \
-                                                            functions_performed_by_controls, nr_of_mechanical_functions, control_surface_area, yawing_moment_of_inertia, reciprocating_engine, turboprop_engine, \
-                                                            nr_of_crew, total_fuselage_length, system_electrical_rating, electric_routing_dist, nr_of_generators, maximum_payload_mass)} kg.")
+for i in range(10):
+    OEM_design = OemEstimator(cruise_design_mass, limit_load_factor, wing_area, aspect_ratio, tc_ratio_root, taper_ratio, sweep_angle, \
+                    control_surface_area, unitary_tail, fuselage_width_at_htail, htail_span, htail_area, tail_length, htail_sweep, htail_aspect, elevator_area, \
+                    interpolate_tail_type, vtail_area, vtail_sweep, vtail_aspect, \
+                    cargo_door_type, landing_gear_mount, structural_fuselage_length, fuselage_wetted_area, glide_ratio, wingspan, \
+                    kneeling_landing_gear, landing_design_mass, limit_landing_load_factor, main_landing_gear_length, nr_main_ldg_wheels, nr_main_ldg_shock_struts, V_stall, nose_landing_gear_length, nr_nose_ldg_wheels, \
+                    nacelle_length, nacelle_width, nr_of_engines, nacelle_wetted_area, engine_weight, engine_with_propeller, thrust_reverser, pylon_mounted_engine, \
+                    length_from_engine_to_cockpit, total_fuel_volume, self_sealing_tank_volume, integral_tank_volume, nr_of_fuel_tanks, \
+                    functions_performed_by_controls, nr_of_mechanical_functions, control_surface_area, yawing_moment_of_inertia, reciprocating_engine, turboprop_engine, \
+                    nr_of_crew, total_fuselage_length, system_electrical_rating, electric_routing_dist, nr_of_generators, maximum_payload_mass)
+    cruise_design_mass = OEM_design + design_payload_mass + fuel_mass
+    landing_design_mass = OEM_design + design_payload_mass + fuel_mass
+    print(f"The calculated operating empty mass is {OEM_design} kg, iteration nr {i}.")
