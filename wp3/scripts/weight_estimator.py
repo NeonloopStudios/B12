@@ -276,7 +276,7 @@ def body_wetted_area(
     return m.pi * d / 4.0 * (nose - d + cylinder + cone)
 
 #General design
-OEM_design = 32900 #kg
+OEM_design = 17930 #kg
 design_payload_mass = 7200 #kg
 maximum_payload_mass = 9302 #kg
 fuel_mass = 7792 #kg
@@ -297,7 +297,7 @@ V_stall = V_approach / 1.23
 #Control surface
 control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
 unitary_tail = False
-tail_length = 13.55 #m, from wing quarter MAC to htail quarter MAC
+tail_length = 18.07 #m, from wing quarter MAC to htail quarter MAC
 interpolate_tail_type = 0.5 #0.0 for conventional tail and 1.0 for T tail
 htail_span = 7.44 #m
 htail_area = 13.84 #m^2
