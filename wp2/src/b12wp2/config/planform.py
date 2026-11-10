@@ -15,7 +15,7 @@ import math
 
 # --- design variables (WP3 redesign) ---
 
-S_REF = 66.7  # wing area, both halves [m^2]
+S_REF = 62.67  # wing area, both halves [m^2]
 AR = 9.50  # aspect ratio [-]
 TAPER = 0.40  # c_tip / c_root [-]
 SWEEP_C4_DEG = 30.0  # quarter-chord sweep [deg]
