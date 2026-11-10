@@ -3,8 +3,9 @@
 # Created: 2026-10-15
 """Shared fixtures for the wp3 tests: flight conditions, settings and a geometry.
 
-The sample geometry is a small, valid aircraft for the build-up tests. Its
-numbers are test data, not design values.
+The sample geometry is a small, valid aircraft for the build-up tests, and
+the sample VSP inputs place its components for the OpenVSP layout tests.
+Their numbers are test data, not design values.
 """
 
 from __future__ import annotations
@@ -23,6 +24,19 @@ from b12wp3.config.geometry import (
     NacelleInputs,
 )
 from b12wp3.config.mission import FlightCondition, FlowRegime
+from b12wp3.config.vsp_model import (
+    CentreOfGravity,
+    FuselageShape,
+    GroundInputs,
+    MainGearPlacement,
+    NacelleDetail,
+    NacellePlacement,
+    NoseGearPlacement,
+    PylonInputs,
+    TailPlacement,
+    VspModelInputs,
+    WingPlacement,
+)
 
 
 @pytest.fixture(scope="session")
@@ -76,4 +90,21 @@ def sample_geometry() -> AircraftGeometry:
         le_flap=FlapInputs(0.15, 0.12, 0.95),
         main_gear=GearInputs(2, 0.4, 0.4, 1.2),
         nose_gear=GearInputs(1, 0.15, 0.25, 0.7),
+    )
+
+
+@pytest.fixture(scope="session")
+def sample_vsp_inputs() -> VspModelInputs:
+    """Valid VSP model positions for sample_geometry: low wing, wing gear."""
+    return VspModelInputs(
+        wing=WingPlacement(12.0, -0.8, 2.0, 2.0, -2.0),
+        centre_of_gravity=CentreOfGravity(14.5),  # about 23 % MAC
+        tails=TailPlacement(15.0, 15.0, 0.5, 0.0),
+        fuselage_shape=FuselageShape(-0.3, 8, 6),
+        nacelle_position=NacellePlacement(4.0, 2.0, 0.9),
+        nacelle_detail=NacelleDetail(0.04, 0.06, 0.02, 0.12, 0.2, 0.3, 0.55, 0.7),
+        pylon=PylonInputs(0.2, 0.7, 45.0, 0.08),
+        nose_gear_position=NoseGearPlacement(3.0, 2, 0.12, 0.15),
+        main_gear_position=MainGearPlacement(14.5, 4.4, 2, 0.2, 0.25),
+        ground=GroundInputs(1.2),
     )

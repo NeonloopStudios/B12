@@ -43,6 +43,21 @@ def drag_breakdown_png(configuration: str) -> Path:
 CONFIGS_DIR: Final[Path] = WP3_DIR / "configs"
 GEOMETRY_YAML: Final[Path] = CONFIGS_DIR / "geometry.yaml"  # every geometric input
 PROPULSION_YAML: Final[Path] = CONFIGS_DIR / "propulsion.yaml"  # engine inputs
+# positions and visual details of the OpenVSP 3-view model
+VSP_MODEL_YAML: Final[Path] = CONFIGS_DIR / "vsp_model.yaml"
+
+# Wing section: the WP2 airfoil file, read as data (wp3 does not import wp2)
+WING_AIRFOIL_DAT: Final[Path] = (
+    WP3_DIR.parent / "wp2" / "airfoils" / "NASA_SC(2)-0712.dat"
+)
+
+# OpenVSP model for the 3-view figure (scripts/vsp_model.py). The OpenVSP
+# Python API runs only in its own conda env; the builder runs there.
+VSP_DIR: Final[Path] = RESULTS_DIR / "vsp"
+VSP_MODEL_JSON: Final[Path] = VSP_DIR / "model_inputs.json"  # stage 1 -> stage 2
+VSP_MODEL_VSP3: Final[Path] = VSP_DIR / "b12_aircraft.vsp3"
+VSP_MODEL_REPORT_TXT: Final[Path] = VSP_DIR / "vsp_model_report.txt"
+OPENVSP_CONDA_ENV: Final[str] = "openvsp"  # conda env with the OpenVSP API
 
 # drag due to lift at cruise (WP3.3a)
 INDUCED_DRAG_CSV: Final[Path] = DRAG_DIR / "induced_drag.csv"

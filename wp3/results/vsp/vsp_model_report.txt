@@ -1,0 +1,20 @@
+OPENVSP 3-VIEW MODEL - derived positions
+  inputs                     configs/geometry.yaml, vsp_model.yaml
+  axes                       x aft from the nose tip, z up from the cylinder axis
+  wing MAC c/4 x             12.261 m
+  c.g. x                     12.310 m (26.8 % MAC)
+  fin root LE (x, z)         (23.456, 0.323) m
+  horizontal tail root LE    (24.283, 2.743) m
+  nacelle inlet (x, y, z)    (7.931, 4.400, -1.842) m
+  nacelle ground clearance   0.691 m
+  nose strut length          1.541 m
+  main strut length          1.834 m, rake -32.1 deg, into the wing
+
+CHECKS
+  WARNING: horizontal-tail root LE x = 24.283 m is outside the fin chord [25.405, 28.094] m at its height
+  WARNING: main strut is raked -32.1 deg: the wing box is far from the contact point
+
+FILES (relative to wp3/)
+  results/vsp/model_inputs.json
+  results/vsp/b12_aircraft.vsp3
+  results/vsp/vsp_model_report.txt

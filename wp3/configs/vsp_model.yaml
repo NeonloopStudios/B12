@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mateusz Suszynski
+# Created: 2026-10-19
+#
+# Inputs of the OpenVSP 3-view model (scripts/vsp_model.py) that are not in
+# geometry.yaml: positions and visual details. The sizes (fuselage, wing,
+# tails, nacelle, tires) come from geometry.yaml. Loaded and validated by
+# b12wp3.config.vsp_model.load_vsp_model().
+#
+# * An input that is not designed yet is null. The loader raises one error
+#   that names every null input.
+# * Every section and every key below is required; an unknown key is an error.
+# * Axes: x aft from the fuselage nose tip, y to the right wing, z up from
+#   the axis of the fuselage cylinder. All lengths in metres.
+# * Inputs marked "visual" change only the picture, not an analysis result.
+
+# --- wing position. Dihedral, incidence and twist: WP2
+#     (wp2/src/b12wp2/config/wing.py) ---
+wing:
+  root_le_x_m: 8.2               # root leading edge at the centreline
+  root_z_m: -1.1                 # root chord line; low wing: below 0
+  dihedral_deg: 2.0              # WP2
+  incidence_deg: 2.0             # WP2, rotation about the root leading edge
+  tip_twist_deg: -2.0            # WP2, wash-out about the quarter chord
+
+# --- centre of gravity: the tail arms are measured from it ---
+centre_of_gravity:
+  x_m: 12.31                     # x of the c.g. from the nose tip
+
+# --- tails: the tail arms place the tails behind the c.g. ---
+tails:
+  # WP3 tail sizing sheet: l = 13.5531 m. Horizontal distance from the c.g.
+  # to the quarter chord of the tail MAC.
+  horizontal_arm_m: 13.5531
+  vertical_arm_m: 13.5531
+  # Cruciform: height of the horizontal tail root above the fin root, as a
+  # fraction of the fin span. 0.5 is the value that geometry.yaml uses for
+  # the horizontal-tail covered span (fin thickness at mid-height).
+  horizontal_height_fraction: 0.5
+  horizontal_incidence_deg: 0.0
+
+# --- fuselage shape (visual) ---
+fuselage_shape:
+  nose_tip_z_m: -0.4             # nose tip below the axis (cockpit droop)
+  nose_sections: 8               # cross-sections on the elliptic nose
+  tail_sections: 6               # cross-sections on the tail cone
+
+# --- nacelle position, right engine; the left engine is its mirror ---
+nacelle_position:
+  axis_y_m: 4.4                  # span station of the nacelle axis
+  inlet_ahead_of_le_m: 3.01      # inlet plane ahead of the local wing LE
+  axis_below_chord_m: 0.8        # axis below the local wing chord line
+
+# --- nacelle details (visual). The outer line is the Torenbeek Type B
+#     outline of geometry.yaml ---
+nacelle_detail:
+  lip_thickness_m: 0.04          # inlet lip wall thickness
+  lip_length_fraction: 0.06      # lip length, fraction of l_n
+  exit_wall_thickness_m: 0.02    # wall thickness at the exit
+  fan_face_position: 0.12        # fan face behind the inlet, fraction of l_n
+  spinner_diameter_m: 0.2006     # D_s, results/propulsion/nacelle.csv
+  spinner_length_m: 0.30
+  plug_diameter_fraction: 0.55   # exhaust plug diameter at the exit / D_ef
+  plug_length_m: 0.70            # plug length behind the exit
+
+# --- pylon (visual): constant chord, from the nacelle up into the wing ---
+pylon:
+  le_position: 0.20              # pylon root LE behind the inlet, fraction of l_n
+  chord_fraction: 0.70           # pylon chord, fraction of l_n
+  sweep_le_deg: 45.0             # leading-edge sweep, nacelle to wing
+  thickness_to_chord: 0.08       # NACA 4-digit section
+
+# --- landing gear, shown down. Tire sizes: geometry.yaml ---
+nose_gear_position:
+  contact_x_m: 5.57              # tire contact point
+  tires_per_unit: 2              # twin tires; geometry.yaml width is the pair
+  strut_diameter_m: 0.12         # visual
+  tire_gap_m: 0.15               # visual, gap between the twin tires
+
+main_gear_position:
+  contact_x_m: 13.2              # tire contact point
+  track_m: 5.54                  # distance between the two main gear units
+  tires_per_unit: 2              # dual tires; geometry.yaml width is the pair
+  strut_diameter_m: 0.20         # visual
+  tire_gap_m: 0.25               # visual, gap between the dual tires
+
+# A main strut inside the fuselage width goes up into the fuselage. A strut
+# outside it goes up into the wing box (between the LE flap and the TE flap
+# chords of geometry.yaml): at the contact x if the wing box is there, else
+# at the nearest point of the wing box (a raked strut).
+ground:
+  fuselage_clearance_m: 1.7     # ground to the fuselage cylinder bottom

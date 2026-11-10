@@ -150,3 +150,33 @@ def test_area_between_invalid_stations_raises(eta_in: float, eta_out: float) -> 
 
     with pytest.raises(ValueError):
         wing.area_between(eta_in, eta_out)
+
+
+def test_mac_quarter_chord_offset_rectangular_unswept_returns_quarter_chord() -> None:
+    wing = TrapezoidalPlanform(40.0, 10.0, 1.0, 0.0, panels=2)
+
+    result = (wing.mac_span_position_m, wing.mac_quarter_chord_offset_m)
+
+    # rectangle: MAC at mid panel, c/4 behind the root LE
+    assert result == pytest.approx((0.25 * wing.span_m, 0.25 * wing.root_chord_m))
+
+
+def test_mac_span_position_taper_half_returns_four_ninths_of_panel() -> None:
+    wing = TrapezoidalPlanform(40.0, 10.0, 0.5, math.radians(25.0), panels=2)
+
+    result = wing.mac_span_position_m
+
+    # y_mac = (b_p / 3)(1 + 2 lam)/(1 + lam) = (4/9) b_p for lam = 0.5
+    assert result == pytest.approx(4.0 / 9.0 * wing.panel_span_m)
+
+
+@given(
+    taper=st.floats(min_value=0.1, max_value=1.0),
+    sweep_deg=st.floats(min_value=0.0, max_value=45.0),
+)
+def test_mac_chord_at_mac_station_equals_mac(taper: float, sweep_deg: float) -> None:
+    wing = TrapezoidalPlanform(50.0, 8.0, taper, math.radians(sweep_deg), panels=2)
+
+    result = wing.chord_at(wing.mac_span_position_m)
+
+    assert result == pytest.approx(wing.mac_m)

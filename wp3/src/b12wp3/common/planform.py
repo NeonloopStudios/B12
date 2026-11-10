@@ -75,6 +75,24 @@ class TrapezoidalPlanform:
         lam = self.taper
         return 2.0 / 3.0 * self.root_chord_m * (1.0 + lam + lam**2) / (1.0 + lam)
 
+    @property
+    def mac_span_position_m(self) -> float:
+        """Span station of the MAC from the root, y_mac = (b_p/3)(1+2 lam)/(1+lam) [m].
+
+        b_p is the panel span.
+        """
+        lam = self.taper
+        return self.panel_span_m / 3.0 * (1.0 + 2.0 * lam) / (1.0 + lam)
+
+    @property
+    def mac_quarter_chord_offset_m(self) -> float:
+        """x of the MAC quarter chord behind the root leading edge [m].
+
+        x = y_mac tan(sweep_LE) + c_mac / 4.
+        """
+        tan_sweep_le = math.tan(self.sweep_at(0.0))
+        return self.mac_span_position_m * tan_sweep_le + QUARTER_CHORD * self.mac_m
+
     def chord_at(self, y_m: float) -> float:
         """Local chord at a span station measured from the root.
 

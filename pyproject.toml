@@ -6,6 +6,9 @@ testpaths = ["wp2/tests", "wp3/tests"]
 # importlib mode: wp2 and wp3 both have a top-level "tests" package
 addopts = "-ra --import-mode=importlib"
 pythonpath = ["wp2", "wp2/src", "wp3/src"]
+markers = [
+    "openvsp: runs the OpenVSP conda env as a subprocess (deselect: -m 'not openvsp')",
+]
 
 [tool.mypy]
 python_version = "3.13"

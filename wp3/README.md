@@ -14,7 +14,8 @@ the final concept. The structure is the same as `wp2/`.
 ```
 wp3/
   configs/      input files: geometry.yaml (every geometric input),
-                propulsion.yaml (engine inputs of the nacelle sizing)
+                propulsion.yaml (engine inputs of the nacelle sizing),
+                vsp_model.yaml (positions for the OpenVSP 3-view model)
   scripts/      the runnable steps, one file per step
   src/b12wp3/   the analysis library every step calls
     config/     every input: paths, atmosphere, mission, geometry, drag settings
@@ -23,11 +24,13 @@ wp3/
                 and drag due to lift
     propulsion/ WP3.1  nacelle sizing of the selected engine (Torenbeek)
     plots/      the figures, one module per stage
+    vsp/        OpenVSP 3-view model: layout (wp3 env), builder (OpenVSP env)
   tests/        pytest suite over src/b12wp3/
   results/      generated CSVs and plots, one directory per stage:
     drag/       class II drag, drag due to lift
     iteration/  WP3.4 inputs (Oswald factors of the configurations)
     propulsion/ nacelle sizing
+    vsp/        OpenVSP model b12_aircraft.vsp3 and its report
 ```
 
 wp3 does not import the wp2 package. Values taken from WP2 (the wing
@@ -167,6 +170,54 @@ prints. The drag build-up uses that outline: the nacelle
 wetted area is two conical frustums (D_h -> D_n -> D_ef), and the form factor
 uses f = l_n / D_n.
 
+## OpenVSP 3-view model
+
+An OpenVSP model of the whole aircraft, for the 3-view figure: fuselage,
+wing, tails, nacelles with pylons, and the landing gear down. The sizes come
+from `configs/geometry.yaml`. The positions and the visual details are in
+`configs/vsp_model.yaml`. Fill in its `null` inputs first: the wing root
+position, the c.g. position, the nacelle position, the gear positions and the
+ground clearance. All x positions are from the nose tip; the tail arms are
+from the c.g.
+
+```
+python -m scripts.vsp_model
+```
+
+The script runs in two stages, because the OpenVSP API runs only in the
+`openvsp` conda env (Python 3.11):
+
+1. The wp3 env loads both YAML files and calculates every position and
+   shape (`b12wp3.vsp.layout`). It writes `results/vsp/model_inputs.json`.
+2. The `openvsp` env runs `src/b12wp3/vsp/builder.py` on that JSON. It
+   writes `results/vsp/b12_aircraft.vsp3`.
+
+The script finds the OpenVSP interpreter as `<conda base>/envs/openvsp`. Use
+`--openvsp-python PATH` or the `OPENVSP_PYTHON` variable for another
+location. `--json-only` stops after stage 1.
+
+| Part | OpenVSP component | Shape |
+|---|---|---|
+| Fuselage | FUSELAGE | elliptic nose with droop, cylinder, tail cone with upsweep u (parabolic centreline, mean angle u) |
+| Wing, tails | WING | trapezoids of geometry.yaml; tails placed by the tail arms (horizontal distance from the c.g. to the tail MAC c/4) |
+| Nacelle | BODYOFREVOLUTION | Torenbeek Type B wall (D_h, D_n at beta l_n, D_ef) revolved: open inlet and exit |
+| Fan face, spinner | ELLIPSOID | inside the inlet |
+| Exhaust plug | FUSELAGE | cone behind the exit |
+| Pylon | WING | constant chord, from the nacelle wall to the wing chord line |
+| Tires | GEAR | one bogie per gear unit, on the ground plane |
+| Struts | FUSELAGE | round-ended cylinder from the axle into the fuselage or the wing box |
+
+A main strut inside the fuselage width goes into the fuselage. A strut
+outside it goes into the wing box, between the LE flap and TE flap chords. If
+the contact point is not under the wing box, the strut is raked.
+`results/vsp/vsp_model_report.txt` lists the derived positions and the
+placement checks: c.g. inside the wing MAC (with its % MAC), horizontal
+tail over the fin, nacelle ground clearance, strut rake.
+
+The `.vsp3` stores the colours, but not the draw type (a GUI setting). Open
+the file in OpenVSP, select all geoms in the Geom Browser and click "Shade".
+Use the view buttons (top, side, front) for the 3-view screenshots.
+
 ## Running the tests
 
 From the repo root (the paths are in `pyproject.toml`):
@@ -177,4 +228,6 @@ python -m mypy --strict wp3/src
 ```
 
 pytest runs with `--import-mode=importlib`, because wp2 and wp3 both have a
-top-level `tests` package.
+top-level `tests` package. The test marked `openvsp` runs the OpenVSP
+builder in the `openvsp` conda env. The test skips if that env is not
+found; deselect it with `-m "not openvsp"`.
