@@ -183,8 +183,6 @@ class NacelleDetail:
         fan_face_position: Fan face behind the inlet, fraction of l_n [-].
         spinner_diameter_m: Spinner diameter D_s [m].
         spinner_length_m: Spinner length ahead of the fan face [m].
-        plug_diameter_fraction: Exhaust plug diameter at the exit / D_ef [-].
-        plug_length_m: Plug length behind the exit [m].
     """
 
     lip_thickness_m: float
@@ -193,8 +191,6 @@ class NacelleDetail:
     fan_face_position: float
     spinner_diameter_m: float
     spinner_length_m: float
-    plug_diameter_fraction: float
-    plug_length_m: float
 
     def __post_init__(self) -> None:
         _require_positive(
@@ -202,12 +198,10 @@ class NacelleDetail:
             exit_wall_thickness_m=self.exit_wall_thickness_m,
             spinner_diameter_m=self.spinner_diameter_m,
             spinner_length_m=self.spinner_length_m,
-            plug_length_m=self.plug_length_m,
         )
         _require_fraction(
             lip_length_fraction=self.lip_length_fraction,
             fan_face_position=self.fan_face_position,
-            plug_diameter_fraction=self.plug_diameter_fraction,
         )
         if self.fan_face_position <= self.lip_length_fraction:
             raise ValueError(

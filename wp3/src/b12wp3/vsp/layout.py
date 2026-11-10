@@ -657,7 +657,6 @@ class NacelleParts:
         shell: Nacelle wall.
         fan: Fan face disc.
         spinner: Spinner.
-        plug: Exhaust plug.
         pylon: Pylon.
         inlet: Inlet centre (x, y, z) [m].
         bottom_z_m: z of the nacelle bottom [m].
@@ -666,7 +665,6 @@ class NacelleParts:
     shell: RingModel
     fan: EllipsoidModel
     spinner: EllipsoidModel
-    plug: BodyModel
     pylon: SurfaceModel
     inlet: Point3
     bottom_z_m: float
@@ -678,7 +676,7 @@ def nacelle_parts(
     frame: WingFrame,
     radius_m: float,
 ) -> NacelleParts:
-    """Nacelle, fan face, spinner, plug and pylon of the right engine.
+    """Nacelle, fan face, spinner and pylon of the right engine.
 
     Args:
         geometry: Nacelle outline, engine count.
@@ -743,29 +741,8 @@ def nacelle_parts(
     spinner = EllipsoidModel(
         "Spinner", MATERIAL_DARK, centre, (det.spinner_length_m, r_s, r_s), True
     )
-
-    d_plug = det.plug_diameter_fraction * nac.exit_diameter_m
-    if d_plug >= 2.0 * float(profile.inner[-1]):
-        raise ValueError(
-            f"plug diameter {d_plug:.3f} m does not fit the exit duct "
-            f"{2.0 * float(profile.inner[-1]):.3f} m"
-        )
-    half = 0.5 * det.plug_length_m  # the plug starts this far inside the duct
-    plug = BodyModel(
-        "Exhaust plug",
-        MATERIAL_METAL,
-        (x0 + length - half, y, z_axis),
-        (
-            BodySection(0.0, 0.0, d_plug, 0.0, 0.0),
-            BodySection(half, 0.0, d_plug, 0.0, 0.0),
-            # slope of the straight line to the tip
-            BodySection(2.0 * half, 0.0, 0.6 * d_plug, 0.0, -0.3 * d_plug / half),
-            BodySection(3.0 * half, 0.0, 0.0, 0.0, 0.0),
-        ),
-        True,
-    )
     pylon = _pylon(inputs, frame, profile, (x0, y, z_axis), length)
-    return NacelleParts(shell, fan, spinner, plug, pylon, (x0, y, z_axis), z_axis - r_n)
+    return NacelleParts(shell, fan, spinner, pylon, (x0, y, z_axis), z_axis - r_n)
 
 
 def _pylon(
@@ -1021,7 +998,7 @@ def build_model(
         logger.warning("%s", message)
 
     model = AircraftModel(
-        bodies=(fuselage, engine.plug),
+        bodies=(fuselage,),
         surfaces=(
             wing_surface(frame, wing_airfoil),
             vertical,

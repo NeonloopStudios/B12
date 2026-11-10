@@ -61,7 +61,6 @@ def test_builder_sample_aircraft_writes_vsp3_with_every_geom(
         "Nacelle",
         "Fan face",
         "Spinner",
-        "Exhaust plug",
         "Nose gear strut",
         "Main gear strut",
         "Tires",

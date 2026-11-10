@@ -376,7 +376,6 @@ def test_build_model_sample_aircraft_returns_every_component(
     ]
     assert names == [
         "Fuselage",
-        "Exhaust plug",
         "Wing",
         "Vertical tail",
         "Horizontal tail",

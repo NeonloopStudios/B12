@@ -102,7 +102,7 @@ def sample_vsp_inputs() -> VspModelInputs:
         tails=TailPlacement(15.0, 15.0, 0.5, 0.0),
         fuselage_shape=FuselageShape(-0.3, 8, 6),
         nacelle_position=NacellePlacement(4.0, 2.0, 0.9),
-        nacelle_detail=NacelleDetail(0.04, 0.06, 0.02, 0.12, 0.2, 0.3, 0.55, 0.7),
+        nacelle_detail=NacelleDetail(0.04, 0.06, 0.02, 0.12, 0.2, 0.3),
         pylon=PylonInputs(0.2, 0.7, 45.0, 0.08),
         nose_gear_position=NoseGearPlacement(3.0, 2, 0.12, 0.15),
         main_gear_position=MainGearPlacement(14.5, 4.4, 2, 0.2, 0.25),

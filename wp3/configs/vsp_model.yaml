@@ -31,7 +31,7 @@ centre_of_gravity:
 tails:
   # WP3 tail sizing sheet: l = 13.5531 m. Horizontal distance from the c.g.
   # to the quarter chord of the tail MAC.
-  horizontal_arm_m: 13.5531
+  horizontal_arm_m: 14.70
   vertical_arm_m: 13.5531
   # Cruciform: height of the horizontal tail root above the fin root, as a
   # fraction of the fin span. 0.5 is the value that geometry.yaml uses for
@@ -48,7 +48,7 @@ fuselage_shape:
 # --- nacelle position, right engine; the left engine is its mirror ---
 nacelle_position:
   axis_y_m: 4.4                  # span station of the nacelle axis
-  inlet_ahead_of_le_m: 3.01      # inlet plane ahead of the local wing LE
+  inlet_ahead_of_le_m: 2.86      # inlet plane ahead of the local wing LE
   axis_below_chord_m: 0.8        # axis below the local wing chord line
 
 # --- nacelle details (visual). The outer line is the Torenbeek Type B
@@ -60,13 +60,11 @@ nacelle_detail:
   fan_face_position: 0.12        # fan face behind the inlet, fraction of l_n
   spinner_diameter_m: 0.2006     # D_s, results/propulsion/nacelle.csv
   spinner_length_m: 0.30
-  plug_diameter_fraction: 0.55   # exhaust plug diameter at the exit / D_ef
-  plug_length_m: 0.70            # plug length behind the exit
 
 # --- pylon (visual): constant chord, from the nacelle up into the wing ---
 pylon:
   le_position: 0.20              # pylon root LE behind the inlet, fraction of l_n
-  chord_fraction: 0.70           # pylon chord, fraction of l_n
+  chord_fraction: 0.65           # pylon chord, fraction of l_n
   sweep_le_deg: 45.0             # leading-edge sweep, nacelle to wing
   thickness_to_chord: 0.08       # NACA 4-digit section
 

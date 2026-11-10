@@ -123,46 +123,6 @@
     }
    ],
    "symmetric": false
-  },
-  {
-   "name": "Exhaust plug",
-   "material": "B12 metal",
-   "origin": [
-    11.651506867773687,
-    4.4,
-    -1.8420492228563867
-   ],
-   "sections": [
-    {
-     "x_m": 0.0,
-     "z_m": 0.0,
-     "diameter_m": 0.49280000000000007,
-     "centre_slope": 0.0,
-     "radius_slope": 0.0
-    },
-    {
-     "x_m": 0.35,
-     "z_m": 0.0,
-     "diameter_m": 0.49280000000000007,
-     "centre_slope": 0.0,
-     "radius_slope": 0.0
-    },
-    {
-     "x_m": 0.7,
-     "z_m": 0.0,
-     "diameter_m": 0.29568000000000005,
-     "centre_slope": 0.0,
-     "radius_slope": -0.4224000000000001
-    },
-    {
-     "x_m": 1.0499999999999998,
-     "z_m": 0.0,
-     "diameter_m": 0.0,
-     "centre_slope": 0.0,
-     "radius_slope": 0.0
-    }
-   ],
-   "symmetric": true
   }
  ],
  "surfaces": [
@@ -1046,7 +1006,7 @@
    "name": "Horizontal tail",
    "material": "B12 lifting surface",
    "root_le": [
-    24.28345028411615,
+    25.430350284116145,
     0.0,
     2.7426683329900343
    ],
@@ -1071,15 +1031,15 @@
    "name": "Pylon",
    "material": "B12 lifting surface",
    "root_le": [
-    8.744706867773687,
+    8.894706867773687,
     4.4,
-    -1.3383189491388876
+    -1.3235396401891597
    ],
    "x_rotation_deg": 90.0,
    "incidence_deg": 0.0,
-   "span_m": 0.36036454473286555,
-   "root_chord_m": 2.8496999999999995,
-   "tip_chord_m": 2.8496999999999995,
+   "span_m": 0.3410225574391709,
+   "root_chord_m": 2.64615,
+   "tip_chord_m": 2.64615,
    "sweep_deg": 45.0,
    "sweep_location": 0.0,
    "dihedral_deg": 0.0,
@@ -1098,7 +1058,7 @@
    "name": "Nacelle",
    "material": "B12 nacelle",
    "inlet": [
-    7.930506867773687,
+    8.080506867773687,
     4.4,
     -1.8420492228563867
    ],
@@ -1445,7 +1405,7 @@
    "name": "Fan face",
    "material": "B12 dark",
    "centre": [
-    8.419026867773686,
+    8.569026867773687,
     4.4,
     -1.8420492228563867
    ],
@@ -1460,7 +1420,7 @@
    "name": "Spinner",
    "material": "B12 dark",
    "centre": [
-    8.419026867773686,
+    8.569026867773687,
     4.4,
     -1.8420492228563867
    ],

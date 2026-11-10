@@ -12,7 +12,7 @@ It only calls OpenVSP: every position and shape is already in the JSON
 
 OpenVSP components:
 
-    Fuselage, exhaust plugs   FUSELAGE, circular sections
+    Fuselage                  FUSELAGE, circular sections
     Wing, tails, pylons       WING, one straight-tapered panel
     Nacelle shells            BODYOFREVOLUTION, file airfoil revolved (open duct)
     Fan faces, spinners       ELLIPSOID

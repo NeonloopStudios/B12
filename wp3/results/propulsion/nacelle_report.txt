@@ -15,7 +15,7 @@ RESULTS
        spinner_diameter_Ds   0.200563    m          -                   -
          inlet_diameter_Di   1.069770    m       1.17            0.914334
      highlight_diameter_Dh   1.069770    m          -                   -
-         nacelle_length_ln   4.071034    m       3.25            1.252626
+         nacelle_length_ln   4.071034    m       3.85            1.057411
         fan_cowl_length_lf   4.071034    m          -                   -
            max_diameter_Dn   1.344032    m          -                   -
 max_diameter_position_beta   0.350000    -          -                   -
