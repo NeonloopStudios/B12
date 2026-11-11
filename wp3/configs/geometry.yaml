@@ -22,9 +22,11 @@
 #   centreline, as in WP2.
 # * Landing gear inputs are per gear unit; d x w is the drag reference area.
 
-# --- wing: WP2 final planform (wp2/results/aero_summary_3d.csv) ---
+# --- wing: improved design after the iteration (report Table 9.1;
+#     wp2/src/b12wp2/config/planform.py, S_REF). Before the iteration: 66.7 m^2.
+# Check: b = sqrt(62.67 * 9.5) = 24.4001 m, c_r = 3.6692 m, c_t = 1.4677 m.
 wing:
-  area_m2: 66.7
+  area_m2: 62.67
   aspect_ratio: 9.5
   taper: 0.4
   sweep_c4_deg: 30.0
@@ -33,23 +35,25 @@ wing:
   covered_span_m: 3.01           # fuselage outer diameter (WP3 fuselage sheet)
   panels: 2
 
-# --- tails: WP3 tail sizing sheet (cruciform; V_h = 1, V_v = 0.105, l = 13.5531 m) ---
-# Check: b_h = sqrt(13.84148 * 4) = 7.4408 m, c_r = 2.5658 m, c_t = 1.1546 m;
-#        b_v = sqrt(13.01033 * 1.8) = 4.8393 m, c_r = 3.7083 m, c_t = 1.6687 m.
+# --- tails: improved design after the iteration (report Table 9.1; cruciform).
+#     Before the iteration (WP3 tail sizing sheet): S_h = 13.84148 m^2,
+#     S_v = 13.01033 m^2.
+# Check: b_h = sqrt(12.56 * 4) = 7.0880 m, c_r = 2.4442 m, c_t = 1.0999 m;
+#        b_v = sqrt(11.8 * 1.8) = 4.6087 m, c_r = 3.5316 m, c_t = 1.5892 m.
 horizontal_tail:
-  area_m2: 13.84148
+  area_m2: 12.56
   aspect_ratio: 4.0
   taper: 0.45
   sweep_c4_deg: 30.0             # sheet "Sweep", read as quarter-chord sweep
   thickness_to_chord: 0.12       # NACA 0012
   x_c_max_thickness: 0.30        # NACA 0012
   # Cruciform: the HT passes through the fin. Estimate: fin thickness at
-  # mid-height, 0.12 * c_v(h/2) = 0.12 * 2.69 m = 0.32 m.
+  # mid-height, 0.12 * c_v(h/2) = 0.12 * 2.56 m = 0.31 m.
   covered_span_m: 0.3
   panels: 2
 
 vertical_tail:
-  area_m2: 13.01033
+  area_m2: 11.8
   aspect_ratio: 1.8              # h^2 / S_v, one panel
   taper: 0.45
   sweep_c4_deg: 35.0             # sheet "Sweep", read as quarter-chord sweep
@@ -57,8 +61,8 @@ vertical_tail:
   x_c_max_thickness: 0.30        # NACA 0012
   # The fin span is measured from the fuselage centreline. Estimate of the part
   # inside the fuselage: tail-cone radius at the fin root quarter chord, with the
-  # fin trailing edge at the fuselage end (x = 28.68 m, root LE at 24.97 m):
-  # r(25.90 m) = 1.505 * (28.68 - 25.90) / 10.535 = 0.40 m.
+  # fin trailing edge at the fuselage end (x = 28.68 m, root LE at 25.15 m):
+  # r(26.03 m) = 1.505 * (28.68 - 26.03) / 10.535 = 0.38 m, rounded to 0.4 m.
   covered_span_m: 0.4
   panels: 1
 

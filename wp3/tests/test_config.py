@@ -136,7 +136,7 @@ def test_load_geometry_all_inputs_set_returns_geometry(tmp_path: Path) -> None:
     result = geometry.load_geometry(path)
 
     assert result.engine_count == 2
-    assert result.wing.area_m2 == pytest.approx(66.7)
+    assert result.wing.area_m2 == pytest.approx(62.67)  # report Table 9.1
     assert result.fuselage.length_m == pytest.approx(28.68125)
     assert result.vertical_tail.panels == 1
     assert result.te_flap.chord_ratio == pytest.approx(0.30)
