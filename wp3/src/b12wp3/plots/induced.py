@@ -21,6 +21,10 @@ from b12wp3.drag.polar import DragPolar  # noqa: E402
 
 FIGURE_DPI: Final[int] = 150
 CL_MAX_PLOTTED: Final[float] = 1.0
+REPORT_FIGSIZE_IN: Final[tuple[float, float]] = (3.1, 2.4)
+REPORT_FONT_PT: Final[float] = 8.0
+REPORT_LEGEND_PT: Final[float] = 7.5
+REPORT_DPI: Final[int] = 300
 
 
 def plot_induced_drag(
@@ -41,26 +45,30 @@ def plot_induced_drag(
         out_path.
     """
     cl = np.linspace(0.0, CL_MAX_PLOTTED, 101)
-    fig, ax = plt.subplots(figsize=(7.0, 4.5))
-    try:
-        for case, style in ((without_winglet, "--"), (with_winglet, "-")):
-            label = (
-                f"{case.name}: AR_eff = {case.effective_aspect_ratio:.2f}, "
-                f"e = {case.oswald:.3f}"
-            )
-            ax.plot(cl, case.k * cl**2, style, label=label)
-            ax.plot(cruise_cl, case.cdi(cruise_cl), "o", color="black", ms=4)
-        ax.axvline(cruise_cl, color="grey", lw=0.8, ls=":")
-        ax.set_xlabel("$C_L$ [-]")
-        ax.set_ylabel("$C_{D_i}$ [-]")
-        ax.set_title("Drag due to lift, clean wing (Brandt, $AR_{eff}$)")
-        ax.grid(alpha=0.3)
-        ax.legend()
-        fig.tight_layout()
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(out_path, dpi=FIGURE_DPI)
-    finally:
-        plt.close(fig)
+    # Sized for the report: the figure is 3.1 in wide on the page, so the 8 pt
+    # axis text and 7.5 pt legend text print at their drawn size (no scaling).
+    with plt.rc_context(
+        {"font.size": REPORT_FONT_PT, "axes.labelsize": REPORT_FONT_PT}
+    ):
+        fig, ax = plt.subplots(figsize=REPORT_FIGSIZE_IN)
+        try:
+            for case, style in ((without_winglet, "--"), (with_winglet, "-")):
+                label = (
+                    f"{case.name}\n$A_{{eff}}$ = {case.effective_aspect_ratio:.2f}, "
+                    f"e = {case.oswald:.3f}"
+                )
+                ax.plot(cl, case.k * cl**2, style, label=label)
+                ax.plot(cruise_cl, case.cdi(cruise_cl), "o", color="black", ms=3)
+            ax.axvline(cruise_cl, color="grey", lw=0.8, ls=":")
+            ax.set_xlabel("$C_L$ [-]")
+            ax.set_ylabel("$C_{D_i}$ [-]")
+            ax.grid(alpha=0.3)
+            ax.legend(loc="upper left", fontsize=REPORT_LEGEND_PT)
+            fig.tight_layout(pad=0.4)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(out_path, dpi=REPORT_DPI)
+        finally:
+            plt.close(fig)
     return out_path
 
 
