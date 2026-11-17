@@ -276,11 +276,12 @@ def body_wetted_area(
     return m.pi * d / 4.0 * (nose - d + cylinder + cone)
 
 #General design
+wing_loading = 4843 #N/m^2
 OEM_design = 17930 #kg
 design_payload_mass = 7200 #kg
 maximum_payload_mass = 9302 #kg
 fuel_mass = 7792 #kg
-cruise_design_mass = OEM_design + design_payload_mass + fuel_mass
+cruise_design_mass = OEM_design + design_payload_mass + fuel_mass #same as MTOM
 limit_load_factor = 3.727 #g
 wing_area = 66.7 #m^2
 aspect_ratio = 9.5
@@ -299,11 +300,13 @@ control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + Control
 unitary_tail = False
 tail_length = 18.07 #m, from wing quarter MAC to htail quarter MAC
 interpolate_tail_type = 0.5 #0.0 for conventional tail and 1.0 for T tail
+assumed_htail_vol = 1
 htail_span = 7.44 #m
 htail_area = 13.84 #m^2
 htail_sweep = 30 #deg
 htail_aspect = 4
 elevator_area = 0.2 * htail_area #m^2
+assumed_vtail_vol = 0.105
 vtail_area = 13.01 #m^2
 vtail_sweep = 35 #deg
 vtail_aspect = 1.8
@@ -361,7 +364,8 @@ nr_of_generators = nr_of_engines
 #Misc
 nr_of_crew = 7
 
-for i in range(10):
+nr_of_iterations = 10
+for i in range(nr_of_iterations):
     OEM_design = OemEstimator(cruise_design_mass, limit_load_factor, wing_area, aspect_ratio, tc_ratio_root, taper_ratio, sweep_angle, \
                     control_surface_area, unitary_tail, fuselage_width_at_htail, htail_span, htail_area, tail_length, htail_sweep, htail_aspect, elevator_area, \
                     interpolate_tail_type, vtail_area, vtail_sweep, vtail_aspect, \
@@ -373,4 +377,29 @@ for i in range(10):
                     nr_of_crew, total_fuselage_length, system_electrical_rating, electric_routing_dist, nr_of_generators, maximum_payload_mass)
     cruise_design_mass = OEM_design + design_payload_mass + fuel_mass
     landing_design_mass = OEM_design + design_payload_mass + fuel_mass
-    print(f"The calculated operating empty mass is {OEM_design} kg, iteration nr {i}.")
+    wing_area = cruise_design_mass * 9.81 / wing_loading
+    wingspan = m.sqrt(wing_area * aspect_ratio)
+    root_chord = 2 * wing_area / ((1+taper_ratio)*wingspan)
+    tip_chord = root_chord * taper_ratio
+    control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
+    mac_length = 2 * (root_chord/3) * (1 + taper_ratio + taper_ratio**2) / (1 + taper_ratio)
+    htail_area = assumed_htail_vol * wing_area * mac_length / (0.75 * tail_length)
+    htail_span = m.sqrt(htail_aspect * htail_area)
+    elevator_area = 0.2 * htail_area
+    vtail_area = assumed_vtail_vol * wing_area * wingspan / (0.75 * tail_length)
+    vtail_span = m.sqrt(vtail_aspect * vtail_area)
+    radius_of_gyration = 0.25 * (wingspan + total_fuselage_length) * 0.5
+    yawing_moment_of_inertia = cruise_design_mass * pow(radius_of_gyration, 2)
+    print(f"For iteration nr {i+1}: \n\t - operating empty mass is {OEM_design} kg \n\t - wing surface area is {round(wing_area, 2)} m^2")
+    if i == nr_of_iterations - 1:
+        print(f"\t - maximum take-off mass is {round(cruise_design_mass, 2)} kg")
+        print(f"\t - wingspan is {round(wingspan, 2)} m")
+        print(f"\t - root chord is {round(root_chord, 2)} m")
+        print(f"\t - tip chord is {round(tip_chord, 2)} m")
+        print(f"\t - MAC length is {round(mac_length, 2)} m")
+        print(f"\t - horizontal tail area is {round(htail_area, 2)} m^2")
+        print(f"\t - horizontal tail span is {round(htail_span, 2)} m")
+        print(f"\t - vertical tail area is {round(vtail_area, 2)} m^2")
+        print(f"\t - vertical tail span is {round(vtail_span, 2)} m")
+        print(f"\t - radius of gyration is {round(radius_of_gyration, 2)} m")
+        print(f"\t - yawing moment of inertia is {round(yawing_moment_of_inertia, 2)} kg m^2")

@@ -43,11 +43,11 @@ externals/
 
 ## Running the analysis
 
-Every runnable step is one file in `scripts/`, started from `wp2/` as a
-module -- `python -m scripts.<name>`, not `python scripts/<name>.py`, since
-the package is what puts `src/` on the path. (The two OpenVSP steps are the
-exception: they add it themselves, so the editor's Run button works on
-them.)
+Every runnable step is one file in `scripts/`. Start it from `wp2/` as a
+module with `python -m scripts.<name>`. You can also run the file directly,
+for example with the editor's Run button. Each script then puts `wp2/` and
+`src/` on the path itself. Select the interpreter that the step needs: the
+repo venv, or the OpenVSP conda env for the OpenVSP steps.
 
 | Command | Does | Writes |
 |---|---|---|

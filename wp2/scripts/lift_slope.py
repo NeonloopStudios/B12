@@ -16,7 +16,16 @@ where the "linear part" is taken to end.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+if __package__ in (None, ""):
+    # run as a file (e.g. the editor's Run button) instead of `python -m scripts.<name>`:
+    # make wp2/ and wp2/src/ importable so `from scripts import ...` and
+    # `from b12wp2 import ...` resolve
+    _WP2_DIR = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(_WP2_DIR))
+    sys.path.insert(0, str(_WP2_DIR / "src"))
 
 from b12wp2.config import paths, solvers
 from b12wp2.xfoil.lift_slope import OLSFit, fit_window

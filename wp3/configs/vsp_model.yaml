@@ -14,12 +14,12 @@
 #   the axis of the fuselage cylinder. All lengths in metres.
 # * Inputs marked "visual" change only the picture, not an analysis result.
 
-# --- wing position. Dihedral, incidence and twist: WP2
-#     (wp2/src/b12wp2/config/wing.py) ---
+# --- wing position. Incidence and twist: WP2 (wp2/src/b12wp2/config/wing.py).
+#     Dihedral: report Table 9.1 (WP2 config/wing.py has 2.0 deg) ---
 wing:
   root_le_x_m: 8.2               # root leading edge at the centreline
   root_z_m: -1.1                 # root chord line; low wing: below 0
-  dihedral_deg: 2.0              # WP2
+  dihedral_deg: 2.6              # report Table 9.1
   incidence_deg: 2.0             # WP2, rotation about the root leading edge
   tip_twist_deg: -2.0            # WP2, wash-out about the quarter chord
 

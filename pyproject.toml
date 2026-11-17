@@ -3,7 +3,9 @@
 
 [tool.pytest.ini_options]
 testpaths = ["wp2/tests", "wp3/tests"]
-# importlib mode: wp2 and wp3 both have a top-level "tests" package
+# importlib mode: wp2/tests and wp3/tests share module basenames (test_config.py).
+# Neither directory has an __init__.py: a "tests" package in both makes pytest
+# import wp2's tests.test_config a second time in place of wp3's.
 addopts = "-ra --import-mode=importlib"
 pythonpath = ["wp2", "wp2/src", "wp3/src"]
 markers = [

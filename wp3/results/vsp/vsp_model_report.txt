@@ -1,17 +1,17 @@
 OPENVSP 3-VIEW MODEL - derived positions
   inputs                     configs/geometry.yaml, vsp_model.yaml
   axes                       x aft from the nose tip, z up from the cylinder axis
-  wing MAC c/4 x             12.261 m
-  c.g. x                     12.310 m (26.8 % MAC)
-  fin root LE (x, z)         (23.456, 0.323) m
-  horizontal tail root LE    (25.430, 2.743) m
-  nacelle inlet (x, y, z)    (8.081, 4.400, -1.842) m
-  nacelle ground clearance   0.691 m
+  wing MAC c/4 x             12.136 m
+  c.g. x                     12.310 m (31.4 % MAC)
+  fin root LE (x, z)         (23.571, 0.330) m
+  horizontal tail root LE    (25.505, 2.635) m
+  nacelle inlet (x, y, z)    (8.082, 4.400, -1.796) m
+  nacelle ground clearance   0.737 m
   nose strut length          1.541 m
-  main strut length          1.834 m, rake -32.1 deg, into the wing
+  main strut length          1.905 m, rake -33.7 deg, into the wing
 
 CHECKS
-  WARNING: main strut is raked -32.1 deg: the wing box is far from the contact point
+  WARNING: main strut is raked -33.7 deg: the wing box is far from the contact point
 
 FILES (relative to wp3/)
   results/vsp/model_inputs.json

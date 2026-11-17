@@ -1,0 +1,12 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}/wp2/src;${workspaceFolder}/wp3/src;${workspaceFolder}/wp4/src"
+  },
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/wp2/src",
+    "${workspaceFolder}/wp3/src",
+    "${workspaceFolder}/wp4/src"
+  ]
+}
