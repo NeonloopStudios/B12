@@ -15,7 +15,7 @@ markers = [
 [tool.mypy]
 python_version = "3.13"
 # wp3/scripts is left out: mypy cannot hold two top-level "scripts" packages
-files = ["wp2/src", "wp2/scripts", "wp3/src", "wp4/configs", "wp4/src"]
+files = ["wp2/src", "wp2/scripts", "wp3/src", "wp4/configs", "wp4/src", "wp4/scripts"]
 ignore_missing_imports = true
 disallow_untyped_defs = true
 warn_unused_ignores = true

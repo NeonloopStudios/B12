@@ -4,9 +4,9 @@
 """WP4.1 aerodynamic loads: pre- and post-processing of the VSPAERO run.
 
 Runs in the repo venv. Only wp41/vspaero_runner.py needs the OpenVSP env;
-main() starts it as a subprocess.
+run_vspaero() starts it as a subprocess.
 
-Chain of main():
+Chain, run by wp4/scripts/wp41_aero_loads.py:
 
 1. Pre-processing: the planform, the freestream (ISA) and the moment
    reference point. vspaero_runner.py imports these functions, so the
@@ -18,11 +18,6 @@ Chain of main():
    check the strips against the VSPAERO totals, then write
    out/wp41/lift_distribution.txt and out/wp41/moment_distribution.txt.
 
-Run from the repo venv (or with the editor's Run button):
-
-    python wp4/src/wp41/aero_loads.py
-    python wp4/src/wp41/aero_loads.py --skip-vspaero    (post-processing only)
-
 Compressibility: VSPAERO applies Prandtl-Glauert at the run Mach. No other
 correction is applied. Drag is not computed.
 
@@ -32,27 +27,20 @@ vspaero_runner.py imports it in the OpenVSP env.
 
 from __future__ import annotations
 
-import argparse
 import logging
 import math
 import os
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, TypeAlias
 
-if __package__ in (None, ""):
-    # Run as a file (Run button): make wp4/ (configs) and wp4/src/ (wp41) importable.
-    _WP4_DIR = Path(__file__).resolve().parents[2]
-    sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
+import numpy as np
+import numpy.typing as npt
 
-import numpy as np  # noqa: E402
-import numpy.typing as npt  # noqa: E402
-
-from configs.aircraft import WING, WingGeometry  # noqa: E402
-from configs.wp41 import settings  # noqa: E402
-from configs.wp41.settings import FlightCondition  # noqa: E402
+from configs.aircraft import WING, WingGeometry
+from configs.wp41 import settings
+from configs.wp41.settings import FlightCondition
 
 logger = logging.getLogger(__name__)
 
@@ -538,23 +526,3 @@ def post_process(run_dir: Path, out_dir: Path) -> tuple[Path, Path]:
         "cm_c4", table, cm_c4, totals[:, 2], "CMy(c/4 MAC)", fs, WING, pf,
     )
     return lift_path, moment_path
-
-
-def main(argv: list[str] | None = None) -> None:
-    """Run VSPAERO (unless --skip-vspaero), then write the two distributions."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
-    parser.add_argument(
-        "--skip-vspaero", action="store_true",
-        help="post-process the existing VSPAERO files only",
-    )
-    args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-
-    if not args.skip_vspaero:
-        settings.RUN_DIR.mkdir(parents=True, exist_ok=True)
-        run_vspaero(settings.RUN_DIR, openvsp_python())
-    post_process(settings.RUN_DIR, settings.OUT_DIR)
-
-
-if __name__ == "__main__":
-    main()

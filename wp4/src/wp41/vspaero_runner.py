@@ -4,7 +4,7 @@
 """WP4.1 VSPAERO run: build the wing, run the alpha sweep, write the strip loads.
 
 Runs ONLY in the OpenVSP env (Python 3.11, imports openvsp). Usually
-wp41.aero_loads.main() starts it from the repo venv. To run it directly:
+wp4/scripts/wp41_aero_loads.py starts it from the repo venv. To run it directly:
 
     <openvsp env>/python.exe wp4/src/wp41/vspaero_runner.py <run_dir>
 
