@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Kajetan R. Gulaj
 
 [tool.pytest.ini_options]
-testpaths = ["wp2/tests", "wp3/tests"]
+testpaths = ["wp2/tests", "wp3/tests", "wp4/tests"]
 # importlib mode: wp2/tests and wp3/tests share module basenames (test_config.py).
 # Neither directory has an __init__.py: a "tests" package in both makes pytest
 # import wp2's tests.test_config a second time in place of wp3's.
 addopts = "-ra --import-mode=importlib"
-pythonpath = ["wp2", "wp2/src", "wp3/src"]
+pythonpath = ["wp2", "wp2/src", "wp3/src", "wp4", "wp4/src"]
 markers = [
     "openvsp: runs the OpenVSP conda env as a subprocess (deselect: -m 'not openvsp')",
 ]
@@ -15,7 +15,7 @@ markers = [
 [tool.mypy]
 python_version = "3.13"
 # wp3/scripts is left out: mypy cannot hold two top-level "scripts" packages
-files = ["wp2/src", "wp2/scripts", "wp3/src"]
+files = ["wp2/src", "wp2/scripts", "wp3/src", "wp4/configs", "wp4/src", "wp4/scripts"]
 ignore_missing_imports = true
 disallow_untyped_defs = true
 warn_unused_ignores = true
