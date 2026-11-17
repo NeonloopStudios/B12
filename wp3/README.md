@@ -227,7 +227,8 @@ python -m pytest wp3/tests
 python -m mypy --strict wp3/src
 ```
 
-pytest runs with `--import-mode=importlib`, because wp2 and wp3 both have a
-top-level `tests` package. The test marked `openvsp` runs the OpenVSP
+pytest runs with `--import-mode=importlib`, because wp2/tests and wp3/tests
+have test files with the same names. Neither directory has an `__init__.py`.
+If both have one, wp2's `test_config.py` runs in place of wp3's. The test marked `openvsp` runs the OpenVSP
 builder in the `openvsp` conda env. The test skips if that env is not
 found; deselect it with `-m "not openvsp"`.

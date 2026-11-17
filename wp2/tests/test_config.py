@@ -52,13 +52,13 @@ def test_cruise_v_freestream_matches_hand_derivation() -> None:
 
 
 def test_planform_matches_hand_derivation() -> None:
-    # S = 66.7, AR = 9.5, taper 0.4: b = sqrt(S AR) = 25.17 m,
-    # c_r = 2S / (b (1 + taper)) = 3.785 m, MAC = 2/3 c_r (1+t+t^2)/(1+t) = 2.812 m,
-    # y_MAC = b/6 (1+2t)/(1+t) = 5.394 m.
-    assert config.planform.B == pytest.approx(25.172, abs=0.001)
-    assert config.planform.C_ROOT == pytest.approx(3.785, abs=0.001)
-    assert config.planform.MAC == pytest.approx(2.812, abs=0.001)
-    assert config.planform.Y_MAC == pytest.approx(5.394, abs=0.001)
+    # S = 62.67 (report Table 9.1), AR = 9.5, taper 0.4: b = sqrt(S AR) = 24.400 m,
+    # c_r = 2S / (b (1 + taper)) = 3.669 m, MAC = 2/3 c_r (1+t+t^2)/(1+t) = 2.726 m,
+    # y_MAC = b/6 (1+2t)/(1+t) = 5.229 m.
+    assert config.planform.B == pytest.approx(24.400, abs=0.001)
+    assert config.planform.C_ROOT == pytest.approx(3.669, abs=0.001)
+    assert config.planform.MAC == pytest.approx(2.726, abs=0.001)
+    assert config.planform.Y_MAC == pytest.approx(5.229, abs=0.001)
 
 
 def test_sweep_lines_match_hand_derivation() -> None:
