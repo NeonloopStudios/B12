@@ -1,15 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-11-17
-"""Aircraft geometry for WP4.
-
-The wing is the WP3 redesign (wp2/src/b12wp2/config/planform.py and
-wp2/src/b12wp2/config/wing.py). The quantities that follow from the planform
-(span, chords, MAC, leading-edge sweep) are computed in
-wp41.aero_loads.planform(), not here.
-
-Axes (VSPAERO frame): x aft, y to the right wing, z up. Lengths in metres.
-"""
+"""Aircraft geometry for WP4 (WP3 wing redesign). Axes: x aft, y right, z up [m]."""
 
 from __future__ import annotations
 
@@ -81,13 +73,13 @@ WING: Final[WingGeometry] = WingGeometry(
     aspect_ratio=9.5,
     taper=0.4,
     sweep_c4_deg=30.0,
-    dihedral_deg=2.0,  # wp2 config/wing.py
+    dihedral_deg=2.0,
     tip_twist_deg=-2.0,
     twist_axis_chord_fraction=0.25,
     incidence_deg=2.0,
     root_le_x_m=0.0,
     root_z_m=0.3,
-    fuselage_diameter_m=3.01,  # WP3 fuselage sizing, wp3/configs/geometry.yaml
+    fuselage_diameter_m=3.01,
     airfoil_root=AIRFOILS_DIR / "NASA_SC(2)-0712.dat",
     airfoil_tip=AIRFOILS_DIR / "NASA_SC(2)-0712.dat",
 )

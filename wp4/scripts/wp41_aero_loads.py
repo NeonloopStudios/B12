@@ -3,19 +3,10 @@
 # Created: 2026-11-17
 """WP4.1: write the spanwise lift and pitching-moment distributions.
 
-Steps:
+Runs VSPAERO in the OpenVSP env, then post-processes in this venv.
+Output: wp4/out/wp41/lift_distribution.txt and moment_distribution.txt.
 
-1. Run VSPAERO (wp4/src/wp41/vspaero_runner.py) in the OpenVSP env, as a
-   subprocess. It writes strips.csv and totals.csv to out/wp41/vspaero_run/.
-2. Post-process with wp4/src/wp41/aero_loads.py. It writes
-   out/wp41/lift_distribution.txt and out/wp41/moment_distribution.txt.
-
-The settings are in wp4/configs/aircraft.py and wp4/configs/wp41/settings.py.
-
-Run from the repo venv (or with the editor's Run button):
-
-    python wp4/scripts/wp41_aero_loads.py
-    python wp4/scripts/wp41_aero_loads.py --skip-vspaero    (step 2 only)
+    python wp4/scripts/wp41_aero_loads.py [--skip-vspaero]
 """
 
 from __future__ import annotations
@@ -25,7 +16,6 @@ import logging
 import sys
 from pathlib import Path
 
-# make wp4/ (configs) and wp4/src/ (wp41) importable
 _WP4_DIR = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
 

@@ -1,14 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-11-17
-"""WP4.1 aerodynamic-load settings.
+"""WP4.1 settings: flight condition, VSPAERO run, output files.
 
-One run gives the spanwise distributions at one Mach number. For each
-load-case Mach of WP4.3, change FLIGHT and run again.
-
-The two angles of attack follow Appendix B of the WP4-5 reader: the inviscid
-solution is linear in alpha, so WP4.1 interpolates between alpha = 0 deg and
-alpha = 10 deg to the C_L of each load case.
+One run is one Mach number. The solution is linear in alpha, so two angles
+of attack give the distribution at any C_L by linear interpolation.
 """
 
 from __future__ import annotations
@@ -38,22 +34,23 @@ class FlightCondition:
         if not 0.0 <= self.altitude_m <= 20_000.0:
             raise ValueError(f"altitude_m must be in [0, 20000], got {self.altitude_m}")
         if not 0.0 <= self.mach < 1.0:
-            # Prandtl-Glauert in VSPAERO is valid for subsonic flow only
-            raise ValueError(f"mach must be in [0, 1), got {self.mach}")
+            raise ValueError(f"mach must be subsonic, in [0, 1), got {self.mach}")
 
 
 @dataclass(frozen=True)
 class VspaeroSettings:
-    """VSPAERO sweep and mesh settings.
+    """VSPAERO sweep, mesh and wake settings.
 
     Attributes:
         alpha_start_deg: First angle of attack [deg].
         alpha_end_deg: Last angle of attack [deg].
         alpha_npts: Number of angles of attack [-].
         span_tess: Spanwise tessellation; span_tess - 1 strips per half-wing.
-        chord_tess: Chordwise tessellation (OpenVSP Tess_W).
+        chord_tess: Points around the airfoil (OpenVSP Tess_W).
         out_cluster: Spanwise clustering, < 1 puts more strips at the tip.
-        wake_iter: Wake iterations.
+        fixed_wake: True for a flat wake along the freestream.
+        wake_nodes: Nodes along each trailing wake line.
+        wake_iter: Wake iterations (relaxed wake only).
         n_cpu: CPU count for VSPAERO.
         timeout_s: Time limit of the VSPAERO subprocess [s].
     """
@@ -64,6 +61,8 @@ class VspaeroSettings:
     span_tess: int
     chord_tess: int
     out_cluster: float
+    fixed_wake: bool
+    wake_nodes: int
     wake_iter: int
     n_cpu: int
     timeout_s: float
@@ -81,41 +80,40 @@ class VspaeroSettings:
                 f"span_tess and chord_tess must be >= 3, got "
                 f"{self.span_tess} and {self.chord_tess}"
             )
+        if self.wake_nodes < 2:
+            raise ValueError(f"wake_nodes must be >= 2, got {self.wake_nodes}")
 
 
-# --- flight condition: cruise (wp2 config/mission.py) ---
 FLIGHT: Final[FlightCondition] = FlightCondition(altitude_m=35_000 * FT_TO_M, mach=0.77)
 
-# --- VSPAERO: alpha 0 and 10 deg (Appendix B), wp2 mesh ---
+# Mesh study: chord_tess 193 is within 0.6 % of 257 in CL and CMy (33 was 10 %
+# low). Fewer than 16 wake nodes give a false jump at the tip strip.
 VSPAERO: Final[VspaeroSettings] = VspaeroSettings(
     alpha_start_deg=0.0,
     alpha_end_deg=10.0,
     alpha_npts=2,
     span_tess=25,
-    chord_tess=33,
+    chord_tess=193,
     out_cluster=0.5,
+    fixed_wake=True,
+    wake_nodes=64,
     wake_iter=5,
     n_cpu=4,
     timeout_s=900.0,
 )
 
-# Largest allowed difference between the strip integral and the VSPAERO
-# totals (CL and CMy). A larger difference means the strip data is read wrong.
-CHECK_TOLERANCE: Final[float] = 1.0e-3
+CHECK_TOLERANCE: Final[float] = 1.0e-3  # strip integral vs VSPAERO totals
 
-# --- OpenVSP interpreter: the environment variable wins over the default ---
 OPENVSP_PYTHON_ENV_VAR: Final[str] = "OPENVSP_PYTHON"
 OPENVSP_PYTHON_DEFAULT: Final[Path] = (
     Path.home() / "anaconda3" / "envs" / "openvsp" / "python.exe"
 )
 
-# --- files ---
 OUT_DIR: Final[Path] = WP4_OUT_DIR / "wp41"
-RUN_DIR: Final[Path] = OUT_DIR / "vspaero_run"  # raw VSPAERO files, gitignored
+RUN_DIR: Final[Path] = OUT_DIR / "vspaero_run"
 VSP3_FILE: Final[str] = "wing.vsp3"
-STRIPS_FILE: Final[str] = "strips.csv"  # written by vspaero_runner.py
-TOTALS_FILE: Final[str] = "totals.csv"  # written by vspaero_runner.py
+STRIPS_FILE: Final[str] = "strips.csv"
+TOTALS_FILE: Final[str] = "totals.csv"
 LIFT_FILE: Final[str] = "lift_distribution.txt"
 MOMENT_FILE: Final[str] = "moment_distribution.txt"
-
-WING_NAME: Final[str] = "Wing"  # geom name inside the OpenVSP model
+WING_NAME: Final[str] = "Wing"

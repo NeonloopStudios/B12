@@ -3,26 +3,10 @@
 # Created: 2026-11-17
 """WP4.1 aerodynamic loads: pre- and post-processing of the VSPAERO run.
 
-Runs in the repo venv. Only wp41/vspaero_runner.py needs the OpenVSP env;
-run_vspaero() starts it as a subprocess.
-
-Chain, run by wp4/scripts/wp41_aero_loads.py:
-
-1. Pre-processing: the planform, the freestream (ISA) and the moment
-   reference point. vspaero_runner.py imports these functions, so the
-   VSPAERO model and the post-processing use the same numbers.
-2. VSPAERO: vspaero_runner.py runs in the OpenVSP env. It writes
-   strips.csv and totals.csv to out/wp41/vspaero_run/.
-3. Post-processing: read the strips of the right half-wing, move the strip
-   pitching moment from the reference point to the local quarter chord,
-   check the strips against the VSPAERO totals, then write
-   out/wp41/lift_distribution.txt and out/wp41/moment_distribution.txt.
-
-Compressibility: VSPAERO applies Prandtl-Glauert at the run Mach. No other
-correction is applied. Drag is not computed.
-
-This module must stay Python 3.11-compatible and use only numpy, because
-vspaero_runner.py imports it in the OpenVSP env.
+Pre-processing: planform, freestream (ISA), moment reference point.
+vspaero_runner.py imports these, so it must stay Python 3.11 and numpy only.
+Post-processing: move the strip moment to the local quarter chord, check
+the strips against the VSPAERO totals, write the two distribution files.
 """
 
 from __future__ import annotations
@@ -46,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 FloatArray: TypeAlias = npt.NDArray[np.float64]
 
-# ICAO standard atmosphere (same constants as wp2/src/b12wp2/config/atmosphere.py)
 ISA_T0_K: Final[float] = 288.15
 ISA_P0_PA: Final[float] = 101_325.0
 ISA_LAPSE_K_M: Final[float] = 0.0065
@@ -56,7 +39,6 @@ ISA_G0: Final[float] = 9.80665
 ISA_H_TROPOPAUSE_M: Final[float] = 11_000.0
 ISA_H_MAX_M: Final[float] = 20_000.0
 
-# Columns of the files that vspaero_runner.py writes (one source for both sides)
 STRIP_COLUMNS: Final[tuple[str, ...]] = (
     "alpha", "y", "chord", "area", "cl", "cx", "cz", "cmy",
 )
@@ -65,9 +47,7 @@ TOTAL_COLUMNS: Final[tuple[str, ...]] = ("alpha", "CL", "CMy")
 RUNNER_PY: Final[Path] = Path(__file__).resolve().parent / "vspaero_runner.py"
 
 
-# ============================================================
-#  PRE-PROCESSING
-# ============================================================
+# --- pre-processing ---
 
 
 @dataclass(frozen=True)
@@ -119,12 +99,7 @@ def planform(wing: WingGeometry) -> Planform:
 
 
 def moment_reference(wing: WingGeometry, pf: Planform) -> tuple[float, float]:
-    """Moment reference point (x, z) of the VSPAERO run: the MAC quarter chord.
-
-    Any point gives the same final result, because post-processing moves the
-    moment to the local quarter chord. This point makes CMy of the whole
-    wing the usual pitching moment about c/4 of the MAC.
-    """
+    """Moment reference point (x, z) of the VSPAERO run: the MAC quarter chord."""
     x_ref = wing.root_le_x_m + pf.y_mac_m * pf.tan_sweep_le + 0.25 * pf.mac_m
     return x_ref, wing.root_z_m
 
@@ -134,13 +109,8 @@ def quarter_chord_points(
 ) -> tuple[FloatArray, FloatArray]:
     """x and z of the local quarter chord at the stations y (VSPAERO frame).
 
-    OpenVSP builds the panel in its own plane, then turns it by the dihedral
-    G about the x axis. A point at panel span s is thus at y = s cos(G),
-    z = s sin(G). With the root LE at the origin: x_w = s tan(Lambda_LE)
-    + c(s)/4 and z_w = s sin(G). OpenVSP then turns the wing by the incidence
-    i about the root LE (nose up positive) and moves it to (root_le_x,
-    root_z). The twist turns each section about its quarter chord, so it does
-    not move this point.
+    The panel span s = y / cos(dihedral). The incidence turns the wing about
+    the root LE, nose up positive. The twist does not move the quarter chord.
 
     Args:
         wing: Wing geometry.
@@ -151,7 +121,7 @@ def quarter_chord_points(
         (x, z) of the quarter chord at each station [m].
     """
     dihedral = math.radians(wing.dihedral_deg)
-    s = y / math.cos(dihedral)  # span along the panel
+    s = y / math.cos(dihedral)
     x_w = s * pf.tan_sweep_le + 0.25 * pf.chord_at(s)
     z_w = s * math.sin(dihedral)
     inc = math.radians(wing.incidence_deg)
@@ -236,20 +206,18 @@ def read_airfoil_dat(path: Path) -> tuple[FloatArray, FloatArray]:
         try:
             x, y = (float(v) for v in line.replace(",", " ").split()[:2])
         except ValueError:
-            continue  # name line, blank line or comment
+            continue
         points.append((x, y))
-    if points and points[0][0] > 1.5:  # Lednicer header with the point counts
+    if points and points[0][0] > 1.5:  # Lednicer point counts
         points = points[1:]
     arr = np.array(points, dtype=np.float64)
     if len(arr) < 10:
         raise ValueError(f"Too few points ({len(arr)}) in airfoil file: {path}")
 
-    if arr[0, 0] > 0.5:
-        # Selig: TE -> upper -> LE -> lower -> TE
+    if arr[0, 0] > 0.5:  # Selig: TE -> upper -> LE -> lower -> TE
         i_le = int(np.argmin(arr[:, 0]))
         upper, lower = arr[i_le::-1], arr[i_le:]
-    else:
-        # Lednicer: LE -> upper -> TE, then LE -> lower -> TE
+    else:  # Lednicer: LE -> upper -> TE, LE -> lower -> TE
         i_split = int(np.argmax(np.diff(arr[:, 0]) < -0.5)) + 1
         upper, lower = arr[:i_split], arr[i_split:]
 
@@ -302,9 +270,7 @@ def run_vspaero(run_dir: Path, python_exe: Path) -> None:
         raise RuntimeError(f"vspaero_runner.py failed (exit code {result.returncode})")
 
 
-# ============================================================
-#  POST-PROCESSING
-# ============================================================
+# --- post-processing ---
 
 
 @dataclass(frozen=True)
@@ -365,7 +331,6 @@ def span_table(strips: FloatArray) -> SpanTable:
         raise ValueError("No strips with y > 0")
     alphas = np.unique(right[:, 0])
 
-    # one block of rows per alpha, each sorted root to tip
     blocks = []
     for alpha in alphas:
         rows = right[right[:, 0] == alpha]
@@ -375,7 +340,7 @@ def span_table(strips: FloatArray) -> SpanTable:
         if rows.shape != first.shape or not np.allclose(rows[:, 1], first[:, 1]):
             raise ValueError(f"The strips at alpha = {alpha} deg differ from the first alpha")
 
-    stacked = np.stack(blocks, axis=-1)  # shape (n_y, n_columns, n_alpha)
+    stacked = np.stack(blocks, axis=-1)  # (n_y, n_columns, n_alpha)
     return SpanTable(
         alpha=alphas,
         y=first[:, 1],
@@ -394,11 +359,8 @@ def quarter_chord_moment(
 ) -> FloatArray:
     """Move a strip pitching moment from the reference point to the quarter chord.
 
-    The moment about a point is M = M_c4 + (dz Fx - dx Fz), with (dx, dz) the
-    position of the quarter chord relative to that point (x aft, z up, nose
-    up positive). Divided by q S_strip c:
-
-        cm_c4 = cmy - (dz / c) cx + (dx / c) cz
+    M_ref = M_c4 + dz Fx - dx Fz (x aft, z up, nose up positive), so
+    cm_c4 = cmy - (dz / c) cx + (dx / c) cz.
 
     Args:
         cmy: Moment coefficient about the reference point.
@@ -449,18 +411,16 @@ def write_distribution(
     path: Path, title: str, symbol: str, table: SpanTable, values: FloatArray,
     totals: FloatArray, total_symbol: str, fs: Freestream, wing: WingGeometry, pf: Planform,
 ) -> None:
-    """Write one spanwise distribution as a text file with a header.
-
-    Columns: y [m], chord [m], then one column per angle of attack.
+    """Write one distribution: y [m], chord [m], one column per alpha.
 
     Args:
         path: Output file.
         title: First header line.
-        symbol: Name of the coefficient in the column names (cl, cm_c4).
-        table: Strip data; gives y, chord and the alphas.
+        symbol: Coefficient name in the column names (cl, cm_c4).
+        table: Strip data (y, chord, alphas).
         values: Coefficient, shape (n_y, n_alpha).
-        totals: Whole-wing coefficient per alpha, shape (n_alpha,).
-        total_symbol: Name of the whole-wing coefficient (CL, CMy).
+        totals: Whole-wing coefficient per alpha.
+        total_symbol: Whole-wing coefficient name (CL, CMy).
         fs: Freestream of the run.
         wing: Wing geometry.
         pf: Planform of the wing.

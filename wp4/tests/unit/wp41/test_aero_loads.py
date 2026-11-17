@@ -191,6 +191,11 @@ def test_vspaero_settings_single_alpha_raises() -> None:
         dataclasses.replace(settings.VSPAERO, alpha_npts=1)
 
 
+def test_vspaero_settings_single_wake_node_raises() -> None:
+    with pytest.raises(ValueError, match="wake_nodes"):
+        dataclasses.replace(settings.VSPAERO, wake_nodes=1)
+
+
 # ============================================================
 #  POST-PROCESSING
 # ============================================================

@@ -3,23 +3,9 @@
 # Created: 2026-11-17
 """WP4.1 VSPAERO run: build the wing, run the alpha sweep, write the strip loads.
 
-Runs ONLY in the OpenVSP env (Python 3.11, imports openvsp). Usually
-wp4/scripts/wp41_aero_loads.py starts it from the repo venv. To run it directly:
-
-    <openvsp env>/python.exe wp4/src/wp41/vspaero_runner.py <run_dir>
-
-The wing model is copied from wp2/src/b12wp2/wing/geometry.py and
-wp2/src/b12wp2/wing/vspaero.py, without the drag work. The planform, the
-freestream and the moment reference point come from wp41.aero_loads, so
-the post-processing uses the same numbers.
-
-Writes to <run_dir>:
-
-    wing.vsp3 and the VSPAERO files
-    strips.csv   one row per (alpha, strip): aero_loads.STRIP_COLUMNS
-    totals.csv   one row per alpha: aero_loads.TOTAL_COLUMNS
-
-VSPAERO applies Prandtl-Glauert at the given Mach (compressibility).
+OpenVSP env only (Python 3.11). Usage: python vspaero_runner.py <run_dir>
+Writes strips.csv and totals.csv (columns: aero_loads.STRIP_COLUMNS and
+TOTAL_COLUMNS) and the VSPAERO files to <run_dir>.
 """
 
 from __future__ import annotations
@@ -29,7 +15,6 @@ import sys
 from pathlib import Path
 
 if __package__ in (None, ""):
-    # Run as a file: make wp4/ (configs) and wp4/src/ (wp41) importable.
     _WP4_DIR = Path(__file__).resolve().parents[2]
     sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
 
@@ -42,7 +27,6 @@ from wp41 import aero_loads as al  # noqa: E402
 
 logger = logging.getLogger("wp41.vspaero_runner")
 
-# VSPAERO result names for the columns of aero_loads.STRIP_COLUMNS (without alpha)
 STRIP_RESULT_NAMES = {
     "y": "Yavg", "chord": "Chord", "area": "dArea",
     "cl": "cl", "cx": "cx", "cz": "cz", "cmy": "cmy",
@@ -139,6 +123,8 @@ def run_sweep(pf: al.Planform, fs: al.Freestream) -> None:
     vsp.SetIntAnalysisInput(a, "MachNpts", [1])
     vsp.SetDoubleAnalysisInput(a, "Vinf", [fs.velocity])
     vsp.SetDoubleAnalysisInput(a, "Rho", [fs.density])
+    vsp.SetIntAnalysisInput(a, "FixedWakeFlag", [int(cfg.fixed_wake)])
+    vsp.SetIntAnalysisInput(a, "NumWakeNodes", [cfg.wake_nodes])
     vsp.SetIntAnalysisInput(a, "WakeNumIter", [cfg.wake_iter])
     vsp.SetIntAnalysisInput(a, "NCPU", [cfg.n_cpu])
 
@@ -197,7 +183,7 @@ def main(run_dir: Path) -> None:
     vsp.VSPRenew()
     vsp.DeleteAllResults()
     build_wing(pf)
-    vsp.WriteVSPFile(str(run_dir / settings.VSP3_FILE))  # VSPAERO writes its files here
+    vsp.WriteVSPFile(str(run_dir / settings.VSP3_FILE))
     run_sweep(pf, fs)
 
     for name, data, columns in (
