@@ -13,6 +13,17 @@ The tables themselves are built by b12wp2.scoring.scorecard.
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+if __package__ in (None, ""):
+    # run as a file (e.g. the editor's Run button) instead of `python -m scripts.<name>`:
+    # make wp2/ and wp2/src/ importable so `from scripts import ...` and
+    # `from b12wp2 import ...` resolve
+    _WP2_DIR = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(_WP2_DIR))
+    sys.path.insert(0, str(_WP2_DIR / "src"))
+
 from b12wp2 import config
 from b12wp2.config import paths
 from b12wp2.scoring.scorecard import build_detail_table, build_summary_table

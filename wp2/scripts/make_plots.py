@@ -10,6 +10,17 @@ exist already -- it reads them, it never re-runs XFoil.
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+if __package__ in (None, ""):
+    # run as a file (e.g. the editor's Run button) instead of `python -m scripts.<name>`:
+    # make wp2/ and wp2/src/ importable so `from scripts import ...` and
+    # `from b12wp2 import ...` resolve
+    _WP2_DIR = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(_WP2_DIR))
+    sys.path.insert(0, str(_WP2_DIR / "src"))
+
 from b12wp2 import config
 from b12wp2.config import paths
 from b12wp2.plots.section import PER_AIRFOIL_PLOTS, airfoil_colors, plot_criteria_breakdown, plot_total_score
