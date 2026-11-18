@@ -31,7 +31,7 @@ TE_CHORD_RATIO: dict[str, float] = {
 # c_s / c -> front spar at x/c = max(X_FS_MIN, c_s/c)
 LE_CHORD_RATIO: dict[str, float] = {
     "none": 0.0,
-    "LE flap": 0.15,
+    "LE flap": 0.20,  # = the front spar; selected design, same as config.hld
     "Krueger": 0.15,
     "slat": 0.20,  # = the ADSEE front-spar position
 }

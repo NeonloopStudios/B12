@@ -13,8 +13,10 @@ Writes:
     results/drag/induced_drag.png              CDi(CL) without and with the winglet
     results/iteration/oswald_configurations.csv  e and K of the clean, take-off
                                                and landing configurations (WP3.4)
-    results/drag/drag_polar.csv / .png         only when the class II CD0 inputs
-                                               are all set
+    results/drag/drag_polar.csv / .png         CD0 of the class II build-up at
+                                               cruise and K with the winglet
+
+The geometry comes from configs/geometry.yaml.
 """
 
 from __future__ import annotations
@@ -33,10 +35,10 @@ import pandas as pd
 
 from b12wp3.common.planform import TrapezoidalPlanform
 from b12wp3.config import drag as drag_cfg
-from b12wp3.config import geometry as geometry_cfg
 from b12wp3.config import induced as induced_cfg
 from b12wp3.config import paths
 from b12wp3.config import mission as mission_cfg
+from b12wp3.config.geometry import AircraftGeometry, load_geometry
 from b12wp3.drag.buildup import aircraft_drag_buildup
 from b12wp3.drag.induced import (
     InducedDrag,
@@ -51,32 +53,6 @@ from b12wp3.drag.polar import DragPolar
 from b12wp3.plots.induced import plot_drag_polar, plot_induced_drag
 
 POLAR_CL = np.round(np.arange(0.0, 1.0001, 0.05), 4)
-
-
-def _wing_planform() -> TrapezoidalPlanform:
-    """Wing planform from config/geometry.py; raises if an input is unset."""
-    named = (
-        ("WING_AREA_M2", geometry_cfg.WING_AREA_M2),
-        ("WING_ASPECT_RATIO", geometry_cfg.WING_ASPECT_RATIO),
-        ("WING_TAPER", geometry_cfg.WING_TAPER),
-        ("WING_SWEEP_C4_DEG", geometry_cfg.WING_SWEEP_C4_DEG),
-    )
-    missing = [name for name, value in named if value is None]
-    if (
-        missing
-        or geometry_cfg.WING_AREA_M2 is None
-        or geometry_cfg.WING_ASPECT_RATIO is None
-        or geometry_cfg.WING_TAPER is None
-        or geometry_cfg.WING_SWEEP_C4_DEG is None
-    ):
-        raise ValueError("wing inputs not set: " + ", ".join(missing))
-    return TrapezoidalPlanform(
-        area_m2=geometry_cfg.WING_AREA_M2,
-        aspect_ratio=geometry_cfg.WING_ASPECT_RATIO,
-        taper=geometry_cfg.WING_TAPER,
-        sweep_c4_rad=math.radians(geometry_cfg.WING_SWEEP_C4_DEG),
-        panels=geometry_cfg.WING_PANELS,
-    )
 
 
 def _cruise_rows(
@@ -206,13 +182,8 @@ def _configurations(
     return pd.DataFrame(rows), unset
 
 
-def _class_ii_cd0() -> float | None:
-    """CD0 of the class II build-up at cruise, or None if an input is unset."""
-    try:
-        geometry = geometry_cfg.aircraft_geometry()
-    except ValueError as err:
-        print(f"  CD0: {err}")
-        return None
+def _class_ii_cd0(geometry: AircraftGeometry) -> float:
+    """CD0 of the class II build-up at cruise."""
     buildup = aircraft_drag_buildup(
         geometry, mission_cfg.CRUISE_CONFIGURATION, drag_cfg.DRAG_SETTINGS
     )
@@ -220,7 +191,9 @@ def _class_ii_cd0() -> float | None:
 
 
 def main() -> None:
-    planform = _wing_planform()
+    # load_geometry raises one error that names every unset input
+    geometry = load_geometry()
+    planform = geometry.wing.planform()
     height_to_span = mean_height_to_span(induced_cfg.REFERENCE_WINGLETS)
     winglet_height_m = height_to_span * planform.span_m
     without = wing_induced_drag(planform, 0.0, name="no winglet")
@@ -242,11 +215,7 @@ def main() -> None:
     if unset:
         print("  not written, input unset in config/mission.py: " + ", ".join(unset))
 
-    cd0 = _class_ii_cd0()
-    if cd0 is None:
-        print("  drag polar not written: class II CD0 not available")
-        return
-    polar = DragPolar(cd0=cd0, k=clean.k)
+    polar = DragPolar(cd0=_class_ii_cd0(geometry), k=clean.k)
     polar.to_dataframe(POLAR_CL).to_csv(paths.DRAG_POLAR_CSV, index=False)
     plot_drag_polar(polar, cl, paths.DRAG_POLAR_PNG)
     print(

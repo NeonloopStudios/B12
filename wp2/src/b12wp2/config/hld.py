@@ -75,7 +75,10 @@ TAKEOFF_FRACTION = 0.7
 
 # --- spanwise limits (fraction of the semi-span) ---
 
-ETA_IN = 0.12  # fuselage side + clearance
+# Fuselage radius 1.505 m = eta 0.123. On this low wing the fuselage side at
+# the wing upper surface is at y ~ 1.22 m (eta 0.10), so the devices start
+# 0.24 m outboard of the wing-body junction.
+ETA_IN = 0.12
 ETA_OUT_TE = 0.75  # trailing-edge devices end where the aileron starts
 ETA_OUT_LE = 0.95  # leading-edge devices run in front of the aileron, short of the tip
 
@@ -86,10 +89,12 @@ REAR_SPAR = 0.7
 FLAP_CHORD_RATIO = 1.0 - REAR_SPAR  # c_f / c
 SLAT_CHORD_RATIO = FRONT_SPAR  # c_s / c
 
-# --- aileron: behind the rear spar, outboard of the trailing-edge devices ---
+# --- aileron: outboard of the trailing-edge devices (roll-control sizing) ---
+# The aileron starts at ETA_OUT_TE. Its hinge line (x/c = 0.75) lies behind
+# the rear spar.
 
-ETA_OUT_AILERON = 1.0
-AILERON_CHORD_RATIO = FLAP_CHORD_RATIO  # c_a / c
+ETA_OUT_AILERON = 0.983
+AILERON_CHORD_RATIO = 0.25  # c_a / c
 
 # --- selected configuration (names from TE_DEVICES / LE_DEVICES) ---
 # Only used to name and colour the devices in the OpenVSP model of

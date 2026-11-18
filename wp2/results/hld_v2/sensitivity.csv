@@ -43,18 +43,18 @@ w_performance,w_space,w_complexity,winner,eta_out_te,score
 0.4,0.3,0.3,triple-slotted,0.75,0.5285367815
 0.4,0.4,0.2,triple-slotted,0.75,0.5285367815
 0.4,0.5,0.1,triple-slotted,0.75,0.5285367815
-0.4,0.6,0.0,triple-slotted + LE flap,0.75,0.532482468158
-0.5,0.0,0.5,triple-slotted + LE flap,0.75,0.556228085197
-0.5,0.1,0.4,triple-slotted + LE flap,0.75,0.562478085197
-0.5,0.2,0.3,triple-slotted + LE flap,0.75,0.568728085197
-0.5,0.3,0.2,triple-slotted + LE flap,0.75,0.574978085197
-0.5,0.4,0.1,triple-slotted + LE flap,0.75,0.581228085197
-0.5,0.5,0.0,triple-slotted + LE flap,0.75,0.587478085197
-0.6,0.0,0.4,triple-slotted + LE flap,0.75,0.617473702237
-0.6,0.1,0.3,triple-slotted + LE flap,0.75,0.623723702237
-0.6,0.2,0.2,triple-slotted + LE flap,0.75,0.629973702237
-0.6,0.3,0.1,triple-slotted + LE flap,0.75,0.636223702237
-0.6,0.4,0.0,triple-slotted + LE flap,0.75,0.642473702237
+0.4,0.6,0.0,triple-slotted + Krueger,0.75,0.532482468158
+0.5,0.0,0.5,triple-slotted + LE flap,0.75,0.556804401733
+0.5,0.1,0.4,triple-slotted,0.75,0.535670976875
+0.5,0.2,0.3,triple-slotted,0.75,0.535670976875
+0.5,0.3,0.2,triple-slotted,0.75,0.535670976875
+0.5,0.4,0.1,triple-slotted + Krueger,0.75,0.556228085197
+0.5,0.5,0.0,triple-slotted + Krueger,0.75,0.587478085197
+0.6,0.0,0.4,triple-slotted + LE flap,0.75,0.618165282079
+0.6,0.1,0.3,triple-slotted + slat,0.75,0.6
+0.6,0.2,0.2,triple-slotted + slat,0.75,0.6
+0.6,0.3,0.1,triple-slotted + Krueger,0.75,0.611223702237
+0.6,0.4,0.0,triple-slotted + Krueger,0.75,0.642473702237
 0.7,0.0,0.3,triple-slotted + slat,0.75,0.7
 0.7,0.1,0.2,triple-slotted + slat,0.75,0.7
 0.7,0.2,0.1,triple-slotted + slat,0.75,0.7
