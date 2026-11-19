@@ -36,7 +36,7 @@ Four scripts exchange data only through CSV files.
 No script imports another script. No `wp41` module imports `wp2`, `wp3`, `wp42` or `wp43`.
 
 ```text
-        wp41_aero_loads.py (existing: VSPAERO run)
+        wp41_aero_loads.py (VSPAERO run on a Mach grid, once per geometry)
         out/wp41/lift_distribution.txt, moment_distribution.txt
                           |
                           v
@@ -57,6 +57,10 @@ No script imports another script. No `wp41` module imports `wp2`, `wp3`, `wp42` 
 | `wp41_weight.py` | mass properties, load case | `weight.csv`, `point_loads.csv` |
 | `wp41_torsion.py` | `lift.csv`, `weight.csv`, `point_loads.csv` | `torque.csv`, plot |
 | `wp41_shear_moment.py` | `lift.csv`, `weight.csv`, `point_loads.csv` | `shear_moment.csv`, plots |
+
+`wp41_aoa_grid.py` is a side script: it reads the VSPAERO files and writes `out/wp41/aoa_grid.txt` (`CL` and `α` for OEW, MZFW and MTOW over a speed range). No other script reads it.
+
+All per-case files use the same global stations, `wp41.stations` (`N_SPAN_STATIONS` points from `y = 0` to `y = b/2`). `wp41.torsion` checks that `lift.csv` and `weight.csv` share them, so the weight script must take its stations from there.
 
 Scripts 1 and 2 are independent. Run them first, in any order.
 Scripts 3 and 4 are independent of each other. Run them after 1 and 2.
@@ -106,7 +110,7 @@ WP4.3 fills the values. The README gives no numbers.
 
 ### 4.2 Mass properties (from WP1-3 and WP4.2)
 
-One frozen dataclass, in `configs/wp41/mass.py`.
+One frozen dataclass, in `configs/wp41/mass.py`. The rows `h_thrust_m` and `f_sc` live in `configs/wp41/torsion.py` (`TorsionInputs`) until WP4.2 replaces them.
 
 | Field | Unit | Meaning |
 |---|---|---|
@@ -117,42 +121,51 @@ One frozen dataclass, in `configs/wp41/mass.py`.
 | `d_engine_m` | m | Distance of the engine centre of gravity ahead of the shear centre |
 | `h_thrust_m` | m | Height of the thrust line below the shear centre |
 | `f_str`, `f_fuel` | - | Chord fraction of the structure and of the fuel centre of gravity |
-| `f_sc` | - | Chord fraction of the shear centre |
+| `f_sc` | - | Chord fraction of the shear centre (the wing box centroid) |
 | `a_nd` | - | Box area ratio `A_nd = (h/c)(l/c)` |
 | `eta_tank_in`, `eta_tank_out` | - | Span fraction `2y/b` where the fuel tank starts and ends |
 
 The reader allows `f_sc` equal to the centroid of the wing box.
 WP4.2 computes that centroid. Until then, `f_sc` is an input.
 Every value is read from the config. No script has a default.
+`f_sc` is `None` in `torsion.py` until WP4.2 gives it. The torsion script then stops and names WP4.2.
+`h_thrust_m` is 0.8 m, the axis height below the chord line from `wp3/configs/vsp_model.yaml`. It is not yet the height below the centroid.
 
 ---
 
 ## 5. Script 1 — lift
 
-**Input:** the two VSPAERO files (`cl` and `cm_c4` at α = 0° and α = 10°) and one load case.
-The files give `CL0` and `CL10` in their header lines.
+**Input:** the two VSPAERO files and one load case.
+The files hold `cl` and `cm_c4` at α = 0° and α = 10° for every Mach number of the grid in `settings.VSPAERO` (0.15 to 0.85).
+Their header lines give the Mach number, the angle and `CL` of each column.
+Module: `wp41.lift_distribution`.
 
 **Steps:**
 
-1. Dynamic pressure from the equivalent airspeed: `q = ½ ρ0 V_EAS²`, with `ρ0` the ISA sea-level density.
-2. Total weight: `W = W_oew + W_mpw + W_fuel` for the mass case.
+1. Flight state (ISA): `q = ½ ρ0 V_EAS²`, `V_TAS = V_EAS √(ρ0/ρ)`, `M = V_TAS / a`.
+2. Total weight of the mass case, `W = W_oem + W_payload + W_fuel` (`case_weights`, masses in `configs/aircraft.py`):
+   - `oew`: OEM only.
+   - `mtow`: OEM + maximum payload + the fuel that gives MTOM.
+   - `no_fuel`: OEM + maximum payload.
 3. Required lift coefficient: `CL_d = n W / (q S)`.
-4. Interpolation weight: `s = (CL_d − CL0) / (CL10 − CL0)`.
-5. Sectional coefficients (reader, Appendix B):
+4. Mach: a cubic spline (`scipy.interpolate.CubicSpline`) over the Mach grid gives `CL0`, `CL10`, `cl0(y)`, `cl10(y)`, `cm0(y)`, `cm10(y)` at `M`.
+5. Interpolation weight: `s = (CL_d − CL0) / (CL10 − CL0)`.
    `cl_d(y) = cl0(y) + s (cl10(y) − cl0(y))` and the same for `cm_c4`.
-6. Angle of attack: `α_d = α0 + s (α10 − α0)`. It is reported, not used in the loads (see A-2).
-7. Loads per unit span:
+6. Angle of attack: `α_d = α0 + s (α10 − α0)` (freestream angle; the wing incidence is in the model). It is reported, not used in the loads (see A-2).
+7. Stations: `cl c` and `cm_c4 c²` go from the VSPAERO strip centres to the global stations with a monotone cubic (`scipy.interpolate.PchipInterpolator`) and the value 0 at the tip.
+8. Loads per unit span:
    - `N'(y) = cl_d(y) q c(y)`
    - `m'_c4(y) = cm_c4_d(y) q c(y)²`  (nose-up positive, about the local quarter chord)
 
 **Output `lift.csv`:** header lines `# schema: wp41.lift.v1`, case name, `n`, `W`, `q`, `CL_d`, `alpha_d`, `mach_case`, `mach_run`, `extrapolated`.
-Columns: `y_m, chord_m, cl_d, cm_c4_d, n_prime_npm, m_prime_c4_nmpm`.
+Columns: `y_m, chord_m, cl_d, cm_c4_d, n_prime_npm, m_prime_c4_nmpm`, on the global stations.
+The database is evaluated at the case Mach, so `mach_run` equals `mach_case`.
 
 **Checks (the script fails with the offending values):**
 
-- `2 ∫ N' dy` equals `n W` within the relative tolerance in `settings.py`.
+- `2 ∫ N' dy` equals `n W` within `LIFT_CHECK_TOLERANCE` (a fraction of `W`) in `settings.py`.
+- A case Mach outside the database grid raises an error.
 - Flag `extrapolated` is true when `s < 0` or `s > 1`. A negative-`n` case is always extrapolated, because `CL_d < 0 < CL0`.
-- The script prints `mach_case` and `mach_run`. A difference is shown, not corrected (see A-3).
 
 ---
 
@@ -177,7 +190,7 @@ Fuel mass per unit span follows the box area. The fuel weight is the weight of t
 
 **Output `weight.csv`:** columns `y_m, chord_m, w_str_npm, w_fuel_npm, f_str, f_fuel`.
 **Output `point_loads.csv`:** columns `name, y_m, w_n, d_ahead_of_sc_m`.
-Both files carry `# schema: wp41.weight.v1` and the case name.
+`weight.csv` carries `# schema: wp41.weight.v1`. `point_loads.csv` carries `# schema: wp41.point_loads.v1`. Both carry `# case: <name>`.
 
 **Checks:** `2 ∫ w'_str dy = W_str` and `2 ∫ w'_fuel dy = W_fuel`, within the tolerance in `settings.py`.
 
@@ -213,8 +226,11 @@ T_j = − n W_engine d_engine  +  T cos(Λ) h_thrust
 The data are strip values at fixed stations. The script interpolates linearly between stations. Beyond the end stations the value stays constant.
 The integral uses `scipy.integrate` (reader, Appendix C).
 
-**Output `torque.csv`:** columns `y_m, t_prime_nmpm, torque_nm`.
-**Plot:** `torque_<case>.png`, positive-`n` and negative-`n` case in one figure.
+**Output `torque.csv`:** header `# schema: wp41.torque.v1`, `# case`, `# n`. Columns `y_m, t_prime_nmpm, torque_nm`.
+The stations are the strip stations, `y = 0`, `y = b/2` and each engine station.
+An engine station appears twice. The first row includes the point torque. The second row excludes it.
+**Plot:** `torque_<case 1>_<case 2>.png` in `out/wp41/`. Top panel: `t'(y)`. Bottom panel: `τ(y)`. Each case is one curve in each panel.
+The script takes `b/2` and `Λ` from `WING` and the thrust from the load case.
 
 ---
 
@@ -249,18 +265,23 @@ This holds when the tail load is zero (A-1). The script fails with the two value
 ```text
 wp4/
 ├── configs/wp41/
-│   ├── settings.py        (existing: flight condition, VSPAERO, tolerances)
-│   ├── load_cases.py      frozen dataclass LoadCase
+│   ├── settings.py        VSPAERO Mach grid, stations, tolerances, files
+│   ├── load_cases.py      frozen dataclass LoadCase, LOAD_CASES (empty until WP4.3)
+│   ├── torsion.py         frozen dataclass TorsionInputs (f_sc, h_thrust_m)
 │   └── mass.py            frozen dataclass MassProperties
 ├── scripts/
-│   ├── wp41_aero_loads.py (existing)
+│   ├── wp41_aero_loads.py VSPAERO database
 │   ├── wp41_lift.py
+│   ├── wp41_aoa_grid.py   side script: CL and alpha over weights and speeds
 │   ├── wp41_weight.py
 │   ├── wp41_torsion.py
 │   └── wp41_shear_moment.py
 ├── src/wp41/
 │   ├── contracts.py       frozen dataclasses of the CSV files, each with to_csv / from_csv
-│   ├── lift.py            steps 1-7 of section 5
+│   ├── stations.py        global spanwise stations of every per-case file
+│   ├── atmosphere.py      ISA
+│   ├── aero_loads.py      VSPAERO pre- and post-processing
+│   ├── lift_distribution.py  section 5
 │   ├── weight.py          section 6
 │   ├── torsion.py         section 7
 │   ├── internal_loads.py  section 8
@@ -282,7 +303,7 @@ Test values are general, not round. Each module has a test with a known exact an
 | `integrate.py` | Constant load `f_z` on span `L`: `S_z = f_z (L − y)`, `M_x = f_z (L − y)² / 2`. Use `f_z = 37.3`, `L = 11.7`, station `y = 4.9`. |
 | `internal_loads.py` | Point load `F` at `y_j`: `S_z` is `F` inboard of `y_j` and zero outboard. Thrust moment `M_j` has the sign derived in section 8. Equilibrium check fails for a wrong `W_fus`. |
 | `torsion.py` | Constant `N'` with `f_sc ≠ 1/4`: `τ = N' (f_sc − 1/4) c (L − y)` for constant chord. Sign flips with `f_sc < 1/4`. |
-| `lift.py` | `s = 0` returns the α = 0° table. `s = 1` returns the α = 10° table. A value in between uses the closed form of the reader. `n < 0` sets `extrapolated`. |
+| `lift_distribution.py` | `s = 0` returns the α = 0° table. `s = 1` returns the α = 10° table. A value in between uses the linear closed form. `n < 0` sets `extrapolated`. `2 ∫ N' dy = n W`. Round trip to `lift.csv`. |
 | `weight.py` | The integrals equal `W_str/2` and `W_fuel/2`. Fuel is zero outside the tank span. |
 | `contracts.py` | Round trip `to_csv` / `from_csv` is bitwise equal. A wrong schema line or column name raises. |
 | import guard | No module in `wp41` imports `wp2`, `wp3`, `wp42` or `wp43`. |
@@ -299,14 +320,14 @@ Each entry has the assumption, the result, and the validity.
 |---|---|---|---|
 | A-1 | The wing carries all the lift. The tail load is zero. | `2 ∫ N' dy = n W`. The root-shear equilibrium check is valid. | A trimmed aircraft has a tail load. Its size is not estimated here. |
 | A-2 | `N' = L'`. The factor `cos α` is taken as 1 and the drag term `sin α D'` is dropped. | The loads need `cl` only. | `cos 10° = 0.985`, an error of 1.5 % at α = 10°. The error grows with `α_d`. The dropped drag term has the opposite sign. Its size is not estimated. |
-| A-3 | The lift shape of the run Mach (set in `settings.py`) holds for every load case. | One VSPAERO run serves all cases. | The shape and the lift slope depend on Mach. The script reports `mach_case` and `mach_run`. The size of the error is not verified. |
+| A-3 | Between the Mach numbers of the VSPAERO grid, the coefficients follow a cubic spline in Mach. Prandtl-Glauert (in VSPAERO) holds up to `M = 0.85`. | One VSPAERO run (15 Mach numbers) serves all cases at their own Mach. | At `M = 0.77` the spline gives `CL` within 0.01 % of a direct run. Above `M ≈ 0.8` Prandtl-Glauert is outside its valid range on this wing. |
 | A-4 | `CL` is linear in `α`. | Two angles of attack give any `CL_d` (reader, Appendix B). | The reader accepts it. Cases outside α = 0° to 10° are extrapolated and flagged. |
 | A-5 | The wing is equivalent to a straight unswept wing. Dihedral is ignored. | Reader, Appendix A.3. Chord fractions replace `x` coordinates. The root kink is not modelled. | Accepted by the reader. The torque at the root is under-estimated and the bending moment is over-estimated (reader, Appendix A.2). |
 | A-6 | The shear centre is at the box centroid, at the constant chord fraction `f_sc`. | One value for the whole span. | The centroid varies with `y` in WP4.2. Replace `f_sc` after WP4.2. |
 | A-7 | Structure mass and fuel mass per unit span scale with `c²`. All fuel is in the wing tank. | Section 6 formulas. | The structure mass depends on the WP4.3 design. Replace the shape after WP4.3. |
 | A-8 | The engine, its pylon and its thrust act at one span station. The thrust line is at `h_thrust` below the shear centre. | Point loads in scripts 3 and 4. | Reader, Appendix A.3 gives the thrust direction. |
 | A-9 | The axial force is not computed. | No axial force diagram. | The reader lists the axial force in deliverable (a). The report states that this design omits it. |
-| A-10 | Loads are linear interpolations of the strip values. They are constant beyond the end stations. | `scipy.integrate` runs on a continuous function. | The tip half-strip is held at the last strip value. The check in section 5 shows the effect. |
+| A-10 | `lift.csv` holds the VSPAERO strips moved to the global stations (monotone cubic, 0 at the tip). Scripts 3 and 4 interpolate linearly between stations. | `scipy.integrate` runs on a continuous function. | The 2° dihedral projection of `y` is neglected (`cos 2° = 0.9994`). The check in section 5 shows the effect (−0.14 % at MTOW cruise). |
 
 ---
 
@@ -315,6 +336,7 @@ Each entry has the assumption, the result, and the validity.
 ```text
 python wp4/scripts/wp41_aero_loads.py          (once per geometry or Mach change)
 python wp4/scripts/wp41_lift.py   --case LC-1
+python wp4/scripts/wp41_aoa_grid.py            (optional: CL and alpha over weights and speeds)
 python wp4/scripts/wp41_weight.py --case LC-1
 python wp4/scripts/wp41_torsion.py       --cases LC-1 LC-2
 python wp4/scripts/wp41_shear_moment.py  --cases LC-1 LC-2
