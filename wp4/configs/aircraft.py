@@ -3,7 +3,8 @@
 # Created: 2026-11-17
 """Aircraft geometry and masses for WP4 (WP3 wing redesign).
 
-Axes: x aft, y right, z up [m]. Masses from wp3/scripts/weight_estimator.py.
+Axes: x aft, y right, z up [m]. Masses, including the engines, from
+wp3/scripts/weight_estimator.py.
 """
 
 from __future__ import annotations
@@ -97,15 +98,24 @@ class AircraftMasses:
         design_payload_kg: Design payload mass.
         max_payload_kg: Maximum payload mass.
         fuel_kg: Fuel mass at MTOM with the design payload.
+        engine_count: Number of engines, one per wing half for a symmetric pair.
+        engine_dry_kg: Dry mass of one engine (datasheet).
+        engine_installed_kg: Installed mass of one engine: engine, engine
+            contents and nacelle group. Part of OEM. Use this value for the
+            engine point load on the wing.
     """
 
     oem_kg: float
     design_payload_kg: float
     max_payload_kg: float
     fuel_kg: float
+    engine_count: int
+    engine_dry_kg: float
+    engine_installed_kg: float
 
     def __post_init__(self) -> None:
-        for name in ("oem_kg", "design_payload_kg", "max_payload_kg", "fuel_kg"):
+        for name in ("oem_kg", "design_payload_kg", "max_payload_kg", "fuel_kg",
+                     "engine_dry_kg"):
             value = getattr(self, name)
             if not value > 0.0:
                 raise ValueError(f"{name} must be > 0, got {value}")
@@ -113,6 +123,20 @@ class AircraftMasses:
             raise ValueError(
                 f"max_payload_kg ({self.max_payload_kg}) must be >= "
                 f"design_payload_kg ({self.design_payload_kg})"
+            )
+        if not (self.engine_count >= 1 and self.engine_count % 2 == 0):
+            raise ValueError(
+                f"engine_count must be a positive even number, got {self.engine_count}"
+            )
+        if not self.engine_installed_kg >= self.engine_dry_kg:
+            raise ValueError(
+                f"engine_installed_kg ({self.engine_installed_kg}) must be >= "
+                f"engine_dry_kg ({self.engine_dry_kg})"
+            )
+        if not self.engine_count * self.engine_installed_kg < self.oem_kg:
+            raise ValueError(
+                f"{self.engine_count} engines of {self.engine_installed_kg} kg "
+                f"exceed the OEM ({self.oem_kg} kg)"
             )
 
     @property
@@ -131,4 +155,8 @@ MASSES: Final[AircraftMasses] = AircraftMasses(
     design_payload_kg=7_200.0,
     max_payload_kg=9_302.0,
     fuel_kg=7_792.0,
+    engine_count=2,
+    engine_dry_kg=1_088.0,  # GE CF34-8C5B1, wp3/scripts/weight_estimator.py
+    # wp3/scripts/weight_estimator.py: "engines and nacelles" 3866.76 kg for 2
+    engine_installed_kg=1_933.38,
 )
