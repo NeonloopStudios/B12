@@ -3,10 +3,12 @@
 # Created: 2026-11-17
 """WP4.1 aerodynamic loads: pre- and post-processing of the VSPAERO run.
 
-Pre-processing: planform, freestream (ISA), moment reference point.
-vspaero_runner.py imports these, so it must stay Python 3.11 and numpy only.
+Pre-processing: planform, moment reference point, airfoil reader.
+vspaero_runner.py imports these, so this module must stay Python 3.11 and
+numpy only.
 Post-processing: move the strip moment to the local quarter chord, check
-the strips against the VSPAERO totals, write the two distribution files.
+the strips against the VSPAERO totals, and write the two distribution files.
+Each file has one column per (Mach, alpha) case of the VSPAERO grid.
 """
 
 from __future__ import annotations
@@ -24,25 +26,15 @@ import numpy.typing as npt
 
 from configs.aircraft import WING, WingGeometry
 from configs.wp41 import settings
-from configs.wp41.settings import FlightCondition
 
 logger = logging.getLogger(__name__)
 
 FloatArray: TypeAlias = npt.NDArray[np.float64]
 
-ISA_T0_K: Final[float] = 288.15
-ISA_P0_PA: Final[float] = 101_325.0
-ISA_LAPSE_K_M: Final[float] = 0.0065
-ISA_R_AIR: Final[float] = 287.05287
-ISA_GAMMA: Final[float] = 1.4
-ISA_G0: Final[float] = 9.80665
-ISA_H_TROPOPAUSE_M: Final[float] = 11_000.0
-ISA_H_MAX_M: Final[float] = 20_000.0
-
 STRIP_COLUMNS: Final[tuple[str, ...]] = (
-    "alpha", "y", "chord", "area", "cl", "cx", "cz", "cmy",
+    "mach", "alpha", "y", "chord", "area", "cl", "cx", "cz", "cmy",
 )
-TOTAL_COLUMNS: Final[tuple[str, ...]] = ("alpha", "CL", "CMy")
+TOTAL_COLUMNS: Final[tuple[str, ...]] = ("mach", "alpha", "CL", "CMy")
 
 RUNNER_PY: Final[Path] = Path(__file__).resolve().parent / "vspaero_runner.py"
 
@@ -128,61 +120,6 @@ def quarter_chord_points(
     x = wing.root_le_x_m + x_w * math.cos(inc) + z_w * math.sin(inc)
     z = wing.root_z_m - x_w * math.sin(inc) + z_w * math.cos(inc)
     return x, z
-
-
-def isa(altitude_m: float) -> tuple[float, float, float]:
-    """ISA temperature [K], speed of sound [m/s] and density [kg/m^3].
-
-    Args:
-        altitude_m: Geopotential altitude, 0 to 20 km [m].
-
-    Returns:
-        (temperature, speed of sound, density).
-
-    Raises:
-        ValueError: If the altitude is outside 0 to 20 km.
-    """
-    if not 0.0 <= altitude_m <= ISA_H_MAX_M:
-        raise ValueError(f"altitude_m must be in [0, {ISA_H_MAX_M}], got {altitude_m}")
-    exponent = ISA_G0 / (ISA_LAPSE_K_M * ISA_R_AIR)
-    t_tropopause = ISA_T0_K - ISA_LAPSE_K_M * ISA_H_TROPOPAUSE_M
-    if altitude_m <= ISA_H_TROPOPAUSE_M:
-        t = ISA_T0_K - ISA_LAPSE_K_M * altitude_m
-        p = ISA_P0_PA * (t / ISA_T0_K) ** exponent
-    else:
-        t = t_tropopause
-        p_tropopause = ISA_P0_PA * (t_tropopause / ISA_T0_K) ** exponent
-        dh = altitude_m - ISA_H_TROPOPAUSE_M
-        p = p_tropopause * math.exp(-ISA_G0 * dh / (ISA_R_AIR * t))
-    rho = p / (ISA_R_AIR * t)
-    a = math.sqrt(ISA_GAMMA * ISA_R_AIR * t)
-    return t, a, rho
-
-
-@dataclass(frozen=True)
-class Freestream:
-    """Freestream state of one flight condition.
-
-    Attributes:
-        mach: Mach number [-].
-        altitude_m: Altitude [m].
-        density: Density [kg/m^3].
-        velocity: True airspeed [m/s].
-        dynamic_pressure: 0.5 rho V^2 [Pa].
-    """
-
-    mach: float
-    altitude_m: float
-    density: float
-    velocity: float
-    dynamic_pressure: float
-
-
-def freestream(condition: FlightCondition) -> Freestream:
-    """Density, speed and dynamic pressure of a flight condition (ISA)."""
-    _, a, rho = isa(condition.altitude_m)
-    v = condition.mach * a
-    return Freestream(condition.mach, condition.altitude_m, rho, v, 0.5 * rho * v**2)
 
 
 def read_airfoil_dat(path: Path) -> tuple[FloatArray, FloatArray]:
@@ -275,20 +212,25 @@ def run_vspaero(run_dir: Path, python_exe: Path) -> None:
 
 @dataclass(frozen=True)
 class SpanTable:
-    """Strip data of the right half-wing: one row per strip, one column per alpha.
+    """Strip data of the right half-wing: one row per strip, one column per case.
+
+    A case is one (Mach, alpha) pair of the VSPAERO grid. The cases are sorted
+    by Mach, then by alpha.
 
     Attributes:
-        alpha: Angles of attack [deg], shape (n_alpha,).
+        mach: Mach number of each case, shape (n_case,).
+        alpha: Angle of attack of each case [deg], shape (n_case,).
         y: Strip stations [m], shape (n_y,).
         chord: Strip chords [m], shape (n_y,).
         area: Strip areas [m^2], shape (n_y,).
-        cl: Lift coefficient, shape (n_y, n_alpha).
-        cx: x-force coefficient (x aft), shape (n_y, n_alpha).
-        cz: z-force coefficient (z up), shape (n_y, n_alpha).
+        cl: Lift coefficient, shape (n_y, n_case).
+        cx: x-force coefficient (x aft), shape (n_y, n_case).
+        cz: z-force coefficient (z up), shape (n_y, n_case).
         cmy: Pitching moment about the reference point, nose up positive,
-            on the local chord, shape (n_y, n_alpha).
+            on the local chord, shape (n_y, n_case).
     """
 
+    mach: FloatArray
     alpha: FloatArray
     y: FloatArray
     chord: FloatArray
@@ -317,6 +259,11 @@ def read_csv(path: Path, columns: tuple[str, ...]) -> FloatArray:
     return data
 
 
+def sort_cases(rows: FloatArray) -> FloatArray:
+    """Sort rows by Mach (column 0), then by alpha (column 1)."""
+    return rows[np.lexsort((rows[:, 1], rows[:, 0]))]
+
+
 def span_table(strips: FloatArray) -> SpanTable:
     """Sort the strip rows (columns STRIP_COLUMNS) into a SpanTable.
 
@@ -324,32 +271,35 @@ def span_table(strips: FloatArray) -> SpanTable:
 
     Raises:
         ValueError: If no strip has y > 0, or if the strips differ between
-            the angles of attack.
+            the cases.
     """
-    right = strips[strips[:, 1] > 0.0]
+    right = strips[strips[:, 2] > 0.0]
     if right.shape[0] == 0:
         raise ValueError("No strips with y > 0")
-    alphas = np.unique(right[:, 0])
+    cases = np.unique(right[:, :2], axis=0)  # sorted by Mach, then alpha
 
     blocks = []
-    for alpha in alphas:
-        rows = right[right[:, 0] == alpha]
-        blocks.append(rows[np.argsort(rows[:, 1])])
+    for mach, alpha in cases:
+        rows = right[(right[:, 0] == mach) & (right[:, 1] == alpha)]
+        blocks.append(rows[np.argsort(rows[:, 2])])
     first = blocks[0]
-    for alpha, rows in zip(alphas, blocks):
-        if rows.shape != first.shape or not np.allclose(rows[:, 1], first[:, 1]):
-            raise ValueError(f"The strips at alpha = {alpha} deg differ from the first alpha")
+    for (mach, alpha), rows in zip(cases, blocks):
+        if rows.shape != first.shape or not np.allclose(rows[:, 2], first[:, 2]):
+            raise ValueError(
+                f"The strips at Mach {mach}, alpha {alpha} deg differ from the first case"
+            )
 
-    stacked = np.stack(blocks, axis=-1)  # (n_y, n_columns, n_alpha)
+    stacked = np.stack(blocks, axis=-1)  # (n_y, n_columns, n_case)
     return SpanTable(
-        alpha=alphas,
-        y=first[:, 1],
-        chord=first[:, 2],
-        area=first[:, 3],
-        cl=stacked[:, 4, :],
-        cx=stacked[:, 5, :],
-        cz=stacked[:, 6, :],
-        cmy=stacked[:, 7, :],
+        mach=cases[:, 0].copy(),
+        alpha=cases[:, 1].copy(),
+        y=first[:, 2],
+        chord=first[:, 3],
+        area=first[:, 4],
+        cl=stacked[:, 5, :],
+        cx=stacked[:, 6, :],
+        cz=stacked[:, 7, :],
+        cmy=stacked[:, 8, :],
     )
 
 
@@ -383,22 +333,35 @@ def check_totals(
 
     Both halves: CL = 2 sum(cl dA) / S, CMy = 2 sum(cmy dA c) / (S MAC).
 
+    Args:
+        table: Strip data.
+        totals: VSPAERO totals (columns TOTAL_COLUMNS), sorted with sort_cases.
+        wing: Wing geometry.
+        pf: Planform of the wing.
+        tolerance: Largest allowed absolute difference.
+
     Raises:
-        ValueError: If the alphas differ, or if a difference exceeds the tolerance.
+        ValueError: If the cases differ, or if a difference exceeds the tolerance.
     """
-    if not np.allclose(np.sort(totals[:, 0]), table.alpha):
-        raise ValueError(f"Alphas differ: totals {totals[:, 0]}, strips {table.alpha}")
-    totals = totals[np.argsort(totals[:, 0])]
+    if totals.shape[0] != table.mach.size or not (
+        np.allclose(totals[:, 0], table.mach) and np.allclose(totals[:, 1], table.alpha)
+    ):
+        raise ValueError(
+            f"Cases differ: totals {totals[:, :2].tolist()}, "
+            f"strips {np.column_stack([table.mach, table.alpha]).tolist()}"
+        )
     cl_strips = 2.0 * (table.cl * table.area[:, None]).sum(axis=0) / wing.area_m2
     weight = (table.area * table.chord)[:, None]
     cmy_strips = 2.0 * (table.cmy * weight).sum(axis=0) / (wing.area_m2 * pf.mac_m)
-    for j, alpha in enumerate(table.alpha):
+    for j in range(table.mach.size):
         logger.info(
-            "alpha = %5.2f deg: CL strips %.5f / VSPAERO %.5f, CMy strips %.5f / VSPAERO %.5f",
-            alpha, cl_strips[j], totals[j, 1], cmy_strips[j], totals[j, 2],
+            "M = %.3f, alpha = %5.2f deg: CL strips %.5f / VSPAERO %.5f, "
+            "CMy strips %.5f / VSPAERO %.5f",
+            table.mach[j], table.alpha[j], cl_strips[j], totals[j, 2],
+            cmy_strips[j], totals[j, 3],
         )
-    d_cl = np.abs(cl_strips - totals[:, 1])
-    d_cmy = np.abs(cmy_strips - totals[:, 2])
+    d_cl = np.abs(cl_strips - totals[:, 2])
+    d_cmy = np.abs(cmy_strips - totals[:, 3])
     if d_cl.max() > tolerance or d_cmy.max() > tolerance:
         logger.error("Strip check failed: |dCL| = %s, |dCMy| = %s", d_cl, d_cmy)
         raise ValueError(
@@ -407,40 +370,45 @@ def check_totals(
         )
 
 
+def _header_line(key: str, values: FloatArray, fmt: str) -> str:
+    """One machine-readable header line: 'key: v1 v2 ...'."""
+    return f"{key}: " + " ".join(format(v, fmt) for v in values)
+
+
 def write_distribution(
     path: Path, title: str, symbol: str, table: SpanTable, values: FloatArray,
-    totals: FloatArray, total_symbol: str, fs: Freestream, wing: WingGeometry, pf: Planform,
+    totals: FloatArray, total_key: str, wing: WingGeometry, pf: Planform,
 ) -> None:
-    """Write one distribution: y [m], chord [m], one column per alpha.
+    """Write one distribution: y [m], chord [m], one column per (Mach, alpha) case.
+
+    The header holds 'key: values' lines (keys in configs.wp41.settings) that
+    wp41.lift_distribution reads back.
 
     Args:
         path: Output file.
         title: First header line.
-        symbol: Coefficient name in the column names (cl, cm_c4).
-        table: Strip data (y, chord, alphas).
-        values: Coefficient, shape (n_y, n_alpha).
-        totals: Whole-wing coefficient per alpha.
-        total_symbol: Whole-wing coefficient name (CL, CMy).
-        fs: Freestream of the run.
+        symbol: Coefficient name in the column description (cl, cm_c4).
+        table: Strip data (y, chord, cases).
+        values: Coefficient, shape (n_y, n_case).
+        totals: Whole-wing coefficient per case, shape (n_case,).
+        total_key: Header key of the whole-wing coefficient.
         wing: Wing geometry.
         pf: Planform of the wing.
     """
-    alpha_text = "  ".join(f"{a:10.4f}" for a in table.alpha)
-    total_text = "  ".join(f"{t:10.6f}" for t in totals)
-    names = ", ".join(f"{symbol}(alpha={a:g} deg)" for a in table.alpha)
     header = "\n".join(
         [
             title,
-            "Right half-wing, VSPAERO VLM (inviscid), Prandtl-Glauert at the run Mach.",
-            f"Mach = {fs.mach:.4f}, altitude = {fs.altitude_m:.1f} m, "
-            f"V = {fs.velocity:.3f} m/s, rho = {fs.density:.5f} kg/m^3, "
-            f"q = {fs.dynamic_pressure:.2f} Pa",
-            f"S_ref = {wing.area_m2:.4f} m^2, b/2 = {pf.half_span_m:.4f} m, "
-            f"MAC = {pf.mac_m:.4f} m, incidence = {wing.incidence_deg:.2f} deg "
-            "(in the model: alpha is the freestream angle, not the wing angle)",
-            f"alpha [deg]: {alpha_text}",
-            f"{total_symbol}:{' ' * (12 - len(total_symbol))}{total_text}",
-            f"columns: y [m], chord [m], {names}",
+            "Right half-wing, VSPAERO VLM (inviscid, fixed wake), Prandtl-Glauert per Mach.",
+            "alpha is the freestream angle; the wing incidence is in the model.",
+            f"{settings.KEY_S_REF}: {wing.area_m2:.6f}",
+            f"{settings.KEY_HALF_SPAN}: {pf.half_span_m:.6f}",
+            f"{settings.KEY_MAC}: {pf.mac_m:.6f}",
+            f"{settings.KEY_INCIDENCE}: {wing.incidence_deg:.6f}",
+            _header_line(settings.KEY_MACH, table.mach, ".4f"),
+            _header_line(settings.KEY_ALPHA, table.alpha, ".4f"),
+            _header_line(total_key, totals, ".6f"),
+            f"columns: y [m], chord [m], then {symbol} for each "
+            f"({settings.KEY_MACH}, {settings.KEY_ALPHA}) pair above",
         ]
     )
     data = np.column_stack([table.y, table.chord, values])
@@ -459,10 +427,8 @@ def post_process(run_dir: Path, out_dir: Path) -> tuple[Path, Path]:
         Paths of the lift and the moment distribution files.
     """
     pf = planform(WING)
-    fs = freestream(settings.FLIGHT)
     table = span_table(read_csv(run_dir / settings.STRIPS_FILE, STRIP_COLUMNS))
-    totals = read_csv(run_dir / settings.TOTALS_FILE, TOTAL_COLUMNS)
-    totals = totals[np.argsort(totals[:, 0])]
+    totals = sort_cases(read_csv(run_dir / settings.TOTALS_FILE, TOTAL_COLUMNS))
     check_totals(table, totals, WING, pf, settings.CHECK_TOLERANCE)
 
     x_ref, z_ref = moment_reference(WING, pf)
@@ -477,12 +443,12 @@ def post_process(run_dir: Path, out_dir: Path) -> tuple[Path, Path]:
     moment_path = out_dir / settings.MOMENT_FILE
     write_distribution(
         lift_path, "WP4.1 spanwise lift coefficient distribution cl(y)", "cl",
-        table, table.cl, totals[:, 1], "CL", fs, WING, pf,
+        table, table.cl, totals[:, 2], settings.KEY_CL, WING, pf,
     )
     write_distribution(
         moment_path,
         "WP4.1 spanwise pitching moment coefficient about the local quarter chord "
         "cm_c4(y), nose up positive",
-        "cm_c4", table, cm_c4, totals[:, 2], "CMy(c/4 MAC)", fs, WING, pf,
+        "cm_c4", table, cm_c4, totals[:, 3], settings.KEY_CMY, WING, pf,
     )
     return lift_path, moment_path

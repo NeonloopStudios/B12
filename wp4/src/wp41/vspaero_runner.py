@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateusz Suszynski
 # Created: 2026-11-17
-"""WP4.1 VSPAERO run: build the wing, run the alpha sweep, write the strip loads.
+"""WP4.1 VSPAERO run: build the wing, run the Mach-alpha sweep, write the strip loads.
 
 OpenVSP env only (Python 3.11). Usage: python vspaero_runner.py <run_dir>
 Writes strips.csv and totals.csv (columns: aero_loads.STRIP_COLUMNS and
@@ -84,8 +84,12 @@ def build_wing(pf: al.Planform) -> str:
     return wid
 
 
-def run_sweep(pf: al.Planform, fs: al.Freestream) -> None:
-    """Run the VSPAERO alpha sweep (thin-surface VLM, symmetric half model)."""
+def run_sweep(pf: al.Planform) -> None:
+    """Run the VSPAERO Mach-alpha sweep (thin-surface VLM, symmetric half model).
+
+    Vinf and Rho stay at the VSPAERO defaults: they scale only dimensional
+    results, and the coefficients used here do not depend on them.
+    """
     vsp_dir = str(Path(vsp.__file__).parent)
     vsp.SetVSPAEROPath(vsp_dir)
     if not vsp.CheckForVSPAERO(vsp_dir):
@@ -118,19 +122,18 @@ def run_sweep(pf: al.Planform, fs: al.Freestream) -> None:
     vsp.SetDoubleAnalysisInput(a, "BetaStart", [0.0])
     vsp.SetDoubleAnalysisInput(a, "BetaEnd", [0.0])
     vsp.SetIntAnalysisInput(a, "BetaNpts", [1])
-    vsp.SetDoubleAnalysisInput(a, "MachStart", [fs.mach])
-    vsp.SetDoubleAnalysisInput(a, "MachEnd", [fs.mach])
-    vsp.SetIntAnalysisInput(a, "MachNpts", [1])
-    vsp.SetDoubleAnalysisInput(a, "Vinf", [fs.velocity])
-    vsp.SetDoubleAnalysisInput(a, "Rho", [fs.density])
+    vsp.SetDoubleAnalysisInput(a, "MachStart", [cfg.mach_start])
+    vsp.SetDoubleAnalysisInput(a, "MachEnd", [cfg.mach_end])
+    vsp.SetIntAnalysisInput(a, "MachNpts", [cfg.mach_npts])
     vsp.SetIntAnalysisInput(a, "FixedWakeFlag", [int(cfg.fixed_wake)])
     vsp.SetIntAnalysisInput(a, "NumWakeNodes", [cfg.wake_nodes])
     vsp.SetIntAnalysisInput(a, "WakeNumIter", [cfg.wake_iter])
     vsp.SetIntAnalysisInput(a, "NCPU", [cfg.n_cpu])
 
     logger.info(
-        "Running VSPAERO: M = %.3f, V = %.2f m/s, alpha %.1f..%.1f deg (%d points)",
-        fs.mach, fs.velocity, cfg.alpha_start_deg, cfg.alpha_end_deg, cfg.alpha_npts,
+        "Running VSPAERO: M %.3f..%.3f (%d points), alpha %.1f..%.1f deg (%d points)",
+        cfg.mach_start, cfg.mach_end, cfg.mach_npts,
+        cfg.alpha_start_deg, cfg.alpha_end_deg, cfg.alpha_npts,
     )
     vsp.ExecAnalysis(a)
 
@@ -151,40 +154,39 @@ def result_column(rid: str, name: str) -> list[float]:
 
 
 def collect_strips() -> np.ndarray:
-    """Strip loads of all alphas as rows of aero_loads.STRIP_COLUMNS."""
+    """Strip loads of all (Mach, alpha) cases as rows of aero_loads.STRIP_COLUMNS."""
     blocks = []
     for i in range(vsp.GetNumResults("VSPAERO_Load")):
         rid = vsp.FindResultsID("VSPAERO_Load", i)
+        mach = result_column(rid, "FC_Mach_")[0]
         alpha = result_column(rid, "FC_AoA_")[0]
-        columns = [result_column(rid, STRIP_RESULT_NAMES[c]) for c in al.STRIP_COLUMNS[1:]]
+        columns = [result_column(rid, STRIP_RESULT_NAMES[c]) for c in al.STRIP_COLUMNS[2:]]
         n = len(columns[0])
-        blocks.append(np.column_stack([np.full(n, alpha), *columns]))
+        blocks.append(np.column_stack([np.full(n, mach), np.full(n, alpha), *columns]))
     if not blocks:
         raise RuntimeError("No VSPAERO_Load results")
     return np.vstack(blocks)
 
 
 def collect_totals() -> np.ndarray:
-    """Whole-wing CL and CMy per alpha as rows of aero_loads.TOTAL_COLUMNS."""
+    """Whole-wing CL and CMy per (Mach, alpha) case as rows of aero_loads.TOTAL_COLUMNS."""
     rid = vsp.FindLatestResultsID("VSPAERO_Polar")
     if rid == "":
         raise RuntimeError("No VSPAERO_Polar results")
-    return np.column_stack(
-        [result_column(rid, "Alpha"), result_column(rid, "CLtot"), result_column(rid, "CMytot")]
-    )
+    names = ("Mach", "Alpha", "CLtot", "CMytot")
+    return np.column_stack([result_column(rid, name) for name in names])
 
 
 def main(run_dir: Path) -> None:
     """Build the wing, run VSPAERO and write strips.csv and totals.csv to run_dir."""
     run_dir.mkdir(parents=True, exist_ok=True)
     pf = al.planform(WING)
-    fs = al.freestream(settings.FLIGHT)
 
     vsp.VSPRenew()
     vsp.DeleteAllResults()
     build_wing(pf)
     vsp.WriteVSPFile(str(run_dir / settings.VSP3_FILE))
-    run_sweep(pf, fs)
+    run_sweep(pf)
 
     for name, data, columns in (
         (settings.STRIPS_FILE, collect_strips(), al.STRIP_COLUMNS),
