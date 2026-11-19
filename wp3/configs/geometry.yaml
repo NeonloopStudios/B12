@@ -101,7 +101,7 @@ te_flap:                         # Fowler flap
   eta_out: 0.75
 
 le_flap:                         # nose flap, unslotted
-  chord_ratio: 0.15
+  chord_ratio: 0.20              # = front spar at 20 % chord
   eta_in: 0.12
   eta_out: 0.95
 

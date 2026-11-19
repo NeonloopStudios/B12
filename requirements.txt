@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 #
-# The only requirements file of the repo: everything wp2/ and wp3/ import,
+# The only requirements file of the repo: everything wp2/, wp3/ and wp4/ import,
 # plus the test and type-check tools. Python 3.13 (pyproject.toml).
 # Lower bounds are the versions verified in the project venv.
 #
@@ -16,6 +16,7 @@
 # --- analysis ---
 numpy>=2.5.3
 pandas>=3.0.5
+scipy>=1.18.1
 matplotlib>=3.11.2
 PyYAML>=6.0.3
 

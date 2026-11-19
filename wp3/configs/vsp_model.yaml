@@ -15,11 +15,12 @@
 # * Inputs marked "visual" change only the picture, not an analysis result.
 
 # --- wing position. Incidence and twist: WP2 (wp2/src/b12wp2/config/wing.py).
-#     Dihedral: report Table 9.1 (WP2 config/wing.py has 2.0 deg) ---
+#     Dihedral: low-wing rule 3 - sweep_c4/10 + 2 = 2.0 deg at 30 deg sweep,
+#     the same as WP2 config/wing.py ---
 wing:
   root_le_x_m: 8.2               # root leading edge at the centreline
   root_z_m: -1.1                 # root chord line; low wing: below 0
-  dihedral_deg: 2.6              # report Table 9.1
+  dihedral_deg: 2.0              # low-wing rule at 30 deg sweep
   incidence_deg: 2.0             # WP2, rotation about the root leading edge
   tip_twist_deg: -2.0            # WP2, wash-out about the quarter chord
 

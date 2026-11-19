@@ -4,8 +4,8 @@
 """Tests of wp41.aero_loads: pre-processing, moment transfer, file I/O.
 
 Planform values: closed-form trapezoidal-wing relations (Raymer, Aircraft
-Design, ch. 7). ISA values: ICAO Standard Atmosphere (Doc 7488). The
-OpenVSP test runs the real VSPAERO chain and needs the OpenVSP env.
+Design, ch. 7). The OpenVSP test post-processes the real VSPAERO run in
+out/wp41/vspaero_run/ when it exists.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from hypothesis import strategies as st
 
 from configs.aircraft import WING, WingGeometry
 from configs.wp41 import settings
-from configs.wp41.settings import FlightCondition
 from wp41 import aero_loads as al
 
 # ============================================================
@@ -114,44 +113,6 @@ def test_moment_reference_rectangular_wing_returns_mac_quarter_chord(
     assert (x_ref, z_ref) == pytest.approx((1.25, 0.5))
 
 
-@pytest.mark.parametrize(
-    ("altitude", "temperature", "speed_of_sound", "density"),
-    [
-        (0.0, 288.15, 340.294, 1.22500),
-        (11_000.0, 216.65, 295.070, 0.36392),
-        (35_000 * 0.3048, 218.81, 296.54, 0.37960),
-    ],
-)
-def test_isa_table_points_match_icao(
-    altitude: float, temperature: float, speed_of_sound: float, density: float
-) -> None:
-    t, a, rho = al.isa(altitude)
-
-    assert t == pytest.approx(temperature, abs=0.01)
-    assert a == pytest.approx(speed_of_sound, abs=0.01)
-    assert rho == pytest.approx(density, abs=1e-4)
-
-
-def test_isa_tropopause_is_continuous() -> None:
-    below = al.isa(11_000.0 - 1e-6)
-    above = al.isa(11_000.0 + 1e-6)
-
-    assert below == pytest.approx(above, rel=1e-8)
-
-
-@pytest.mark.parametrize("altitude", [-1.0, 20_001.0])
-def test_isa_altitude_out_of_range_raises(altitude: float) -> None:
-    with pytest.raises(ValueError, match="altitude_m"):
-        al.isa(altitude)
-
-
-def test_freestream_sea_level_returns_q_from_rho_and_v() -> None:
-    fs = al.freestream(FlightCondition(altitude_m=0.0, mach=0.5))
-
-    assert fs.velocity == pytest.approx(0.5 * 340.294, abs=1e-2)
-    assert fs.dynamic_pressure == pytest.approx(0.5 * fs.density * fs.velocity**2)
-
-
 def test_read_airfoil_dat_design_airfoil_has_unit_chord() -> None:
     upper, lower = al.read_airfoil_dat(WING.airfoil_root)
 
@@ -180,15 +141,19 @@ def test_wing_geometry_invalid_value_raises(change: dict[str, float]) -> None:
         dataclasses.replace(WING, **change)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("change", [{"mach": 1.0}, {"mach": -0.1}, {"altitude_m": -5.0}])
-def test_flight_condition_invalid_value_raises(change: dict[str, float]) -> None:
-    with pytest.raises(ValueError):
-        dataclasses.replace(settings.FLIGHT, **change)  # type: ignore[arg-type]
+@pytest.mark.parametrize(
+    "change",
+    [{"mach_start": 0.0}, {"mach_end": 1.0}, {"mach_start": 0.9}, {"mach_npts": 1}],
+)
+def test_vspaero_settings_invalid_mach_grid_raises(change: dict[str, float]) -> None:
+    with pytest.raises(ValueError, match="mach"):
+        dataclasses.replace(settings.VSPAERO, **change)  # type: ignore[arg-type]
 
 
-def test_vspaero_settings_single_alpha_raises() -> None:
+@pytest.mark.parametrize("npts", [1, 3])
+def test_vspaero_settings_alpha_count_not_two_raises(npts: int) -> None:
     with pytest.raises(ValueError, match="alpha_npts"):
-        dataclasses.replace(settings.VSPAERO, alpha_npts=1)
+        dataclasses.replace(settings.VSPAERO, alpha_npts=npts)
 
 
 def test_vspaero_settings_single_wake_node_raises() -> None:
@@ -231,28 +196,33 @@ def test_quarter_chord_moment_recovers_section_moment(
     assert cm[0] == pytest.approx(cm_c4, abs=1e-9)
 
 
-def _strip_rows(alphas: list[float], y: list[float]) -> np.ndarray:
-    """Strip rows (STRIP_COLUMNS) with cl = 0.1 alpha and cmy = -0.01 alpha."""
+
+
+def _strip_rows(cases: list[tuple[float, float]], y: list[float]) -> np.ndarray:
+    """Strip rows (STRIP_COLUMNS) with cl = 0.1 alpha + mach and cmy = -0.01 alpha."""
     rows = []
-    for alpha in alphas:
+    for mach, alpha in cases:
         for yi in y:
-            rows.append([alpha, yi, 1.0, 0.5, 0.1 * alpha, 0.0, 0.1 * alpha, -0.01 * alpha])
+            cl = 0.1 * alpha + mach
+            rows.append([mach, alpha, yi, 1.0, 0.5, cl, 0.0, cl, -0.01 * alpha])
     return np.array(rows, dtype=np.float64)
 
 
-def test_span_table_unsorted_rows_returns_sorted_columns() -> None:
-    rows = _strip_rows([10.0, 0.0], [3.0, 1.0, -1.0, 2.0])
+def test_span_table_unsorted_rows_returns_cases_by_mach_then_alpha() -> None:
+    rows = _strip_rows([(0.6, 10.0), (0.3, 10.0), (0.6, 0.0), (0.3, 0.0)], [3.0, 1.0, -1.0, 2.0])
 
     table = al.span_table(rows)
 
-    np.testing.assert_allclose(table.alpha, [0.0, 10.0])
+    np.testing.assert_allclose(table.mach, [0.3, 0.3, 0.6, 0.6])
+    np.testing.assert_allclose(table.alpha, [0.0, 10.0, 0.0, 10.0])
     np.testing.assert_allclose(table.y, [1.0, 2.0, 3.0])
-    np.testing.assert_allclose(table.cl[:, 1], 1.0)
-    assert table.cmy.shape == (3, 2)
+    np.testing.assert_allclose(table.cl[:, 3], 1.6)
+    assert table.cmy.shape == (3, 4)
+    assert table.cl.dtype == np.float64
 
 
-def test_span_table_different_strips_per_alpha_raises() -> None:
-    rows = np.vstack([_strip_rows([0.0], [1.0, 2.0]), _strip_rows([5.0], [1.0, 2.5])])
+def test_span_table_different_strips_per_case_raises() -> None:
+    rows = np.vstack([_strip_rows([(0.3, 0.0)], [1.0, 2.0]), _strip_rows([(0.3, 5.0)], [1.0, 2.5])])
 
     with pytest.raises(ValueError, match="differ"):
         al.span_table(rows)
@@ -260,25 +230,42 @@ def test_span_table_different_strips_per_alpha_raises() -> None:
 
 def test_span_table_no_right_wing_strips_raises() -> None:
     with pytest.raises(ValueError, match="y > 0"):
-        al.span_table(_strip_rows([0.0], [-1.0, 0.0]))
+        al.span_table(_strip_rows([(0.3, 0.0)], [-1.0, 0.0]))
+
+
+def _totals(cases: list[tuple[float, float]], scale: float) -> np.ndarray:
+    """Totals (TOTAL_COLUMNS) that match _strip_rows on 3 strips of 0.5 m^2, S = 10 m^2.
+
+    2 * 3 strips * 0.5 m^2 / 10 m^2 = 0.3 times the strip value.
+    """
+    rows = [[m, a, scale * 0.3 * (0.1 * a + m), 0.3 * (-0.01 * a)] for m, a in cases]
+    return al.sort_cases(np.array(rows, dtype=np.float64))
+
+
+CASES = [(0.3, 0.0), (0.3, 10.0), (0.6, 0.0), (0.6, 10.0)]
 
 
 def test_check_totals_consistent_data_passes(rectangular_wing: WingGeometry) -> None:
     pf = al.planform(rectangular_wing)
-    table = al.span_table(_strip_rows([0.0, 10.0], [1.0, 2.0, 3.0]))
-    # 2 * 3 strips * 0.5 m^2 / 10 m^2 = 0.3 times the strip value
-    totals = np.array([[0.0, 0.0, 0.0], [10.0, 0.3, -0.03]], dtype=np.float64)
+    table = al.span_table(_strip_rows(CASES, [1.0, 2.0, 3.0]))
 
-    al.check_totals(table, totals, rectangular_wing, pf, tolerance=1e-9)
+    al.check_totals(table, _totals(CASES, 1.0), rectangular_wing, pf, tolerance=1e-9)
 
 
 def test_check_totals_mismatch_raises(rectangular_wing: WingGeometry) -> None:
     pf = al.planform(rectangular_wing)
-    table = al.span_table(_strip_rows([0.0, 10.0], [1.0, 2.0, 3.0]))
-    totals = np.array([[0.0, 0.0, 0.0], [10.0, 0.4, -0.03]], dtype=np.float64)
+    table = al.span_table(_strip_rows(CASES, [1.0, 2.0, 3.0]))
 
     with pytest.raises(ValueError, match="differs"):
-        al.check_totals(table, totals, rectangular_wing, pf, tolerance=1e-3)
+        al.check_totals(table, _totals(CASES, 1.5), rectangular_wing, pf, tolerance=1e-3)
+
+
+def test_check_totals_missing_case_raises(rectangular_wing: WingGeometry) -> None:
+    pf = al.planform(rectangular_wing)
+    table = al.span_table(_strip_rows(CASES, [1.0, 2.0, 3.0]))
+
+    with pytest.raises(ValueError, match="Cases differ"):
+        al.check_totals(table, _totals(CASES[:3], 1.0), rectangular_wing, pf, tolerance=1e-3)
 
 
 def test_read_csv_wrong_header_raises(tmp_path: Path) -> None:
@@ -291,50 +278,50 @@ def test_read_csv_wrong_header_raises(tmp_path: Path) -> None:
 
 def test_read_csv_header_only_raises(tmp_path: Path) -> None:
     path = tmp_path / "totals.csv"
-    path.write_text("# alpha,CL,CMy\n")
+    path.write_text("# mach,alpha,CL,CMy\n")
 
     with pytest.warns(UserWarning), pytest.raises(ValueError, match="shape"):
         al.read_csv(path, al.TOTAL_COLUMNS)
 
 
-def test_write_distribution_file_reads_back(
+def test_write_distribution_file_has_keyed_header_and_case_columns(
     tmp_path: Path, rectangular_wing: WingGeometry
 ) -> None:
     pf = al.planform(rectangular_wing)
-    table = al.span_table(_strip_rows([0.0, 10.0], [1.0, 2.0, 3.0]))
-    fs = al.freestream(FlightCondition(altitude_m=0.0, mach=0.3))
+    table = al.span_table(_strip_rows(CASES, [1.0, 2.0, 3.0]))
+    totals = _totals(CASES, 1.0)
     path = tmp_path / "lift.txt"
 
     al.write_distribution(
-        path, "title", "cl", table, table.cl, np.array([0.0, 0.3]), "CL", fs,
+        path, "title", "cl", table, table.cl, totals[:, 2], settings.KEY_CL,
         rectangular_wing, pf,
     )
 
     data = np.loadtxt(path)
-    assert data.shape == (3, 4)
+    text = path.read_text()
+    assert data.shape == (3, 2 + len(CASES))
     np.testing.assert_allclose(data[:, 0], table.y)
-    np.testing.assert_allclose(data[:, 3], table.cl[:, 1])
-    assert "Mach = 0.3000" in path.read_text()
+    np.testing.assert_allclose(data[:, 5], table.cl[:, 3])
+    assert f"# {settings.KEY_MACH}: 0.3000 0.3000 0.6000 0.6000" in text
+    assert f"# {settings.KEY_S_REF}: 10.000000" in text
 
 
 # ============================================================
-#  FULL CHAIN (OpenVSP env)
+#  REAL VSPAERO RUN (OpenVSP env)
 # ============================================================
 
 
 @pytest.mark.openvsp
-def test_full_chain_design_wing_writes_consistent_files(tmp_path: Path) -> None:
-    try:
-        python_exe = al.openvsp_python()
-    except FileNotFoundError as error:
-        pytest.skip(str(error))
-    run_dir = tmp_path / "run"
+def test_post_process_real_run_writes_full_grid(tmp_path: Path) -> None:
+    """Post-process out/wp41/vspaero_run/ (skip if wp41_aero_loads.py has not run)."""
+    if not (settings.RUN_DIR / settings.STRIPS_FILE).is_file():
+        pytest.skip("no VSPAERO run in out/wp41/vspaero_run/")
+    n_case = settings.VSPAERO.mach_npts * settings.VSPAERO.alpha_npts
 
-    al.run_vspaero(run_dir, python_exe)
-    lift_path, moment_path = al.post_process(run_dir, tmp_path)
+    lift_path, moment_path = al.post_process(settings.RUN_DIR, tmp_path)
 
     lift = np.loadtxt(lift_path)
     moment = np.loadtxt(moment_path)
-    assert lift.shape == moment.shape == (settings.VSPAERO.span_tess - 1, 4)
-    assert np.all(lift[:, 3] > lift[:, 2])  # cl rises with alpha at every strip
+    assert lift.shape == moment.shape == (settings.VSPAERO.span_tess - 1, 2 + n_case)
+    assert np.all(lift[:, 3::2] > lift[:, 2::2])  # cl rises with alpha at every Mach
     assert np.all(lift[:, 0] < al.planform(WING).half_span_m)

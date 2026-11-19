@@ -296,7 +296,7 @@ V_approach = 65 #m/s
 V_stall = V_approach / 1.23
 
 #Control surface
-control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
+control_surface_area = ControlSurfaceArea(wingspan, 0.75, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
 unitary_tail = False
 tail_length = 18.07 #m, from wing quarter MAC to htail quarter MAC
 interpolate_tail_type = 0.5 #0.0 for conventional tail and 1.0 for T tail
@@ -381,7 +381,7 @@ for i in range(nr_of_iterations):
     wingspan = m.sqrt(wing_area * aspect_ratio)
     root_chord = 2 * wing_area / ((1+taper_ratio)*wingspan)
     tip_chord = root_chord * taper_ratio
-    control_surface_area = ControlSurfaceArea(wingspan, 0.65, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
+    control_surface_area = ControlSurfaceArea(wingspan, 0.75, 0.983, 0.25) + ControlSurfaceArea(wingspan, 0.12, 0.75, 0.3) + ControlSurfaceArea(wingspan, 0.12, 0.95, 0.2)
     mac_length = 2 * (root_chord/3) * (1 + taper_ratio + taper_ratio**2) / (1 + taper_ratio)
     htail_area = assumed_htail_vol * wing_area * mac_length / (0.75 * tail_length)
     htail_span = m.sqrt(htail_aspect * htail_area)
