@@ -4,11 +4,13 @@
 """Aircraft geometry and masses for WP4 (WP3 wing redesign).
 
 Axes: x aft, y right, z up [m]. Masses, including the engines, from
-wp3/scripts/weight_estimator.py.
+wp3/scripts/weight_estimator.py. Engine position from
+wp3/configs/vsp_model.yaml.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -70,6 +72,11 @@ class WingGeometry:
             raise ValueError(
                 f"fuselage_diameter_m must be >= 0, got {self.fuselage_diameter_m}"
             )
+
+    @property
+    def half_span_m(self) -> float:
+        """b / 2 = sqrt(S AR) / 2 [m]."""
+        return math.sqrt(self.area_m2 * self.aspect_ratio) / 2.0
 
 
 WING: Final[WingGeometry] = WingGeometry(
@@ -160,3 +167,38 @@ MASSES: Final[AircraftMasses] = AircraftMasses(
     # wp3/scripts/weight_estimator.py: "engines and nacelles" 3866.76 kg for 2
     engine_installed_kg=1_933.38,
 )
+
+
+@dataclass(frozen=True)
+class EnginePosition:
+    """Position of the engine on the right wing half; the left engine is its mirror.
+
+    Attributes:
+        y_m: Span station of the nacelle axis, from the centreline [m]. The
+            engine mass acts here.
+    """
+
+    y_m: float
+
+    def __post_init__(self) -> None:
+        if not (self.y_m > 0.0 and math.isfinite(self.y_m)):
+            raise ValueError(f"y_m must be > 0 and finite, got {self.y_m}")
+
+    def eta(self, wing: WingGeometry) -> float:
+        """Span fraction 2 y / b of the engine on this wing [-]."""
+        return self.y_m / wing.half_span_m
+
+
+def check_engine_on_wing(engine: EnginePosition, wing: WingGeometry) -> None:
+    """Raise ValueError unless the engine is outside the fuselage and inside b/2."""
+    lo, hi = wing.fuselage_diameter_m / 2.0, wing.half_span_m
+    if not lo < engine.y_m < hi:
+        raise ValueError(
+            f"engine y_m = {engine.y_m} m must lie between the fuselage side "
+            f"({lo} m) and the tip ({hi:.4f} m)"
+        )
+
+
+# wp3/configs/vsp_model.yaml: nacelle_position.axis_y_m (eta = 0.36)
+ENGINE: Final[EnginePosition] = EnginePosition(y_m=4.4)
+check_engine_on_wing(ENGINE, WING)
