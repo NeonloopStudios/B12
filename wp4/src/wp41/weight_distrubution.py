@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pathlib import Path
+
+# Script is at wp4/src/wp41/<this_file>.py -> parents[2] is wp4/
+out_dir = Path(__file__).resolve().parents[2] / "out" / "wp41"
+
 weight_distribution = np.array([])
 points = np.array([])
 
@@ -69,4 +74,4 @@ ax.set_title("Fuel Weight Distribution")
 plt.tight_layout()
 plt.show() """
 
-np.savetxt("weight.csv", np.column_stack((points, weight_distribution)))
+np.savetxt(out_dir / "weight.csv", np.column_stack((points, weight_distribution)))
