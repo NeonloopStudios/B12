@@ -106,7 +106,7 @@ WP4.3 fills the values. The README gives no numbers.
 
 ### 4.2 Mass properties (from WP1-3 and WP4.2)
 
-One frozen dataclass, in `configs/wp41/mass.py`.
+One frozen dataclass, in `configs/wp41/mass.py`. The rows `h_thrust_m` and `f_sc` live in `configs/wp41/torsion.py` (`TorsionInputs`) until WP4.2 replaces them.
 
 | Field | Unit | Meaning |
 |---|---|---|
@@ -117,13 +117,15 @@ One frozen dataclass, in `configs/wp41/mass.py`.
 | `d_engine_m` | m | Distance of the engine centre of gravity ahead of the shear centre |
 | `h_thrust_m` | m | Height of the thrust line below the shear centre |
 | `f_str`, `f_fuel` | - | Chord fraction of the structure and of the fuel centre of gravity |
-| `f_sc` | - | Chord fraction of the shear centre |
+| `f_sc` | - | Chord fraction of the shear centre (the wing box centroid) |
 | `a_nd` | - | Box area ratio `A_nd = (h/c)(l/c)` |
 | `eta_tank_in`, `eta_tank_out` | - | Span fraction `2y/b` where the fuel tank starts and ends |
 
 The reader allows `f_sc` equal to the centroid of the wing box.
 WP4.2 computes that centroid. Until then, `f_sc` is an input.
 Every value is read from the config. No script has a default.
+`f_sc` is `None` in `torsion.py` until WP4.2 gives it. The torsion script then stops and names WP4.2.
+`h_thrust_m` is 0.8 m, the axis height below the chord line from `wp3/configs/vsp_model.yaml`. It is not yet the height below the centroid.
 
 ---
 
@@ -177,7 +179,7 @@ Fuel mass per unit span follows the box area. The fuel weight is the weight of t
 
 **Output `weight.csv`:** columns `y_m, chord_m, w_str_npm, w_fuel_npm, f_str, f_fuel`.
 **Output `point_loads.csv`:** columns `name, y_m, w_n, d_ahead_of_sc_m`.
-Both files carry `# schema: wp41.weight.v1` and the case name.
+`weight.csv` carries `# schema: wp41.weight.v1`. `point_loads.csv` carries `# schema: wp41.point_loads.v1`. Both carry `# case: <name>`.
 
 **Checks:** `2 ∫ w'_str dy = W_str` and `2 ∫ w'_fuel dy = W_fuel`, within the tolerance in `settings.py`.
 
@@ -213,8 +215,11 @@ T_j = − n W_engine d_engine  +  T cos(Λ) h_thrust
 The data are strip values at fixed stations. The script interpolates linearly between stations. Beyond the end stations the value stays constant.
 The integral uses `scipy.integrate` (reader, Appendix C).
 
-**Output `torque.csv`:** columns `y_m, t_prime_nmpm, torque_nm`.
-**Plot:** `torque_<case>.png`, positive-`n` and negative-`n` case in one figure.
+**Output `torque.csv`:** header `# schema: wp41.torque.v1`, `# case`, `# n`. Columns `y_m, t_prime_nmpm, torque_nm`.
+The stations are the strip stations, `y = 0`, `y = b/2` and each engine station.
+An engine station appears twice. The first row includes the point torque. The second row excludes it.
+**Plot:** `torque_<case 1>_<case 2>.png` in `out/wp41/`. Top panel: `t'(y)`. Bottom panel: `τ(y)`. Each case is one curve in each panel.
+The script takes `b/2` and `Λ` from `WING` and the thrust from the load case.
 
 ---
 
@@ -250,7 +255,8 @@ This holds when the tail load is zero (A-1). The script fails with the two value
 wp4/
 ├── configs/wp41/
 │   ├── settings.py        (existing: flight condition, VSPAERO, tolerances)
-│   ├── load_cases.py      frozen dataclass LoadCase
+│   ├── load_cases.py      frozen dataclass LoadCase, LOAD_CASES (empty until WP4.3)
+│   ├── torsion.py         frozen dataclass TorsionInputs (f_sc, h_thrust_m)
 │   └── mass.py            frozen dataclass MassProperties
 ├── scripts/
 │   ├── wp41_aero_loads.py (existing)
