@@ -117,3 +117,13 @@ TOTALS_FILE: Final[str] = "totals.csv"
 LIFT_FILE: Final[str] = "lift_distribution.txt"
 MOMENT_FILE: Final[str] = "moment_distribution.txt"
 WING_NAME: Final[str] = "Wing"
+
+LIFT_CSV: Final[str] = "lift.csv"
+WEIGHT_CSV: Final[str] = "weight.csv"
+POINT_LOADS_CSV: Final[str] = "point_loads.csv"
+TORQUE_CSV: Final[str] = "torque.csv"
+
+
+def case_dir(case_name: str) -> Path:
+    """Output folder of one load case: wp4/out/wp41/<case_name>."""
+    return OUT_DIR / case_name
