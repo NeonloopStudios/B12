@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Javier Cortina
 # Created: 2026-11-19
-"""WP4.3 settings: masses, CL_max, design speeds and load factors for the V-n diagram.
+"""WP4.3 settings: CL_max, design speeds and load factors for the V-n diagram.
 
 Manoeuvre envelope only (CS 25.333-25.337, 25.345); the gust envelope is
-neglected.
+neglected. Masses and wing area are shared with the rest of WP4: use
+configs.aircraft.MASSES (.mtom_kg, .mzfm_kg, .oem_kg) and configs.aircraft.WING.
 """
 
 from __future__ import annotations
@@ -13,30 +14,6 @@ from dataclasses import dataclass
 from typing import Final
 
 FT_TO_M: Final[float] = 0.3048
-
-
-@dataclass(frozen=True)
-class Masses:
-    """Design masses [kg].
-
-    Attributes:
-        mtow_kg: Maximum take-off mass [kg].
-        mzfw_kg: Maximum zero-fuel mass [kg].
-        oem_kg: Operating empty mass [kg].
-    """
-
-    mtow_kg: float
-    mzfw_kg: float
-    oem_kg: float
-
-    def __post_init__(self) -> None:
-        if self.oem_kg <= 0.0:
-            raise ValueError(f"oem_kg must be > 0, got {self.oem_kg}")
-        if not self.oem_kg < self.mzfw_kg <= self.mtow_kg:
-            raise ValueError(
-                f"masses must satisfy oem_kg < mzfw_kg <= mtow_kg, got "
-                f"{self.oem_kg}, {self.mzfw_kg}, {self.mtow_kg}"
-            )
 
 
 @dataclass(frozen=True)
@@ -125,12 +102,6 @@ ALTITUDES_M: Final[tuple[float, ...]] = (0.0, 35_000 * FT_TO_M)
 # is computed in src/wp43, not set here.
 N_MIN: Final[float] = -1.0
 N_FLAPS: Final[float] = 2.0
-
-MASSES: Final[Masses] = Masses(
-    mtow_kg=30_865.0,
-    mzfw_kg=25_175.0,
-    oem_kg=15_873.0,
-)
 
 # Values from wp2/results/hld/ (copied, not imported). Approach CL_max taken
 # equal to landing CL_max.
