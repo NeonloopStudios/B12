@@ -41,6 +41,7 @@ class WingGeometry:
     area_m2: float
     aspect_ratio: float
     taper: float
+    root_chord: float
     sweep_c4_deg: float
     dihedral_deg: float
     tip_twist_deg: float
@@ -83,6 +84,7 @@ WING: Final[WingGeometry] = WingGeometry(
     area_m2=62.52,
     aspect_ratio=9.5,
     taper=0.4,
+    root_chord=3.66,
     sweep_c4_deg=30.0,
     dihedral_deg=2.0,
     tip_twist_deg=-2.0,
