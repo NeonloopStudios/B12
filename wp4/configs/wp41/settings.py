@@ -147,7 +147,7 @@ GRID_SPEEDS: Final[tuple[SpeedRange, ...]] = (
     SpeedRange(altitude_m=0.0, v_eas_start=60.0, v_eas_end=280.0, v_eas_npts=23),
     SpeedRange(altitude_m=CRUISE_ALTITUDE_M, v_eas_start=30.0, v_eas_end=140.0, v_eas_npts=23),
 )
-GRID_LOAD_FACTOR: Final[float] = 1.0
+GRID_LOAD_FACTOR: Final[float] = 2.5
 
 # --- OpenVSP interpreter: the environment variable wins over the default ---
 OPENVSP_PYTHON_ENV_VAR: Final[str] = "OPENVSP_PYTHON"
