@@ -8,9 +8,9 @@ from configs.aircraft import WING
 
 #y is in meters, maximum is half-span
 def chord(y: float):
-    area = WING.area_m2,
-    aspect = WING.aspect_ratio,
-    taper = WING.taper,
+    area = WING.area_m2
+    aspect = WING.aspect_ratio
+    taper = WING.taper
     root = WING.root_chord
     span = m.sqrt(aspect * area)
     return root - (root - taper*root)*y/(span/2)

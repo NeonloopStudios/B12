@@ -46,6 +46,4 @@ def centroid_wingbox(fspar_loc: float, fspar_up: float, fspar_dn: float, rspar_l
     centroid_z = (P1[0][1] * P1[1] + P2[0][1] * P2[1] + P3[0][1] * P3[1]) / area
 
     return ((centroid_x, -centroid_z * tmax_c / tmax_ul), area)
-    #return(f"{P1} \n {P2} \n {P3} \n {(centroid_x, centroid_z)}")
-
-#print(centroid_wingbox(0.2, 5.4, -5.46, 0.7, 4.51, -2.8, 11.97, 0.12))
+    #return(f"{P1} \n {P2} \n {P3} \n {(centroid_x, centroid_z)}") #for testing
