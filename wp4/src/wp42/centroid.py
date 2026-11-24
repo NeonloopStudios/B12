@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Luca Paraschiv
 # Created: 2026-11-19
-"""WP4.2 stiffness calculations: wingbox edge coordinates to centroid."""
+"""WP4.2: centroid calculations from wingbox edge coordinates."""
 
 import math as m
 import numpy as np 
-#import scipy as sp
 
 #xf and xr are the x-pos of the spars
 def rectangle(xf, xr, zup, zdn):
@@ -22,7 +21,13 @@ def triangle(xf, xr, ztip, zbase, front_tip: bool):
 
 #tmax_ul is the max unitless (dat-format) thickness
 #tmax_c is the max thickness as a frac of the chord
-def centroid_wingbox(fspar_loc, fspar_up, fspar_dn, rspar_loc, rspar_up, rspar_dn, tmax_ul, tmax_c):
+#function returns in this order: centroid x, centroid z, area; last two as fractions of chord
+def centroid_wingbox(fspar_loc: float, fspar_up: float, fspar_dn: float, rspar_loc: float, rspar_up: float, rspar_dn: float, tmax_ul: float, tmax_c: float):
+    fspar_up = -fspar_up
+    fspar_dn = -fspar_dn
+    rspar_up = -rspar_up
+    rspar_dn = -rspar_dn
+    
     ctr_up = min(fspar_up, rspar_up)
     ctr_dn = max(fspar_dn, rspar_dn)
 
@@ -40,7 +45,7 @@ def centroid_wingbox(fspar_loc, fspar_up, fspar_dn, rspar_loc, rspar_up, rspar_d
     centroid_x = (P1[0][0] * P1[1] + P2[0][0] * P2[1] + P3[0][0] * P3[1]) / area
     centroid_z = (P1[0][1] * P1[1] + P2[0][1] * P2[1] + P3[0][1] * P3[1]) / area
 
-    return (centroid_x, centroid_z * tmax_c / tmax_ul) #2nd component of tuple is a fraction of chord
+    return ((centroid_x, -centroid_z * tmax_c / tmax_ul), area)
     #return(f"{P1} \n {P2} \n {P3} \n {(centroid_x, centroid_z)}")
 
-print(centroid_wingbox(0.2, 5.4, -5.46, 0.7, 4.51, -2.8, 11.97, 0.12))
+#print(centroid_wingbox(0.2, 5.4, -5.46, 0.7, 4.51, -2.8, 11.97, 0.12))
