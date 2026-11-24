@@ -1,6 +1,6 @@
 import scipy
 import numpy as np
-
+import math
 shear_modulus = 2.8 * 10**10
 root_chord = 3.66 
 tip_chord = 1.47
@@ -12,9 +12,22 @@ def Am_per_chord (Am, y_pos):
     Am_y = Am*chord_y
     return Am_y
 
-def theta ():
+def perimeter ():
+    x1 = 20/100
+    y1=5.44/100
+    y2=-5.46/100
+    x2=70/100
+    y3=4.51/100
+    y4=-2.8/100
+    length_up = np.sqrt((x2-x1)^2+(y3-y1)^2)
+    length_right = np.sqrt((y4-y3)^2)
+    length_bottom = np.sqrt((x2-x1)^2+(y4-y2)^2)
+    length_left = np.sqrt((y2-y1)^2)
 
-    return theta_tot
+# def theta ():
+
+
+#     return theta_tot
 
 def solve_multicell_trapezoid_torsion(
     T,
