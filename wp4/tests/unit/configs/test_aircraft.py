@@ -57,13 +57,13 @@ def test_masses_invalid_value_raises(change: dict[str, float]) -> None:
 
 
 def test_wing_half_span_matches_hand_check() -> None:
-    """b = sqrt(62.67 * 9.5) = 24.4001 m (hand check in wp3/configs/geometry.yaml)."""
-    assert WING.half_span_m == pytest.approx(24.4001 / 2.0, abs=1e-4)
+    """b = sqrt(62.52 * 9.5) = 24.3709 m (improved design: b = 24.37 m)."""
+    assert WING.half_span_m == pytest.approx(24.3709 / 2.0, abs=1e-4)
 
 
 def test_engine_design_position_is_on_the_wing() -> None:
     assert ENGINE.y_m == pytest.approx(4.4)
-    assert ENGINE.eta(WING) == pytest.approx(4.4 / 12.20005, abs=1e-5)
+    assert ENGINE.eta(WING) == pytest.approx(4.4 / 12.18544, abs=1e-5)
 
     check_engine_on_wing(ENGINE, WING)
 

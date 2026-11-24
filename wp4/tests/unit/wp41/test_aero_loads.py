@@ -40,12 +40,12 @@ def test_planform_rectangular_wing_returns_closed_form(rectangular_wing: WingGeo
 
 
 def test_planform_design_wing_matches_hand_check() -> None:
-    """Hand check in wp3/configs/geometry.yaml: b, c_r, c_t."""
+    """Improved design: b = 24.37 m, c_r = 3.66 m, c_t = 1.47 m (S = 62.52 m^2)."""
     pf = al.planform(WING)
 
-    assert pf.span_m == pytest.approx(24.4001, abs=1e-4)
-    assert pf.root_chord_m == pytest.approx(3.6692, abs=1e-4)
-    assert pf.tip_chord_m == pytest.approx(1.4677, abs=1e-4)
+    assert pf.span_m == pytest.approx(24.3709, abs=1e-4)
+    assert pf.root_chord_m == pytest.approx(3.6648, abs=1e-4)
+    assert pf.tip_chord_m == pytest.approx(1.4659, abs=1e-4)
 
 
 @given(

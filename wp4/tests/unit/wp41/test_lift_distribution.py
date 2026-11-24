@@ -178,9 +178,9 @@ def test_flight_state_speed_not_positive_raises(v_eas: float) -> None:
 @pytest.mark.parametrize(
     ("mass_case", "expected_kg"),
     [
-        ("oew", (17_930.0, 0.0, 0.0)),
-        ("no_fuel", (17_930.0, 9_302.0, 0.0)),
-        ("mtow", (17_930.0, 9_302.0, 32_922.0 - 17_930.0 - 9_302.0)),
+        ("oew", (15_873.0, 0.0, 0.0)),
+        ("no_fuel", (15_873.0, 9_302.0, 0.0)),
+        ("mtow", (15_873.0, 9_302.0, 30_865.0 - 15_873.0 - 9_302.0)),
     ],
 )
 def test_case_weights_mass_cases_return_oem_payload_fuel(

@@ -80,7 +80,7 @@ class WingGeometry:
 
 
 WING: Final[WingGeometry] = WingGeometry(
-    area_m2=62.67,
+    area_m2=62.52,
     aspect_ratio=9.5,
     taper=0.4,
     sweep_c4_deg=30.0,
@@ -158,7 +158,7 @@ class AircraftMasses:
 
 
 MASSES: Final[AircraftMasses] = AircraftMasses(
-    oem_kg=17_930.0,
+    oem_kg=15_873.0,
     design_payload_kg=7_200.0,
     max_payload_kg=9_302.0,
     fuel_kg=7_792.0,
