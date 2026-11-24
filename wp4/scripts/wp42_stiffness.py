@@ -33,7 +33,7 @@ ctr = centroid.centroid_wingbox(
 centroid_xz = ctr[0] #z as frac of chord
 winbox_area_c = ctr[1] #as frac of chord
 
-I_xx = bending_stiffness.second_area_moment(
+I_xx_c = bending_stiffness.second_area_moment(
     fspar_l = abs(WINGBOX_GEOM.front_spar_point_up - WINGBOX_GEOM.front_spar_point_down),
     fspar_ctr = (WINGBOX_GEOM.front_spar_point_up + WINGBOX_GEOM.front_spar_point_down)/2,
     rspar_l = abs(WINGBOX_GEOM.rear_spar_point_up - WINGBOX_GEOM.rear_spar_point_down),
@@ -41,4 +41,4 @@ I_xx = bending_stiffness.second_area_moment(
     horizontal_l = WINGBOX_GEOM.rear_spar_c - WINGBOX_GEOM.front_spar_c
 ) #per unit chord
 
-print(I_xx * chord.chord(span/2))
+#print(I_xx_c * chord.chord(span/2))

@@ -16,7 +16,7 @@ def second_area_moment(fspar_l: float, fspar_ctr: float, rspar_l: float, rspar_c
     h = horizontal_l
     dy = abs(fspar_ctr - rspar_ctr) #vertical offset between the midpoints of the spars
 
-    I_xx = h*(a+b)*(a**2+b**2)/48 + h*(a**2 + b**2 + 4*a*b)*(dy**2)/(36 * (a+b))
+    I_xx_c = h*(a+b)*(a**2+b**2)/48 + h*(a**2 + b**2 + 4*a*b)*(dy**2)/(36 * (a+b))
 
     """
     #for testing
@@ -25,4 +25,4 @@ def second_area_moment(fspar_l: float, fspar_ctr: float, rspar_l: float, rspar_c
     print(f"offset {dy}     horiz {h}")
     """
     
-    return I_xx
+    return I_xx_c
