@@ -112,6 +112,7 @@ class AircraftMasses:
         engine_installed_kg: Installed mass of one engine: engine, engine
             contents and nacelle group. Part of OEM. Use this value for the
             engine point load on the wing.
+        wing_structure_kg: Mass of the wing structure, both halves. Part of OEM.
     """
 
     oem_kg: float
@@ -121,10 +122,11 @@ class AircraftMasses:
     engine_count: int
     engine_dry_kg: float
     engine_installed_kg: float
+    wing_structure_kg: float
 
     def __post_init__(self) -> None:
         for name in ("oem_kg", "design_payload_kg", "max_payload_kg", "fuel_kg",
-                     "engine_dry_kg"):
+                     "engine_dry_kg", "wing_structure_kg"):
             value = getattr(self, name)
             if not value > 0.0:
                 raise ValueError(f"{name} must be > 0, got {value}")
@@ -142,10 +144,14 @@ class AircraftMasses:
                 f"engine_installed_kg ({self.engine_installed_kg}) must be >= "
                 f"engine_dry_kg ({self.engine_dry_kg})"
             )
-        if not self.engine_count * self.engine_installed_kg < self.oem_kg:
+        if not (
+            self.wing_structure_kg + self.engine_count * self.engine_installed_kg
+            < self.oem_kg
+        ):
             raise ValueError(
-                f"{self.engine_count} engines of {self.engine_installed_kg} kg "
-                f"exceed the OEM ({self.oem_kg} kg)"
+                f"{self.engine_count} engines of {self.engine_installed_kg} kg and the "
+                f"wing structure ({self.wing_structure_kg} kg) exceed the OEM "
+                f"({self.oem_kg} kg)"
             )
 
     @property
@@ -168,6 +174,8 @@ MASSES: Final[AircraftMasses] = AircraftMasses(
     engine_dry_kg=1_088.0,  # GE CF34-8C5B1, wp3/scripts/weight_estimator.py
     # wp3/scripts/weight_estimator.py: "engines and nacelles" 3866.76 kg for 2
     engine_installed_kg=1_933.38,
+    # wp3/scripts/weight_estimator.py, last iteration (10): "mass of wing" 3052.14 kg
+    wing_structure_kg=3_052.14,
 )
 
 
