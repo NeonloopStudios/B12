@@ -18,7 +18,9 @@ from src.wp42 import centroid
 from src.wp42 import bending_stiffness
 from src.wp42 import chord
 
-print(centroid.centroid_wingbox(
+span = m.sqrt(WING.aspect_ratio * WING.area_m2)
+
+ctr = centroid.centroid_wingbox(
     fspar_loc = WINGBOX_GEOM.front_spar_c,
     fspar_up = WINGBOX_GEOM.front_spar_point_up,
     fspar_dn = WINGBOX_GEOM.front_spar_point_down,
@@ -27,6 +29,16 @@ print(centroid.centroid_wingbox(
     rspar_dn = WINGBOX_GEOM.rear_spar_point_down,
     tmax_ul = WINGBOX_GEOM.airfoil_tmax_dat,
     tmax_c = WINGBOX_GEOM.airfoil_tmax_c
-))
+)
+centroid_xz = ctr[0] #z as frac of chord
+winbox_area_c = ctr[1] #as frac of chord
 
-print(chord.chord(y = 24.37/2))
+I_xx_c = bending_stiffness.second_area_moment(
+    fspar_l = abs(WINGBOX_GEOM.front_spar_point_up - WINGBOX_GEOM.front_spar_point_down),
+    fspar_ctr = (WINGBOX_GEOM.front_spar_point_up + WINGBOX_GEOM.front_spar_point_down)/2,
+    rspar_l = abs(WINGBOX_GEOM.rear_spar_point_up - WINGBOX_GEOM.rear_spar_point_down),
+    rspar_ctr = (WINGBOX_GEOM.rear_spar_point_up + WINGBOX_GEOM.rear_spar_point_down)/2,
+    horizontal_l = WINGBOX_GEOM.rear_spar_c - WINGBOX_GEOM.front_spar_c
+) #per unit chord
+
+#print(I_xx_c * chord.chord(span/2))
