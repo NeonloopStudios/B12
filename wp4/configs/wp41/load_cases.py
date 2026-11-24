@@ -3,7 +3,8 @@
 # Created: 2026-11-19
 """WP4.1 load cases. WP4.3 defines them; WP4.1 reads them as input.
 
-LOAD_CASES is empty until WP4.3 gives the cases. Add one LoadCase per case.
+LOAD_CASES holds one TEST case until WP4.3 gives the cases.
+Replace it with one LoadCase per case.
 """
 
 from __future__ import annotations
@@ -48,7 +49,16 @@ class LoadCase:
             raise ValueError(f"thrust_n must be >= 0 and finite, got {self.thrust_n}")
 
 
-LOAD_CASES: Final[tuple[LoadCase, ...]] = ()
+# TEST ONLY. WP4.3 has not given the load cases. LC-TEST exercises the chain.
+# The values are not design values: n, V_EAS, altitude and thrust are chosen so
+# that the case Mach number (0.54) lies inside the VSPAERO grid and CL_d (0.93)
+# lies inside the two VSPAERO angles.
+LOAD_CASES: Final[tuple[LoadCase, ...]] = (
+    LoadCase(
+        name="LC-TEST", n=2.5, v_eas=150.0, altitude_m=3_050.0,
+        mass_case="mtow", thrust_n=20_000.0,
+    ),
+)
 
 
 def get_case(name: str, cases: tuple[LoadCase, ...] = LOAD_CASES) -> LoadCase:
