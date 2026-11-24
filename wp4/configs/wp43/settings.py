@@ -11,9 +11,15 @@ configs.aircraft.MASSES (.mtom_kg, .mzfm_kg, .oem_kg) and configs.aircraft.WING.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Final
 
+from configs.paths import OUT_DIR as WP4_OUT_DIR
+
 FT_TO_M: Final[float] = 0.3048
+
+# Plots and CSV files of the V-n diagrams.
+OUT_DIR: Final[Path] = WP4_OUT_DIR / "wp43"
 
 
 @dataclass(frozen=True)
