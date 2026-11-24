@@ -16,10 +16,9 @@ from typing import Final
 
 @dataclass(frozen=True)
 class WeightInputs:
-    """Chord fractions of the wing weights and the engine installation.
+    """Chord fraction of the fuel and the engine installation.
 
     Attributes:
-        f_str: Chord fraction of the structure centre of gravity [-].
         f_fuel: Chord fraction of the fuel centre of gravity [-].
         engine_inlet_ahead_of_le_m: Inlet plane ahead of the local wing leading
             edge [m].
@@ -28,14 +27,13 @@ class WeightInputs:
             fraction of the nacelle length [-].
     """
 
-    f_str: float
     f_fuel: float
     engine_inlet_ahead_of_le_m: float
     nacelle_length_m: float
     engine_cg_fraction: float
 
     def __post_init__(self) -> None:
-        for name in ("f_str", "f_fuel", "engine_cg_fraction"):
+        for name in ("f_fuel", "engine_cg_fraction"):
             value = getattr(self, name)
             if not (0.0 <= value <= 1.0):
                 raise ValueError(f"{name} must be in [0, 1], got {value}")
@@ -45,11 +43,10 @@ class WeightInputs:
                 raise ValueError(f"{name} must be > 0 and finite, got {value}")
 
 
-# f_str, f_fuel: x/c of the area centroid of the wing box, from
+# f_fuel: x/c of the area centroid of the wing box, from
 # wp42.centroid.centroid_wingbox with configs/wp42/wingbox.py (0.43371858...).
-# ASSUMPTION A-11: fuel and structure act at this centroid. The fuel fills the
-# box, so this holds for the fuel. For the structure the true centroid of the
-# material is not known before WP4.3.
+# ASSUMPTION A-11: the fuel acts at this centroid. The fuel fills the box, so
+# this holds. The wing structure weight is neglected (A-7).
 # engine_inlet_ahead_of_le_m: wp3/configs/vsp_model.yaml, nacelle_position.
 # nacelle_length_m: wp3/results/propulsion/nacelle.csv, nacelle_length_ln.
 # engine_cg_fraction: ASSUMPTION A-12. The WP3 report (chapter 5, table of
@@ -58,7 +55,6 @@ class WeightInputs:
 # the inlet at y = 4.4 m. The frame origin (taken as the MAC leading edge) is
 # not defined in the report, and the position was read by eye from the drawing.
 WEIGHT_INPUTS: Final[WeightInputs] = WeightInputs(
-    f_str=0.4337186,
     f_fuel=0.4337186,
     engine_inlet_ahead_of_le_m=2.86,
     nacelle_length_m=4.071,

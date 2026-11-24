@@ -66,12 +66,12 @@ def test_torsion_inputs_design_values_are_set_and_inside_the_chord() -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("f_str", 1.2), ("f_fuel", -0.1), ("engine_cg_fraction", float("nan")),
+    [("f_fuel", -0.1), ("f_fuel", 1.3), ("engine_cg_fraction", float("nan")),
      ("engine_inlet_ahead_of_le_m", 0.0), ("nacelle_length_m", float("inf"))],
 )
 def test_weight_inputs_invalid_field_raises(field: str, value: float) -> None:
     fields = {
-        "f_str": 0.43, "f_fuel": 0.47, "engine_inlet_ahead_of_le_m": 2.5,
+        "f_fuel": 0.47, "engine_inlet_ahead_of_le_m": 2.5,
         "nacelle_length_m": 4.0, "engine_cg_fraction": 0.35,
     }
     fields[field] = value
@@ -83,5 +83,5 @@ def test_weight_inputs_invalid_field_raises(field: str, value: float) -> None:
 def test_weight_inputs_design_values_put_the_engine_cg_ahead_of_the_wing_box() -> None:
     inputs = WEIGHT_INPUTS
 
-    assert inputs.f_str == inputs.f_fuel
+    assert inputs.f_fuel == pytest.approx(0.4337186)
     assert 0.0 < inputs.engine_cg_fraction < 1.0

@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kajetan R. Gulaj
 # Created: 2026-11-24
-"""WP4.1 wing weights on the global stations: structure, fuel and engine.
+"""WP4.1 wing weights on the global stations: fuel and engine.
 
 Model: wp4/README_41.md, section 6. All values are for n = 1, right half-wing.
-Structure weight per unit span follows c(y)^2 over the whole half-span. The
-fuel formula is in wp41.weight_distrubution (c(y)^2 from the fuselage side to
-the tip). This module evaluates it on the global stations and scales it so the
-station integral is exactly W_fuel / 2.
+The wing structure weight is neglected (assumption A-7), so its column in
+weight.csv is zero. The fuel formula is in wp41.weight_distrubution (c(y)^2
+from the fuselage side to the tip). This module evaluates it on the global
+stations and scales it so the station integral is exactly W_fuel / 2.
 """
 
 from __future__ import annotations
@@ -17,30 +17,6 @@ from numpy import trapezoid
 
 from wp41.contracts import FloatArray, PointLoads, WeightTable
 from wp41.weight_distrubution import weight_distribution
-
-
-def structure_per_span(
-    y: FloatArray, chord: FloatArray, w_structure_n: float
-) -> FloatArray:
-    """Structure weight per unit span, proportional to c^2 (assumption A-7).
-
-    Args:
-        y: Global stations [m].
-        chord: Chord at the stations [m].
-        w_structure_n: Weight of the wing structure, both halves [N].
-
-    Returns:
-        w'_str at the stations [N/m], with 2 * integral(w'_str dy) = w_structure_n.
-
-    Raises:
-        ValueError: If the weight is negative or not finite.
-    """
-    if not (w_structure_n >= 0.0 and np.isfinite(w_structure_n)):
-        raise ValueError(f"w_structure_n must be >= 0 and finite, got {w_structure_n}")
-    shape = chord**2
-    return np.asarray(
-        shape * (0.5 * w_structure_n) / float(trapezoid(shape, y)), dtype=np.float64
-    )
 
 
 def fuel_per_span(y: FloatArray, w_fuel_n: float, tolerance: float) -> FloatArray:
@@ -105,9 +81,7 @@ def weight_tables(
     case: str,
     y: FloatArray,
     chord: FloatArray,
-    w_structure_n: float,
     w_fuel_n: float,
-    f_str: float,
     f_fuel: float,
     engine_y_m: float,
     engine_weight_n: float,
@@ -116,13 +90,14 @@ def weight_tables(
 ) -> tuple[WeightTable, PointLoads]:
     """Build weight.csv and point_loads.csv of one load case.
 
+    The structure column is zero. Its chord fraction is set equal to the fuel
+    one, so it has no effect.
+
     Args:
         case: Load case name.
         y: Global stations [m].
         chord: Chord at the stations [m].
-        w_structure_n: Weight of the wing structure, both halves [N].
         w_fuel_n: Fuel weight of the mass case, both halves [N].
-        f_str: Chord fraction of the structure centre of gravity [-].
         f_fuel: Chord fraction of the fuel centre of gravity [-].
         engine_y_m: Span station of the engine [m].
         engine_weight_n: Weight of the engines of one half-wing [N].
@@ -137,9 +112,9 @@ def weight_tables(
         case=case,
         y_m=y,
         chord_m=chord,
-        w_str_npm=structure_per_span(y, chord, w_structure_n),
+        w_str_npm=np.zeros(y.shape, dtype=np.float64),
         w_fuel_npm=fuel_per_span(y, w_fuel_n, tolerance),
-        f_str=f_str * ones,
+        f_str=f_fuel * ones,
         f_fuel=f_fuel * ones,
     )
     points = PointLoads(

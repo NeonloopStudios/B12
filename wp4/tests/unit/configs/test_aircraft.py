@@ -22,7 +22,6 @@ from configs.aircraft import (
 SAMPLE = AircraftMasses(
     oem_kg=16_431.0, design_payload_kg=6_870.0, max_payload_kg=8_915.0,
     fuel_kg=7_213.0, engine_count=2, engine_dry_kg=1_017.0, engine_installed_kg=1_806.0,
-    wing_structure_kg=3_011.0,
 )
 
 
@@ -50,8 +49,6 @@ def test_masses_design_engines_are_a_part_of_oem() -> None:
         {"engine_count": 3},
         {"oem_kg": -1.0},
         {"max_payload_kg": 5_000.0},  # below the design payload
-        {"wing_structure_kg": 0.0},
-        {"wing_structure_kg": 14_000.0},  # wing and engines above the OEM
     ],
 )
 def test_masses_invalid_value_raises(change: dict[str, float]) -> None:

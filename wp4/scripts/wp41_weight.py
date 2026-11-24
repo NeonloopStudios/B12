@@ -50,14 +50,11 @@ def write_case(case_name: str) -> Path:
         WEIGHT_INPUTS.nacelle_length_m,
         WEIGHT_INPUTS.engine_cg_fraction,
     )
-    w_structure = G0 * MASSES.wing_structure_kg
     weight, points = weight_tables(
         case=case.name,
         y=y,
         chord=chord,
-        w_structure_n=w_structure,
         w_fuel_n=w_fuel,
-        f_str=WEIGHT_INPUTS.f_str,
         f_fuel=WEIGHT_INPUTS.f_fuel,
         engine_y_m=ENGINE.y_m,
         engine_weight_n=G0 * MASSES.engine_installed_kg * MASSES.engine_count / 2.0,
@@ -68,9 +65,9 @@ def write_case(case_name: str) -> Path:
     weight.to_csv(folder / settings.WEIGHT_CSV)
     points.to_csv(folder / settings.POINT_LOADS_CSV)
     logger.info(
-        "%s: W_str = %.0f N, W_fuel = %.0f N, engine %.0f N at y = %.2f m, "
+        "%s: W_fuel = %.0f N, engine %.0f N at y = %.2f m, "
         "%.3f m ahead of the centroid",
-        case.name, w_structure, w_fuel, points.w_n[0], ENGINE.y_m, ahead,
+        case.name, w_fuel, points.w_n[0], ENGINE.y_m, ahead,
     )
     return folder
 
