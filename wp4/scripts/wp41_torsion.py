@@ -7,7 +7,7 @@ Reads lift.csv, weight.csv and point_loads.csv of each case from
 wp4/out/wp41/<case>/ (written by the lift and the weight script). Writes
 torque.csv beside them and one PNG with t'(y) and tau(y) of all cases.
 
-    python wp4/scripts/wp41_torsion.py --cases LC-1 LC-2
+    python wp4/scripts/wp41_torsion.py --case LC-1 LC-2
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> None:
     """Compute the torque diagram of each case and plot them together."""
     parser = argparse.ArgumentParser(description="WP4.1 torque diagram")
     parser.add_argument(
-        "--cases", nargs="+", required=True,
+        "--case", nargs="+", required=True,
         help="load case names, for example one with n > 0 and one with n < 0",
     )
     args = parser.parse_args(argv)
@@ -97,8 +97,8 @@ def main(argv: list[str] | None = None) -> None:
         level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
     )
 
-    tables = [compute_case(name) for name in args.cases]
-    plot_path = settings.OUT_DIR / f"torque_{'_'.join(args.cases)}.png"
+    tables = [compute_case(name) for name in args.case]
+    plot_path = settings.OUT_DIR / f"torque_{'_'.join(args.case)}.png"
     plot_cases(tables, plot_path)
 
 
