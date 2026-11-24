@@ -29,10 +29,4 @@ print(centroid.centroid_wingbox(
     tmax_c = WINGBOX_GEOM.airfoil_tmax_c
 ))
 
-print(chord.chord(
-    y = 24.37/2,
-    area = WING.area_m2,
-    aspect = WING.aspect_ratio,
-    taper = WING.taper,
-    root = WING.root_chord
-))
+print(chord.chord(y = 24.37/2))

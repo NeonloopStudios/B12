@@ -4,8 +4,13 @@
 """WP4.2: the airfoil chord length as a function of the half-span."""
 
 import math as m
+from configs.aircraft import WING
 
-#y is in meters
-def chord(y: float, area: float, aspect: float, taper: float, root: float):
+#y is in meters, maximum is half-span
+def chord(y: float):
+    area = WING.area_m2,
+    aspect = WING.aspect_ratio,
+    taper = WING.taper,
+    root = WING.root_chord
     span = m.sqrt(aspect * area)
     return root - (root - taper*root)*y/(span/2)
