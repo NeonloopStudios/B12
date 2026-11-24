@@ -9,6 +9,6 @@
     "${workspaceFolder}/wp3/src",
     "${workspaceFolder}/wp4/src"
   ],
-  "python-envs.defaultEnvManager": "ms-python.python:conda",
-  "python-envs.defaultPackageManager": "ms-python.python:conda"
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.defaultPackageManager": "ms-python.python:pip"
 }
