@@ -52,13 +52,15 @@ class WeightInputs:
 # material is not known before WP4.3.
 # engine_inlet_ahead_of_le_m: wp3/configs/vsp_model.yaml, nacelle_position.
 # nacelle_length_m: wp3/results/propulsion/nacelle.csv, nacelle_length_ln.
-# engine_cg_fraction: ASSUMPTION A-12, an educated guess. The fan and the
-# compressor are in the front part of a turbofan, so the centre of gravity is
-# taken at 40 % of the nacelle length behind the inlet. No source gives it.
+# engine_cg_fraction: ASSUMPTION A-12. The WP3 report (chapter 5, table of
+# component group positions) puts the propulsion and nacelle group at
+# x = -1.406 m in the wing frame. That is 0.48 of the nacelle length behind
+# the inlet at y = 4.4 m. The frame origin (taken as the MAC leading edge) is
+# not defined in the report, and the position was read by eye from the drawing.
 WEIGHT_INPUTS: Final[WeightInputs] = WeightInputs(
     f_str=0.4337186,
     f_fuel=0.4337186,
     engine_inlet_ahead_of_le_m=2.86,
     nacelle_length_m=4.071,
-    engine_cg_fraction=0.40,
+    engine_cg_fraction=0.48,
 )
