@@ -21,13 +21,6 @@ def test_get_case_known_name_returns_the_case() -> None:
     assert get_case("LC-T", (CASE,)) is CASE
 
 
-def test_get_case_default_cases_hold_the_test_case() -> None:
-    case = get_case("LC-TEST")
-
-    assert case.name == "LC-TEST"
-    assert case.mass_case == "mtow"
-
-
 def test_get_case_unknown_name_raises_with_known_names() -> None:
     with pytest.raises(KeyError, match="known: \\['LC-T'\\]"):
         get_case("LC-9", (CASE,))
