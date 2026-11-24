@@ -1,6 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Rodrigo and Yajvin
+# Created: 2026-11-19
+"""WP4.2: Torsional displacement calculations."""
+
 import scipy
 import numpy as np
-import math
+from src.wp42 import chord
+
 shear_modulus = 2.8 * 10**10
 root_chord = 3.66 
 tip_chord = 1.47
@@ -8,21 +14,31 @@ span = 24.37
 taper_ratio = tip_chord/root_chord
 
 def Am_per_chord (Am, y_pos):
-    chord_y = (3.66-taper_ratio*y_pos/span/2)
-    Am_y = Am*chord_y
+    Am_y = Am*chord.chord(y = y_pos)
     return Am_y
 
-def perimeter ():
+def perimeter_per_chord (y_pos):
+    #Coordinates for the perimeter
     x1 = 20/100
     y1=5.44/100
     y2=-5.46/100
     x2=70/100
     y3=4.51/100
     y4=-2.8/100
-    length_up = np.sqrt((x2-x1)^2+(y3-y1)^2)
-    length_right = np.sqrt((y4-y3)^2)
-    length_bottom = np.sqrt((x2-x1)^2+(y4-y2)^2)
-    length_left = np.sqrt((y2-y1)^2)
+
+    #Normalised value for the lengths of the perimeter
+    chordwise_length_top = np.sqrt((x2-x1)^2+(y3-y1)^2)
+    chordwise_length_right = np.sqrt((y4-y3)^2)
+    chordwise_length_bottom = np.sqrt((x2-x1)^2+(y4-y2)^2)
+    chordwise_length_left = np.sqrt((y2-y1)^2)
+
+    #Total value based on chord length
+    length_bottom = chordwise_length_bottom * chord.chord(y = y_pos)
+    length_left = chordwise_length_left * chord.chord(y = y_pos)
+    length_right = chordwise_length_right * chord.chord(y = y_pos)
+    length_top = chordwise_length_top * chord.chord(y = y_pos)
+    
+    return length_bottom, length_left, length_right, length_top
 
 # def theta ():
 
