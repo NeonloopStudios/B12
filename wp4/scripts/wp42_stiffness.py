@@ -20,25 +20,22 @@ from src.wp42 import chord
 
 span = m.sqrt(WING.aspect_ratio * WING.area_m2)
 
-ctr = centroid.centroid_wingbox(
-    fspar_loc = WINGBOX_GEOM.front_spar_c,
-    fspar_up = WINGBOX_GEOM.front_spar_point_up,
-    fspar_dn = WINGBOX_GEOM.front_spar_point_down,
-    rspar_loc = WINGBOX_GEOM.rear_spar_c,
-    rspar_up = WINGBOX_GEOM.rear_spar_point_up,
-    rspar_dn = WINGBOX_GEOM.rear_spar_point_down,
+ctr_out = centroid.centroid_quad(
+    points = WINGBOX_GEOM.points,
     tmax_ul = WINGBOX_GEOM.airfoil_tmax_dat,
     tmax_c = WINGBOX_GEOM.airfoil_tmax_c
 )
-centroid_xz = ctr[0] #z as frac of chord
-winbox_area_c = ctr[1] #as frac of chord
+print(ctr_out)
 
-I_xx_c = bending_stiffness.second_area_moment(
-    fspar_l = abs(WINGBOX_GEOM.front_spar_point_up - WINGBOX_GEOM.front_spar_point_down),
-    fspar_ctr = (WINGBOX_GEOM.front_spar_point_up + WINGBOX_GEOM.front_spar_point_down)/2,
-    rspar_l = abs(WINGBOX_GEOM.rear_spar_point_up - WINGBOX_GEOM.rear_spar_point_down),
-    rspar_ctr = (WINGBOX_GEOM.rear_spar_point_up + WINGBOX_GEOM.rear_spar_point_down)/2,
-    horizontal_l = WINGBOX_GEOM.rear_spar_c - WINGBOX_GEOM.front_spar_c
-) #per unit chord
-
-#print(I_xx_c * chord.chord(span/2))
+I_xx = bending_stiffness.I_xx(
+    points = WINGBOX_GEOM.points,
+    y = 0,
+    t_sp = WINGBOX_GEOM.spar_thickness,
+    t_sk = WINGBOX_GEOM.skin_thickness,
+    centroid = ctr_out[0],
+    dat_to_c = WINGBOX_GEOM.airfoil_tmax_c / WINGBOX_GEOM.airfoil_tmax_dat,
+    stringers = WINGBOX_GEOM.stringers,
+    stringer_area = WINGBOX_GEOM.stringer_area,
+    span = span
+)
+print(I_xx)

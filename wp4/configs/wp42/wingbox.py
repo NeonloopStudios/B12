@@ -11,23 +11,28 @@ from typing import Final
 
 @dataclass(frozen=True)
 class WingboxGeometry:
-    #_c refers to the value being as a fraction of the chord
-    front_spar_c: float
-    front_spar_point_up: float #wingbox corner on the front spar, in the negative z-dir (negative value!)
-    front_spar_point_down: float
-    rear_spar_c: float
-    rear_spar_point_up: float
-    rear_spar_point_down: float
+    """
+    _c refers to the value being as a fraction of the chord
+    (x,z) points describe geometry; x-coord is as a fraction of chord, z-coord is in dat units
+    points must be given sequentially in CCW order starting from negative z-dir on the front spar
+    """
+    points: [tuple]
     airfoil_tmax_dat: float #max thickness of the airfoil in dat file units
     airfoil_tmax_c: float
+    spar_thickness: float
+    skin_thickness: float
+    stringers: (list, list) #first list is nr of stringer; second is percent of half-span from 0 to 100
+    stringer_area: float
 
 WINGBOX_GEOM: Final[WingboxGeometry] = WingboxGeometry(
-    front_spar_c = 0.2,
-    front_spar_point_up = -5.4,
-    front_spar_point_down = 5.46,
-    rear_spar_c = 0.7,
-    rear_spar_point_up = -4.51,
-    rear_spar_point_down = 2.8,
-    airfoil_tmax_dat = 11.97,
-    airfoil_tmax_c = 0.12
+    points = [(0.2, -5.4), (0.2, 5.46), (0.7, 2.8), (0.7, -4.51)],
+    airfoil_tmax_dat = 11.97, #dat
+    airfoil_tmax_c = 0.12,
+    spar_thickness = 10, #mm
+    skin_thickness = 8, #mm
+    stringers = (
+        [7, 5, 3],
+        [0, 50, 70]
+    ),
+    stringer_area = 400 #mm^2
 )
