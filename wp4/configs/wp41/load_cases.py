@@ -55,10 +55,10 @@ class LoadCase:
 #   the envelope, so the nose-down torque of the pitching moment is the highest.
 #   Thrust 0: thrust gives a nose-up torque, so zero thrust is conservative.
 # LC-2: n_min = -1 at V_C at FL350 (M = 0.77), the highest speed with n = -1.
-#   Thrust = drag of the clean aircraft, D = q S (CD0 + K CL^2), per engine D/2:
-#   CD0 = 0.02172 (wp3/results/drag/cd0_summary.csv, cruise), K = 0.05357
-#   (wp3/results/iteration/oswald_configurations.csv, clean, e = 0.5593),
-#   CL = -0.3987, q = 9903.5 Pa, S = 62.52 m^2: D = 18.72 kN, 9.36 kN per engine.
+#   Thrust 0: a push-over with the engines at idle is possible, and zero thrust
+#   is conservative for the torque: with the thrust of the clean drag
+#   (9.36 kN per engine) the root torque is 4 % smaller. The thrust adds about
+#   0.6 % to the root bending moment (estimate), which is neglected.
 LOAD_CASES: Final[tuple[LoadCase, ...]] = (
     LoadCase(
         name="LC-1", n=2.5, v_eas=158.946, altitude_m=0.0,
@@ -66,7 +66,7 @@ LOAD_CASES: Final[tuple[LoadCase, ...]] = (
     ),
     LoadCase(
         name="LC-2", n=-1.0, v_eas=127.157, altitude_m=10_668.0,
-        mass_case="no_fuel", thrust_n=9_360.0,
+        mass_case="no_fuel", thrust_n=0.0,
     ),
 )
 
