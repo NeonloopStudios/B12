@@ -6,6 +6,7 @@
 import math as m
 import numpy as np
 import scipy as sp
+import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
 
@@ -19,6 +20,8 @@ from src.wp42 import chord
 from src.wp42 import centroid
 from src.wp42 import bending_stiffness
 from src.wp42 import bending_displacement
+from src.wp42 import bending_figures
+from configs.paths import OUT_DIR
 
 span = m.sqrt(WING.aspect_ratio * WING.area_m2)
 E = AL2024_T81.youngs_modulus_pa
@@ -42,7 +45,6 @@ def I_xx(y):
         stringer_area = WINGBOX_GEOM.stringer_area,
         halfspan = span/2
     )
-print(I_xx(0))
 
 def load_moment(path):
     data = np.loadtxt(path, comments="#")
@@ -75,5 +77,10 @@ for i in range(b_station.size - 1):
 
     v[i+1] = v[i] - dv
 
-print(f"v {v[b_station.size-1]}")
-print(f"theta {theta[b_station.size-1]}")
+print(f"v_tip {v[b_station.size-1]}")
+print(f"theta_tip {theta[b_station.size-1]}")
+
+fig = bending_figures.bending_plot(b_station, m_station, I_xx, v)
+path = OUT_DIR / "wp42" / "bending_plot.pdf"
+fig.savefig(path)
+plt.show()
