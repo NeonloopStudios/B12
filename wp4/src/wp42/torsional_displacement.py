@@ -5,7 +5,7 @@
 
 from scipy import interpolate, integrate
 import numpy as np
-# from src.wp42 import chord
+from src.wp42 import chord
 from typing import Callable, Sequence, Union
 
 
