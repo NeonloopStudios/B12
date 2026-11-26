@@ -1,10 +1,13 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_WP4_DIR = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
 
 import numpy as np
 import matplotlib.pyplot as plt
 from configs.aircraft import WING, MASSES, ENGINE
+from wp41.weight import fuel_per_span
+
 
 g = 9.81
 n = 2.5                       
@@ -36,16 +39,19 @@ def tip_integral(f, y):
 
 
 y, chord, cl = load_cl(lift_dist, mach, alpha)
+w_fuel = fuel_per_span(y, MASSES.fuel_kg*g, tolerance=.01)
+
 
 shape = chord * cl
 lift_half = n * MASSES.mtom_kg * g / 2.0
 lift = shape * lift_half / np.trapezoid(shape, y)
+q = lift-n*w_fuel
 
 P_eng = n * MASSES.engine_installed_kg * g
 a = 4.4
 
 
-shear_dist = tip_integral(lift, y)
+shear_dist = tip_integral(q, y)
 moment = tip_integral(shear_dist, y)
 for i in range(len(moment)):    
     if y[i] > a:
