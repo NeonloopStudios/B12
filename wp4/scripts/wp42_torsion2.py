@@ -32,7 +32,7 @@ theta_tot = np.zeros(n_stations)
 
 if y_stations[0] > 0.0:
     theta_tot[0], _ = integrate.quad(
-        dtheta_dy, 0.0, y_stations, args=(T_func, G)
+        dtheta_dy, 0.0, y_stations[0], args=(T_func, G)
     )
 
 for k in range(1, n_stations):
