@@ -64,7 +64,7 @@ ax[0].plot(y, lift);  ax[0].set_ylabel("lift [N/m]")
 ax[1].plot(y, shear_dist); ax[1].set_ylabel("shear [N]")
 ax[2].plot(y, moment); ax[2].set_ylabel("M [Nm]")
 ax[2].set_xlabel("y [m]")
-#plt.show()
+plt.show()
 
 out_path = Path(__file__).resolve().parents[1] / "out" / "wp41" / "internal_moment_distribution.txt"
 with open(out_path, "w") as f:

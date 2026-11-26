@@ -164,6 +164,8 @@ TOTALS_FILE: Final[str] = "totals.csv"
 LIFT_FILE: Final[str] = "lift_distribution.txt"
 MOMENT_FILE: Final[str] = "moment_distribution.txt"
 AOA_GRID_FILE: Final[str] = "aoa_grid.txt"
+CM_CL_PLOT_FILE: Final[str] = "cm_vs_cl.png"
+CM_SPAN_PLOT_FILE: Final[str] = "cm_span.png"
 WING_NAME: Final[str] = "Wing"
 
 # --- header keys of the distribution files ("# key: values") ---

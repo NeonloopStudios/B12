@@ -24,6 +24,7 @@ class WingboxGeometry:
     skin_thickness: float
     stringers: (list, list) #first list is nr of stringer; second is percent of half-span from 0 to 100
     stringer_area: float
+    vertical_stiffeners_chordwise_pos: list
 
 WINGBOX_GEOM: Final[WingboxGeometry] = WingboxGeometry(
     points = [(0.2, -5.4), (0.2, 5.46), (0.7, 2.8), (0.7, -4.51)],
@@ -36,5 +37,6 @@ WINGBOX_GEOM: Final[WingboxGeometry] = WingboxGeometry(
         [4, 2, 1],
         [0, 30, 60]
     ),
-    stringer_area = 400 #mm^2
+    stringer_area = 400, #mm^2
+    vertical_stiffeners_chordwise_pos = [0.2,0.4,0.7]
 )

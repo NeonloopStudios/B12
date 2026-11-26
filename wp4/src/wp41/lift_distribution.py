@@ -88,6 +88,8 @@ class AeroDatabase:
         cm_c4: Strip moment coefficient about the local c/4, nose-up
             positive, shape (n_strip, n_mach, 2).
         cl_wing: Wing lift coefficient CL, shape (n_mach, 2).
+        cm_wing: Wing pitching moment coefficient about the MAC quarter
+            chord, nose-up positive, shape (n_mach, 2).
         s_ref_m2: Reference area, both halves [m^2].
         half_span_m: b / 2 [m].
     """
@@ -99,6 +101,7 @@ class AeroDatabase:
     cl: FloatArray
     cm_c4: FloatArray
     cl_wing: FloatArray
+    cm_wing: FloatArray
     s_ref_m2: float
     half_span_m: float
 
@@ -226,6 +229,7 @@ def read_aero_database(lift_path: Path, moment_path: Path) -> AeroDatabase:
         cl=lift.values,
         cm_c4=moment.values,
         cl_wing=lift.totals,
+        cm_wing=moment.totals,
         s_ref_m2=lift.s_ref_m2,
         half_span_m=lift.half_span_m,
     )
