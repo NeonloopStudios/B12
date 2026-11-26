@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import pytest
 
-from configs.wp41.load_cases import LoadCase, get_case
+from configs.wp41 import settings
+from configs.wp41.load_cases import LOAD_CASES, LoadCase, get_case
 from configs.wp41.torsion import TORSION_INPUTS, TorsionInputs
 from configs.wp41.weight import WEIGHT_INPUTS, WeightInputs
+from wp41.lift_distribution import flight_state
 
 CASE = LoadCase(
     name="LC-T", n=2.3, v_eas=187.3, altitude_m=3_050.0, mass_case="mtow",
@@ -85,3 +87,13 @@ def test_weight_inputs_design_values_put_the_engine_cg_ahead_of_the_wing_box() -
 
     assert inputs.f_fuel == pytest.approx(0.4337186)
     assert 0.0 < inputs.engine_cg_fraction < 1.0
+
+
+def test_load_cases_hold_a_positive_and_a_negative_case_inside_the_mach_grid() -> None:
+    signs = sorted(case.n > 0.0 for case in LOAD_CASES)
+    machs = [flight_state(c.v_eas, c.altitude_m).mach for c in LOAD_CASES]
+
+    assert signs == [False, True]
+    low, high = settings.VSPAERO.mach_start, settings.VSPAERO.mach_end
+    assert all(low <= m <= high for m in machs)
+    assert machs == pytest.approx([0.4671, 0.7703], abs=5e-4)
