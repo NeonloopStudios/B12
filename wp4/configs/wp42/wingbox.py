@@ -29,7 +29,7 @@ WINGBOX_GEOM: Final[WingboxGeometry] = WingboxGeometry(
     airfoil_tmax_dat = 11.97, #dat
     airfoil_tmax_c = 0.12,
     spar_thickness = 10, #mm
-    skin_thickness = 8, #mm
+    skin_thickness = 10, #mm
     stringers = (
         [7, 5, 3],
         [0, 50, 70]

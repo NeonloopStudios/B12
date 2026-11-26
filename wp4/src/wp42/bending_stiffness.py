@@ -8,7 +8,7 @@ import numpy as np
 import scipy as sp
 from src.wp42 import chord
 
-def I_xx(points: [tuple], y: float, t_sp: float, t_sk: float, centroid: tuple, dat_to_c: float, stringers: (list, list), stringer_area: float, span: float):
+def I_xx(points: [tuple], y: float, t_sp: float, t_sk: float, centroid: tuple, dat_to_c: float, stringers: (list, list), stringer_area: float, halfspan: float):
     """
     points must be given sequentially in CW or CCW order for any non-intersecting quadrilateral
     returns second area moment (in m^4) against bending about xx as a function of:
@@ -42,6 +42,6 @@ def I_xx(points: [tuple], y: float, t_sp: float, t_sk: float, centroid: tuple, d
         #for skin segments
         if i%2!=0:
             stringer_term = (stringer_area / (1000**2)) * (mid_z - centroid[1]*c)**2
-            I_xx += stringer_term * s(100*y/span)
+            I_xx += stringer_term * s(100*y/halfspan)
 
     return I_xx
