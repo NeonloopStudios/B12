@@ -232,7 +232,7 @@ def compute_J_distribution(
         "q_unit": q_unit_arr,
     }
 
-def dtheta_dy(y: float, T_func, G: float) -> float:
+def dtheta_dy(y: float, T_func, G: float, J_func) -> float:
     T_y = float(T_func(y))
     J_y = float(J_func(y))
     return T_y / (G * J_y)
