@@ -60,6 +60,11 @@ No script imports another script. No `wp41` module imports `wp2`, `wp3`, `wp42` 
 
 `wp41_aoa_grid.py` is a side script: it reads the VSPAERO files and writes `out/wp41/aoa_grid.txt` (`CL` and `α` for OEW, MZFW and MTOW over a speed range). No other script reads it.
 
+`wp41_cm_plots.py` is a side script: it reads the VSPAERO files and writes two plots with one line per Mach. No other script reads them.
+
+- `out/wp41/cm_vs_cl.png`: wing `CM` about the MAC quarter chord against `CL`.
+- `out/wp41/cm_span.png`: spanwise `cm_c4(y)` and `cm_c4 c² / MAC²` (that is `m' / (q MAC²)`) at α = 0° and α = 10°.
+
 All per-case files use the same global stations, `wp41.stations` (`N_SPAN_STATIONS` points from `y = 0` to `y = b/2`). `wp41.torsion` checks that `lift.csv` and `weight.csv` share them, so the weight script must take its stations from there.
 
 Scripts 1 and 2 are independent. Run them first, in any order.
@@ -273,6 +278,7 @@ wp4/
 │   ├── wp41_aero_loads.py VSPAERO database
 │   ├── wp41_lift.py
 │   ├── wp41_aoa_grid.py   side script: CL and alpha over weights and speeds
+│   ├── wp41_cm_plots.py   side script: CM against CL, spanwise cm per Mach
 │   ├── wp41_weight.py
 │   ├── wp41_torsion.py
 │   └── wp41_shear_moment.py
@@ -337,6 +343,7 @@ Each entry has the assumption, the result, and the validity.
 python wp4/scripts/wp41_aero_loads.py          (once per geometry or Mach change)
 python wp4/scripts/wp41_lift.py   --case LC-1
 python wp4/scripts/wp41_aoa_grid.py            (optional: CL and alpha over weights and speeds)
+python wp4/scripts/wp41_cm_plots.py            (optional: CM against CL, spanwise cm per Mach)
 python wp4/scripts/wp41_weight.py --case LC-1
 python wp4/scripts/wp41_torsion.py       --cases LC-1 LC-2
 python wp4/scripts/wp41_shear_moment.py  --cases LC-1 LC-2
