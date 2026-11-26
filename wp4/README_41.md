@@ -115,17 +115,19 @@ WP4.3 fills the values. The README gives no numbers.
 
 ### 4.2 Mass properties (from WP1-3 and WP4.2)
 
-One frozen dataclass, in `configs/wp41/mass.py`. The rows `h_thrust_m` and `f_sc` live in `configs/wp41/torsion.py` (`TorsionInputs`) until WP4.2 replaces them.
+The masses live in `configs/aircraft.py` (`MASSES`, including `engine_installed_kg`) and the engine station in `ENGINE`.
+The chord fractions and the engine installation live in `configs/wp41/weight.py` (`WeightInputs`).
+The rows `h_thrust_m` and `f_sc` live in `configs/wp41/torsion.py` (`TorsionInputs`) until WP4.2 replaces them.
+The rows below are the full list of inputs, not one dataclass.
 
 | Field | Unit | Meaning |
 |---|---|---|
 | `w_oew_n`, `w_mpw_n`, `w_fuel_n` | N | Weights of the three mass cases |
-| `w_wing_str_n` | N | Weight of the wing structure, both halves |
 | `w_engine_n` | N | Weight of one engine with pylon |
 | `y_engine_m` | m | Span station of the engine |
 | `d_engine_m` | m | Distance of the engine centre of gravity ahead of the shear centre |
 | `h_thrust_m` | m | Height of the thrust line below the shear centre |
-| `f_str`, `f_fuel` | - | Chord fraction of the structure and of the fuel centre of gravity |
+| `f_fuel` | - | Chord fraction of the fuel centre of gravity |
 | `f_sc` | - | Chord fraction of the shear centre (the wing box centroid) |
 | `a_nd` | - | Box area ratio `A_nd = (h/c)(l/c)` |
 | `eta_tank_in`, `eta_tank_out` | - | Span fraction `2y/b` where the fuel tank starts and ends |
@@ -176,28 +178,33 @@ The database is evaluated at the case Mach, so `mach_run` equals `mach_case`.
 
 ## 6. Script 2 — weight
 
-**Input:** the mass properties, one load case, the chord `c(y)` from the planform.
+**Input:** `MASSES`, `ENGINE`, `WeightInputs`, `f_sc`, one load case, the chord `c(y)` and the stations of the planform.
+Modules: `wp41.weight` and, for the fuel formula, `wp41.weight_distrubution`.
 
 All loads are at `n = 1`. The torsion and shear scripts multiply them by `n`.
 
 **Distributions** (`η = 2y/b`):
 
-- Structure: `w'_str(y) = (W_str/2) c(y)² / ∫_0^{b/2} c² dy`
-- Fuel, inside the tank span only: `w'_fuel(y) = (W_fuel/2) A_nd c(y)² / ∫_tank A_nd c² dy`
-- Outside the tank span: `w'_fuel(y) = 0`.
+- Structure: `w'_str(y) = 0`. The wing structure weight is neglected (assumption A-7).
+- Fuel, from the fuselage side to the tip: `w'_fuel(y) = (W_fuel/2) c(y)² / ∫_{y_f}^{b/2} c² dy`, with `y_f = d_fus / 2` (`weight_distrubution.py`).
+- Inside the fuselage, `w'_fuel(y) = 0`.
+- The box area ratio `A_nd` is constant for one airfoil, so it cancels.
 
 The sketch of the design gives the reason: the box area is `A = A_nd c²`.
-Fuel mass per unit span follows the box area. The fuel weight is the weight of the mass case.
+Fuel mass per unit span follows the box area. The fuel weight is the weight of the mass case (`case_weights`).
+The formula is evaluated on the global stations. The fuel table is then scaled so that `2 ∫ w'_fuel dy = W_fuel` exactly. The scale factor must be within `WEIGHT_CHECK_TOLERANCE` of 1.
 
-**Point loads:** one row per engine. The engine weight is `W_engine`. Thrust is not a weight and is added in scripts 3 and 4.
+**Point loads:** one row for the engines of one half-wing. The weight is `W_engine = g × engine_installed_kg × engine_count / 2`. Thrust is not a weight and is added in scripts 3 and 4.
+The engine centre of gravity is ahead of the shear centre by `d = f_sc c(y_e) + x_inlet − k l_n`:
+`c(y_e)` is the chord at the engine, `x_inlet` the inlet plane ahead of the leading edge, `l_n` the nacelle length and `k` the centre of gravity position as a fraction of `l_n` (assumption A-12).
 
-**Fuselage group:** `W_fus = W_oew − W_str − 2 W_engine` plus `W_mpw`. It acts at the centreline. It is not in the CSV. It is the reaction in the equilibrium check of script 4.
+**Fuselage group:** `W_fus = W_oew − 2 W_engine` plus `W_mpw`. The wing structure weight is part of `W_oew` and is not applied to the wing (A-7). It acts at the centreline. It is not in the CSV. It is the reaction in the equilibrium check of script 4.
 
-**Output `weight.csv`:** columns `y_m, chord_m, w_str_npm, w_fuel_npm, f_str, f_fuel`.
+**Output `weight.csv`:** columns `y_m, chord_m, w_str_npm, w_fuel_npm, f_str, f_fuel`. `w_str_npm` is zero and `f_str` equals `f_fuel`. The columns stay for the contract.
 **Output `point_loads.csv`:** columns `name, y_m, w_n, d_ahead_of_sc_m`.
 `weight.csv` carries `# schema: wp41.weight.v1`. `point_loads.csv` carries `# schema: wp41.point_loads.v1`. Both carry `# case: <name>`.
 
-**Checks:** `2 ∫ w'_str dy = W_str` and `2 ∫ w'_fuel dy = W_fuel`, within the tolerance in `settings.py`.
+**Checks:** The fuel scale factor is within `WEIGHT_CHECK_TOLERANCE` of 1 (`settings.py`).
 
 ---
 
@@ -273,7 +280,7 @@ wp4/
 │   ├── settings.py        VSPAERO Mach grid, stations, tolerances, files
 │   ├── load_cases.py      frozen dataclass LoadCase, LOAD_CASES (empty until WP4.3)
 │   ├── torsion.py         frozen dataclass TorsionInputs (f_sc, h_thrust_m)
-│   └── mass.py            frozen dataclass MassProperties
+│   └── weight.py          frozen dataclass WeightInputs (f_fuel, engine installation)
 ├── scripts/
 │   ├── wp41_aero_loads.py VSPAERO database
 │   ├── wp41_lift.py
@@ -289,6 +296,7 @@ wp4/
 │   ├── aero_loads.py      VSPAERO pre- and post-processing
 │   ├── lift_distribution.py  section 5
 │   ├── weight.py          section 6
+│   ├── weight_distrubution.py  fuel formula of section 6 (file name as committed)
 │   ├── torsion.py         section 7
 │   ├── internal_loads.py  section 8
 │   └── integrate.py       tip-to-station integral, shared by torsion and internal_loads
@@ -310,7 +318,7 @@ Test values are general, not round. Each module has a test with a known exact an
 | `internal_loads.py` | Point load `F` at `y_j`: `S_z` is `F` inboard of `y_j` and zero outboard. Thrust moment `M_j` has the sign derived in section 8. Equilibrium check fails for a wrong `W_fus`. |
 | `torsion.py` | Constant `N'` with `f_sc ≠ 1/4`: `τ = N' (f_sc − 1/4) c (L − y)` for constant chord. Sign flips with `f_sc < 1/4`. |
 | `lift_distribution.py` | `s = 0` returns the α = 0° table. `s = 1` returns the α = 10° table. A value in between uses the linear closed form. `n < 0` sets `extrapolated`. `2 ∫ N' dy = n W`. Round trip to `lift.csv`. |
-| `weight.py` | The integrals equal `W_str/2` and `W_fuel/2`. Fuel is zero outside the tank span. |
+| `weight.py` | The fuel integral equals `W_fuel/2`. Fuel is zero inside the fuselage and follows `c²`. The structure column is zero. Hand value of the engine offset. |
 | `contracts.py` | Round trip `to_csv` / `from_csv` is bitwise equal. A wrong schema line or column name raises. |
 | import guard | No module in `wp41` imports `wp2`, `wp3`, `wp42` or `wp43`. |
 
@@ -330,7 +338,9 @@ Each entry has the assumption, the result, and the validity.
 | A-4 | `CL` is linear in `α`. | Two angles of attack give any `CL_d` (reader, Appendix B). | The reader accepts it. Cases outside α = 0° to 10° are extrapolated and flagged. |
 | A-5 | The wing is equivalent to a straight unswept wing. Dihedral is ignored. | Reader, Appendix A.3. Chord fractions replace `x` coordinates. The root kink is not modelled. | Accepted by the reader. The torque at the root is under-estimated and the bending moment is over-estimated (reader, Appendix A.2). |
 | A-6 | The shear centre is at the box centroid, at the constant chord fraction `f_sc`. | One value for the whole span. | The centroid varies with `y` in WP4.2. Replace `f_sc` after WP4.2. |
-| A-7 | Structure mass and fuel mass per unit span scale with `c²`. All fuel is in the wing tank. | Section 6 formulas. | The structure mass depends on the WP4.3 design. Replace the shape after WP4.3. |
+| A-7 | The wing structure weight is neglected. The fuel per unit span scales with `c²`. All fuel is in the wing tank. | `w'_str = 0`. Section 6 formulas. | Conservative for shear and bending: the structure weight relieves the wing loading. For the torque it has no effect, because `f_str = f_sc`. |
+| A-11 | The fuel acts at the centroid of the wing box (`f_fuel = f_sc`). | The fuel gives no torque. | True for the fuel, which fills the box. |
+| A-12 | The engine centre of gravity is 48 % of the nacelle length behind the inlet. It follows from the position in the WP3 report, read by eye from the drawing. | Sets the engine arm `d`. | The report does not define the frame origin. The engine term of the torque changes in proportion to `d`. |
 | A-8 | The engine, its pylon and its thrust act at one span station. The thrust line is at `h_thrust` below the shear centre. | Point loads in scripts 3 and 4. | Reader, Appendix A.3 gives the thrust direction. |
 | A-9 | The axial force is not computed. | No axial force diagram. | The reader lists the axial force in deliverable (a). The report states that this design omits it. |
 | A-10 | `lift.csv` holds the VSPAERO strips moved to the global stations (monotone cubic, 0 at the tip). Scripts 3 and 4 interpolate linearly between stations. | `scipy.integrate` runs on a continuous function. | The 2° dihedral projection of `y` is neglected (`cos 2° = 0.9994`). The check in section 5 shows the effect (−0.14 % at MTOW cruise). |
@@ -345,8 +355,8 @@ python wp4/scripts/wp41_lift.py   --case LC-1
 python wp4/scripts/wp41_aoa_grid.py            (optional: CL and alpha over weights and speeds)
 python wp4/scripts/wp41_cm_plots.py            (optional: CM against CL, spanwise cm per Mach)
 python wp4/scripts/wp41_weight.py --case LC-1
-python wp4/scripts/wp41_torsion.py       --cases LC-1 LC-2
-python wp4/scripts/wp41_shear_moment.py  --cases LC-1 LC-2
+python wp4/scripts/wp41_torsion.py       --case LC-1 LC-2
+python wp4/scripts/wp41_shear_moment.py  --case LC-1 LC-2
 ```
 
 Always call Python through the project environment (`<env>\python.exe`).

@@ -23,6 +23,7 @@ def rectangular_wing() -> WingGeometry:
         area_m2=10.0,
         aspect_ratio=10.0,
         taper=1.0,
+        root_chord=1.0,
         sweep_c4_deg=0.0,
         dihedral_deg=0.0,
         tip_twist_deg=0.0,

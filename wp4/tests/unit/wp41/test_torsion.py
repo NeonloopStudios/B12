@@ -232,6 +232,25 @@ def test_torque_diagram_different_stations_raises(
         _diagram(make_lift(), shifted, make_points(), 0.43)
 
 
+def test_torque_diagram_chord_differs_by_a_tenth_percent_passes_and_two_percent_raises(
+    make_lift: Lift, make_weight: Weight, make_points: Points
+) -> None:
+    weight = make_weight()
+
+    def with_chord(factor: float) -> WeightTable:
+        return WeightTable(
+            case=weight.case, y_m=weight.y_m, chord_m=weight.chord_m * factor,
+            w_str_npm=weight.w_str_npm, w_fuel_npm=weight.w_fuel_npm,
+            f_str=weight.f_str, f_fuel=weight.f_fuel,
+        )
+
+    table = _diagram(make_lift(n_prime=412.7), with_chord(1.001), make_points(), 0.43)
+
+    assert table.torque_nm.shape == (8,)
+    with pytest.raises(ContractError, match="differ in y_m or chord_m"):
+        _diagram(make_lift(), with_chord(1.02), make_points(), 0.43)
+
+
 def test_torque_diagram_different_case_names_raises(
     make_lift: Lift, make_weight: Weight, make_points: Points
 ) -> None:

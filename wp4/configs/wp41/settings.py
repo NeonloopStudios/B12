@@ -188,3 +188,9 @@ TORQUE_CSV: Final[str] = "torque.csv"
 def case_dir(case_name: str) -> Path:
     """Output folder of one load case: wp4/out/wp41/<case_name>."""
     return OUT_DIR / case_name
+
+# Largest allowed scale factor error of the fuel table. The fuel formula has a
+# step at the fuselage side. Between the stations it becomes a ramp, so the
+# station integral differs from W_fuel / 2 by at most half a station gap over
+# the tank length: 0.5 * 0.1 m / 10.7 m = 0.5 %. The table is scaled to W_fuel / 2.
+WEIGHT_CHECK_TOLERANCE: Final[float] = 0.01

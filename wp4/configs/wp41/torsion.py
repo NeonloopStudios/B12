@@ -20,7 +20,7 @@ class TorsionInputs:
 
     Attributes:
         f_sc: Chord fraction of the centroid of the wing box [-], in [0, 1].
-            None until WP4.2 gives it.
+            None while WP4.2 gives no value.
         h_thrust_m: Height of the thrust line below the centroid [m].
     """
 
@@ -47,7 +47,12 @@ class TorsionInputs:
         return self.f_sc
 
 
-# h_thrust_m: engine axis 0.8 m below the local wing chord line, from
-# wp3/configs/vsp_model.yaml (nacelle_position.axis_below_chord_m). It is the
-# distance to the chord line, not to the centroid. WP4.2 gives the correction.
-TORSION_INPUTS: Final[TorsionInputs] = TorsionInputs(f_sc=None, h_thrust_m=0.8)
+# f_sc: x/c of the area centroid of the wing box (spars at 0.2 c and 0.7 c),
+# from wp42.centroid.centroid_wingbox with configs/wp42/wingbox.py: 0.43371858.
+# The reader allows the shear centre at the centroid (assumption A-6).
+# h_thrust_m: the engine axis is 0.8 m below the local chord line at y = 4.4 m
+# (wp3/configs/vsp_model.yaml, nacelle_position.axis_below_chord_m). The
+# centroid lies 0.0038464 c below the chord line (centroid_z of centroid_wingbox,
+# c = 2.8708 m at y = 4.4 m), so h_thrust = 0.8 - 0.0038464 * 2.8708 = 0.7890 m.
+# UNVERIFIED: the sign of centroid_z (z positive up) is not documented there.
+TORSION_INPUTS: Final[TorsionInputs] = TorsionInputs(f_sc=0.4337186, h_thrust_m=0.7890)
