@@ -5,36 +5,16 @@
 
 from scipy import interpolate, integrate
 import numpy as np
-from src.wp42 import chord
+# from src.wp42 import chord
+from typing import Callable, Sequence, Union
 
-shear_modulus = 2.8 * 10**10
-root_chord = 3.66 
-tip_chord = 1.47
-span = 24.37
-half_span = span / 2.0
-taper_ratio = tip_chord/root_chord
 
-X_FRONT = 20 / 100
-Z_FRONT_TOP = 5.44 / 100
-Z_FRONT_BOT = -5.46 / 100
+# def Am_per_chord (Am, y_pos):
+#     Am_y = Am*chord.chord(y = y_pos)**2
+#     return Am_y
 
-X_REAR = 70 / 100
-Z_REAR_TOP = 4.51 / 100
-Z_REAR_BOT = -2.80 / 100
-
-def Am_per_chord (Am, y_pos):
-    Am_y = Am*chord.chord(y = y_pos)**2
-    return Am_y
-
-def perimeter_per_chord (y_pos):
-    #Chodwise coordinates for the perimeter
-    x1 = 20/100
-    y1=5.44/100
-    y2=-5.46/100
-    x2=70/100
-    y3=4.51/100
-    y4=-2.8/100
-
+def perimeter_per_chord (y_pos, x1, y1, y2, x2, y3, y4):
+    
     #Normalised value for the lengths of the perimeter
     chordwise_length_top = np.sqrt((x2-x1)**2+(y3-y1)**2)
     chordwise_length_right = np.sqrt((y4-y3)**2)
@@ -49,132 +29,208 @@ def perimeter_per_chord (y_pos):
     
     return length_bottom, length_left, length_right, length_top
 
-def get_multicell_geometry(y_pos, x_spars_norm=(X_FRONT, X_REAR)):
+def multicell_geometry(
+    x_spars_norm: Sequence[float],
+    z_front_top_norm: float,
+    z_front_bot_norm: float,
+    z_rear_top_norm: float,
+    z_rear_bot_norm: float,
+    t_spars: Sequence[float],
+    t_top: Union[float, Sequence[float]],
+    t_bot: Union[float, Sequence[float]],
+) -> tuple[float, np.ndarray, np.ndarray]:
     """
-    Computes physical spar heights, horizontal cell widths, inclined top/bottom
-    skin lengths, and enclosed cell areas at spanwise location y_pos for an
-    irregular asymmetric trapezoid with vertical parallel spars.
+    Solves the Appendix D.1.3 torsion system at unit chord (c = 1.0 m) and unit
+    torque (T = 1.0 N*m) for an irregular asymmetric trapezoidal wing box with
+    vertical parallel spars and N >= 1 cells.
 
-    Parameters
-    ----------
-    y_pos : float
-        Spanwise position from wing root [m].
-    x_spars_norm : sequence of float
-        Normalized chordwise positions (x/c) of all spars from front to rear
-        (length N + 1 for N cells). Default (0.20, 0.70) gives a single-cell box.
+    Coordinate convention:
+        +x : chordwise aft from leading edge (x/c in [0, 1])
+        +y : spanwise from wing root (y = 0) to tip (y = b/2)
+        +z : vertical downwards (top skin z < 0, bottom skin z > 0)
+
+    Returns
+    -------
+    J_norm : float
+        Chord-normalized torsional constant J / c^3 [m] (multiply by c(y)^3 for J(y)).
+    q_unit_norm : np.ndarray
+        Unit-chord, unit-torque cell shear flows [q_1, ..., q_N] (length N).
+    cell_areas_norm : np.ndarray
+        Chord-normalized enclosed cell areas A_i / c^2 [-] (length N).
     """
-    c = chord.chord(y=y_pos)
-    x_spars_norm = np.asarray(x_spars_norm, dtype=float)
+    # Convert input sequences into 1D floating-point NumPy arrays
+    x_spars = np.asarray(x_spars_norm, dtype=float)
+    t_spars_arr = np.asarray(t_spars, dtype=float)
 
-    # Linear interpolation fraction between front and rear spars
-    xi = (x_spars_norm - X_FRONT) / (X_REAR - X_FRONT)
+    # Validate that at least two spars (front and rear) are given to form >= 1 cell
+    if x_spars.ndim != 1 or len(x_spars) < 2:
+        raise ValueError("x_spars_norm must be a 1D sequence with at least 2 spars.")
 
-    # Top and bottom skin z/c positions at each spar
-    z_top_norm = Z_FRONT_TOP + xi * (Z_REAR_TOP - Z_FRONT_TOP)
-    z_bot_norm = Z_FRONT_BOT + xi * (Z_REAR_BOT - Z_FRONT_BOT)
+    # Ensure spars are strictly ordered from front (leading edge) to rear (trailing edge)
+    if np.any(np.diff(x_spars) <= 0.0):
+        raise ValueError("x_spars_norm must be strictly increasing from front to rear.")
 
-    # Physical spar heights [m] (length N + 1)
-    spar_heights = (z_top_norm - z_bot_norm) * c
+    # Number of closed cells N equals (number of spars - 1)
+    n_cells = len(x_spars) - 1
 
-    # Physical horizontal cell widths [m] (length N)
-    dx_norm = np.diff(x_spars_norm)
-    cell_widths = dx_norm * c
+    # Verify that every spar has a corresponding thickness value
+    if t_spars_arr.shape != (n_cells + 1,):
+        raise ValueError(f"Expected {n_cells + 1} spar thicknesses for {n_cells} cells.")
 
-    # Physical inclined skin lengths [m] for each cell (length N)
-    s_top = np.hypot(dx_norm, np.diff(z_top_norm)) * c
-    s_bot = np.hypot(dx_norm, np.diff(z_bot_norm)) * c
+    # Broadcast scalar skin thicknesses to length N if uniform across all cells,
+    # or convert per-cell thickness sequences into 1D float arrays
+    t_top_arr = np.full(n_cells, t_top, dtype=float) if np.isscalar(t_top) else np.asarray(t_top, dtype=float)
+    t_bot_arr = np.full(n_cells, t_bot, dtype=float) if np.isscalar(t_bot) else np.asarray(t_bot, dtype=float)
 
-    # Physical enclosed trapezoidal area [m^2] of each cell: A_i = 0.5*(h_l + h_r)*w_i
-    cell_areas = 0.5 * (spar_heights[:-1] + spar_heights[1:]) * cell_widths
+    if t_top_arr.shape != (n_cells,) or t_bot_arr.shape != (n_cells,):
+        raise ValueError(f"Skin thicknesses must be scalars or 1D sequences of length {n_cells}.")
 
-    return spar_heights, cell_widths, s_top, s_bot, cell_areas
+    # Compute normalized position xi in [0, 1] of every spar between front and rear spars
+    xi = (x_spars - x_spars[0]) / (x_spars[-1] - x_spars[0])
 
+    # Linearly interpolate upper and lower skin z/c coordinates at each spar
+    # (straight skin segments connecting front and rear spars)
+    z_top_norm = z_front_top_norm + xi * (z_rear_top_norm - z_front_top_norm)
+    z_bot_norm = z_front_bot_norm + xi * (z_rear_bot_norm - z_front_bot_norm)
 
-def solve_multicell_trapezoid_torsion(
-    T,
-    spar_heights,
-    cell_widths,
-    s_top,
-    s_bot,
-    t_spars,
-    t_top,
-    t_bot,
-    G=shear_modulus,
-):
-    """
-    Solves the multi-cell torsion system (Appendix D.1.3) for an idealized
-    N-cell irregular trapezoidal wing box using numpy.linalg.solve.
-    Works for both single-cell (N = 1) and multi-cell (N >= 2) sections.
-    """
-    spar_heights = np.asarray(spar_heights, dtype=float)
-    cell_widths = np.asarray(cell_widths, dtype=float)
-    t_spars = np.asarray(t_spars, dtype=float)
-    n_cells = len(cell_widths)
+    # Normalized vertical spar heights h_k / c (z_bot > z_top since +z points downwards)
+    h_spars_norm = z_bot_norm - z_top_norm
+    if np.any(h_spars_norm <= 0.0):
+        raise ValueError("Computed non-positive spar height; verify +z downwards sign convention.")
 
-    if len(spar_heights) != n_cells + 1 or len(t_spars) != n_cells + 1:
-        raise ValueError(f"Expected {n_cells + 1} spars for {n_cells} cells.")
+    # Normalized horizontal cell widths w_i / c (length N)
+    w_cells_norm = np.diff(x_spars)
 
-    s_top = np.full(n_cells, s_top, dtype=float) if np.isscalar(s_top) else np.asarray(s_top, dtype=float)
-    s_bot = np.full(n_cells, s_bot, dtype=float) if np.isscalar(s_bot) else np.asarray(s_bot, dtype=float)
-    t_top = np.full(n_cells, t_top, dtype=float) if np.isscalar(t_top) else np.asarray(t_top, dtype=float)
-    t_bot = np.full(n_cells, t_bot, dtype=float) if np.isscalar(t_bot) else np.asarray(t_bot, dtype=float)
+    # Normalized inclined top and bottom skin panel lengths s_i / c (length N)
+    s_top_norm = np.hypot(w_cells_norm, np.diff(z_top_norm))
+    s_bot_norm = np.hypot(w_cells_norm, np.diff(z_bot_norm))
 
-    # Enclosed area of each irregular trapezoidal cell
-    cell_areas = 0.5 * (spar_heights[:-1] + spar_heights[1:]) * cell_widths
+    # Normalized enclosed trapezoidal area A_i / c^2 of each cell i:
+    # A_i = 0.5 * (h_left + h_right) * width_i
+    cell_areas_norm = 0.5 * (h_spars_norm[:-1] + h_spars_norm[1:]) * w_cells_norm
 
-    # Assemble linear system M * x = rhs for x = [q_1, ..., q_N, G * dtheta/dy]
+    # Assemble the (N + 1) x (N + 1) linear system M * x = rhs (Appendix D.1.3).
+    # Unknown vector x = [q_1, q_2, ..., q_N, G * (dtheta/dy)_norm]:
+    # - Rows 0 ... N-1 : twist-rate compatibility (1 / 2A_i) * integral(q ds / t) - G*(dtheta/dy) = 0
+    # - Row N (index -1): global torque equilibrium sum(2 * A_i * q_i) = T_unit
+    # For N = 1 (single cell), this 2x2 system reduces identically to J = 4*A^2 / integral(ds/t).
     M = np.zeros((n_cells + 1, n_cells + 1), dtype=float)
     rhs = np.zeros(n_cells + 1, dtype=float)
 
     for i in range(n_cells):
-        coeff = 1.0 / (2.0 * cell_areas[i])
+        # Bredt-Batho prefactor 1 / (2 * A_i)
+        coeff = 1.0 / (2.0 * cell_areas_norm[i])
 
-        left_web = spar_heights[i] / t_spars[i]
-        right_web = spar_heights[i + 1] / t_spars[i + 1]
-        top_skin = s_top[i] / t_top[i]
-        bot_skin = s_bot[i] / t_bot[i]
+        # Perimeter integral contributions (ds / t) for the 4 walls bounding cell i
+        web_left = h_spars_norm[i] / t_spars_arr[i]
+        web_right = h_spars_norm[i + 1] / t_spars_arr[i + 1]
+        skin_top = s_top_norm[i] / t_top_arr[i]
+        skin_bot = s_bot_norm[i] / t_bot_arr[i]
 
-        M[i, i] = coeff * (left_web + right_web + top_skin + bot_skin)
+        # Self shear flow q_i acts positively around all 4 walls of cell i
+        M[i, i] = coeff * (web_left + web_right + skin_top + skin_bot)
+
+        # Adjacent cell shear flows oppose q_i along shared internal spars (q_i - q_{i+/-1})
         if i > 0:
-            M[i, i - 1] = -coeff * left_web
+            M[i, i - 1] = -coeff * web_left
         if i < n_cells - 1:
-            M[i, i + 1] = -coeff * right_web
+            M[i, i + 1] = -coeff * web_right
 
+        # Compatibility condition: subtract G * (dtheta/dy)_norm
         M[i, -1] = -1.0
-        M[-1, i] = 2.0 * cell_areas[i]
 
-    rhs[-1] = T
+        # Global torque equilibrium contribution of cell i: 2 * A_i * q_i
+        M[-1, i] = 2.0 * cell_areas_norm[i]
 
+    # Apply unit torque T = 1.0 N*m
+    T_unit = 1.0
+    rhs[-1] = T_unit
+
+    # Solve M * x = rhs using NumPy's LU linear solver (Appendix D.1.3)
     solution = np.linalg.solve(M, rhs)
+    q_unit_norm = solution[:-1]
+    G_dtheta_dy_norm = solution[-1]
 
-    q_cells = solution[:-1]
-    G_dtheta_dy = solution[-1]
-    dtheta_dy = G_dtheta_dy / G
-    J = T / G_dtheta_dy if T != 0 else np.nan
-    GJ = G * J
+    # Normalized torsional constant J_norm = T_unit / (G * dtheta/dy)_norm
+    J_norm = float(T_unit / G_dtheta_dy_norm)
 
-    q_spars = np.zeros(n_cells + 1)
-    q_spars[0] = q_cells[0]
-    q_spars[-1] = q_cells[-1]
-    for k in range(1, n_cells):
-        q_spars[k] = q_cells[k - 1] - q_cells[k]
+    return J_norm, q_unit_norm, cell_areas_norm
+
+
+def compute_J_distribution(
+    y_stations: Sequence[float],
+    chord_func: Callable[[float], float],
+    x_spars_norm: Sequence[float],
+    t_spars: Sequence[float],
+    t_top: Union[float, Sequence[float]],
+    t_bot: Union[float, Sequence[float]],
+    z_front_top_norm: float,
+    z_front_bot_norm: float,
+    z_rear_top_norm: float,
+    z_rear_bot_norm: float,
+    G: float,
+) -> dict:
+    """
+    Computes the torsional constant J[y] across all spanwise stations y_stations
+    using your existing chord(y) function, and returns exact callables J(y) and
+    GJ(y) for scipy.integrate.quad.
+
+    Parameters
+    ----------
+    y_stations : Sequence[float]
+        1D array of spanwise coordinates [m] from wing root (0) to tip (b/2).
+    chord_func : Callable[[float], float]
+        Your existing chord(y) function returning local chord length [m] at y [m].
+    x_spars_norm : Sequence[float]
+        Normalized chordwise positions (x/c) of all spars ordered front-to-rear
+        (length 2 for 1 cell, length 3 for 2 cells, ..., length N+1 for N cells).
+    t_spars : Sequence[float]
+        Constant thicknesses [m] of each spar from front to rear (length N + 1).
+    t_top, t_bot : float or Sequence[float]
+        Constant top and bottom skin thicknesses [m] (single float if uniform across
+        all cells, or sequence of length N if varying cell-to-cell).
+    z_front_top_norm, z_front_bot_norm, z_rear_top_norm, z_rear_bot_norm : float
+        Normalized corner z/c coordinates of the trapezoidal wing box (+z down).
+    G : float
+        Material shear modulus [Pa] (passed in by caller from configs/material.py).
+    """
+    # Convert spanwise stations to a 1D float NumPy array
+    y_arr = np.asarray(y_stations, dtype=float)
+
+    # Solve the unit-chord (c = 1 m), unit-torque (T = 1 Nm) multi-cell system once
+    J_norm, q_unit_norm, _ = multicell_geometry(
+        x_spars_norm=x_spars_norm,
+        z_front_top_norm=z_front_top_norm,
+        z_front_bot_norm=z_front_bot_norm,
+        z_rear_top_norm=z_rear_top_norm,
+        z_rear_bot_norm=z_rear_bot_norm,
+        t_spars=t_spars,
+        t_top=t_top,
+        t_bot=t_bot,
+    )
+
+    # Evaluate your existing chord(y) function at all 120 spanwise stations [m]
+    c_arr = np.array([float(chord_func(float(y))) for y in y_arr], dtype=float)
+
+    # Scale unit-chord J_norm by local chord cubed: J(y) = J_norm * c(y)^3 [m^4]
+    J_arr = J_norm * (c_arr ** 3)
+
+    # Scale unit-chord, unit-torque cell shear flows by 1 / c(y)^2 (shape: n_stations x n_cells).
+    # Multiply by physical torque T(y) later to get actual cell shear flows q_i(y) [N/m].
+    q_unit_arr = q_unit_norm[np.newaxis, :] / (c_arr[:, np.newaxis] ** 2)
+
+    # Exact analytical callables using your chord_func directly (no interpolation needed)
+    J_func = lambda y: J_norm * (float(chord_func(float(y))) ** 3)
+    GJ_func = lambda y: float(G) * J_norm * (float(chord_func(float(y))) ** 3)
 
     return {
-        "spar_heights": spar_heights,
-        "cell_areas": cell_areas,
-        "total_area": np.sum(cell_areas),
-        "q_cells": q_cells,
-        "q_spars": q_spars,
-        "tau_spars": q_spars / t_spars,
-        "tau_top": q_cells / t_top,
-        "tau_bot": q_cells / t_bot,
-        "dtheta_dy": dtheta_dy,
-        "J": J,
-        "GJ": GJ,
+        "y": y_arr,
+        "J": J_arr,
+        "GJ": float(G) * J_arr,
+        "J_func": J_func,
+        "GJ_func": GJ_func,
+        "q_unit": q_unit_arr,
     }
-
-def dtheta_dy(y, T_func, G):
-    return float(T_func(y)) / (G * float(J(y)))
 
 def theta(
     y_stations,
@@ -183,7 +239,7 @@ def theta(
     t_spars_list,
     t_top_arr,
     t_bot_arr,
-    G=shear_modulus,
+    G,
     J_interp_kind="previous",
 ):
     """

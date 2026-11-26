@@ -1,9 +1,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Yajvin Singhal
-# Created: 2026-11-26
-"""WP4 directories, from the location of this file (not the working directory)."""
-
-# SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Rodrigo and Yajvin
 # Created: 2026-11-26
 """Material properties configuration for Aluminum 2024-T81 (WP4 & WP5)."""
