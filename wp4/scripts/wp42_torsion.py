@@ -33,4 +33,4 @@ torsion_data = compute_J_distribution(
 J_y = torsion_data["J"]            # 120-element NumPy array J[y] [m^4]
 GJ_func = torsion_data["GJ_func"]  # Exact callable GJ(y) [N*m^2] for scipy.integrate.quad
 
-print(J_y)
+print(GJ_func)
