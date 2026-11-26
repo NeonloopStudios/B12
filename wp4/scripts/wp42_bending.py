@@ -48,8 +48,8 @@ def load_moment(path):
     data = np.loadtxt(path, comments="#")
     return (data[:,0], data[:,1])
 
-b_station = load_moment(moment_path)[0] #np.array([0, 3, 7, 12]) #m, half-span position
-m_station = load_moment(moment_path)[1] #np.array([2*10e6, 10e6, 0.4*10e6, 0]) #internal moment, half-span direction
+b_station = load_moment(moment_path)[0] #m, half-span position
+m_station = load_moment(moment_path)[1] #internal moment, half-span direction
 v = [float] * b_station.size #vertical wing displacement at a given half-span position
 v[0] = 0
 theta = [float] * b_station.size #slope of the wing at a given half-span position
@@ -60,7 +60,7 @@ for i in range(b_station.size - 1):
 
     #slope change
     dtheta, _ = sp.integrate.quad(
-        lambda y: bending_displacement.M_x(y, b_station, m_station) / (E * I_xx(y)),
+        lambda y: bending_displacement.M_x(y, b_station, m_station * WINGBOX_GEOM.safety_factor) / (E * I_xx(y)),
         y0,
         y1,
     )

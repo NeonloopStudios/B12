@@ -19,6 +19,7 @@ class WingboxGeometry:
     points: [tuple]
     airfoil_tmax_dat: float #max thickness of the airfoil in dat file units
     airfoil_tmax_c: float
+    safety_factor: float
     spar_thickness: float
     skin_thickness: float
     stringers: (list, list) #first list is nr of stringer; second is percent of half-span from 0 to 100
@@ -28,11 +29,12 @@ WINGBOX_GEOM: Final[WingboxGeometry] = WingboxGeometry(
     points = [(0.2, -5.4), (0.2, 5.46), (0.7, 2.8), (0.7, -4.51)],
     airfoil_tmax_dat = 11.97, #dat
     airfoil_tmax_c = 0.12,
-    spar_thickness = 15, #mm
-    skin_thickness = 25, #mm
+    safety_factor = 1.5,
+    spar_thickness = 5, #mm
+    skin_thickness = 5, #mm
     stringers = (
-        [7, 5, 3],
-        [0, 50, 70]
+        [4, 2, 1],
+        [0, 30, 60]
     ),
-    stringer_area = 600 #mm^2
+    stringer_area = 400 #mm^2
 )
