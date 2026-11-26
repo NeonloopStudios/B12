@@ -10,7 +10,7 @@ from wp41.weight import fuel_per_span
 
 
 g = 9.81
-n = 2.5                       
+n = 2.5             
 mach, alpha = 0.30, 10.0          
 lift_dist = Path(__file__).resolve().parents[1] / "out" / "wp41" / "lift_distribution.txt"  
 
@@ -54,9 +54,9 @@ a = 4.4
 shear_dist = tip_integral(q, y)
 moment = tip_integral(shear_dist, y)
 for i in range(len(moment)):    
-    if y[i] > a:
-        moment[i] -= P_eng * (y[i] - a)
-        shear_dist[i] -= P_eng
+    if y[i] < a:
+        moment[i] -= P_eng * (a - y[i])
+        shear_dist[i] += P_eng
 
 
 fig, ax = plt.subplots(3, 1, sharex=True)
