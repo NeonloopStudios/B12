@@ -5,7 +5,7 @@
 
 from scipy import interpolate, integrate
 import numpy as np
-# from src.wp42 import chord
+from src.wp42 import chord
 from typing import Callable, Sequence, Union
 
 
@@ -232,78 +232,7 @@ def compute_J_distribution(
         "q_unit": q_unit_arr,
     }
 
-def theta(
-    y_stations,
-    T_stations,
-    x_spars_list,
-    t_spars_list,
-    t_top_arr,
-    t_bot_arr,
-    G,
-    J_interp_kind="previous",
-):
-    """
-    Computes spanwise torsional constant J(y) at all stations (e.g., 120 points)
-    using unit torque (T = 1 Nm) and integrates dtheta/dy = T(y) / (G * J(y))
-    from y = 0 to y using scipy.integrate.quad (Appendix D.2).
-
-    Returns
-    -------
-    theta_tot : np.ndarray
-        Cumulative twist angle [rad] at every station in y_stations.
-    theta_deg : np.ndarray
-        Cumulative twist angle [deg] at every station (must stay within +/- 10 deg).
-    J_stations : np.ndarray
-        Torsional constant J [m^4] at every station.
-    q_cells_actual : list[np.ndarray]
-        Actual torsional shear flows [N/m] in each cell at each station.
-    """
-    y_stations = np.asarray(y_stations, dtype=float)
-    T_stations = np.asarray(T_stations, dtype=float)
-    n_stations = len(y_stations)
-
-    J_stations = np.zeros(n_stations)
-    q_cells_actual = []
-
-    # 1. Solve for geometric J(y_k) at each station with unit torque T = 1.0 Nm
-    for k in range(n_stations):
-        spar_h, cell_w, s_t, s_b, _ = get_multicell_geometry(
-            y_pos=y_stations[k],
-            x_spars_norm=x_spars_list[k],
-        )
-        res_unit = solve_multicell_trapezoid_torsion(
-            T=1.0,
-            spar_heights=spar_h,
-            cell_widths=cell_w,
-            s_top=s_t,
-            s_bot=s_b,
-            t_spars=t_spars_list[k],
-            t_top=t_top_arr[k],
-            t_bot=t_bot_arr[k],
-            G=G,
-        )
-        J_stations[k] = res_unit["J"]
-        q_cells_actual.append(res_unit["q_cells"] * T_stations[k])
-
-    # 2. Interpolate T(y) and J(y) as continuous functions of y (Appendix D.1.4)
-    T_func = interpolate.interp1d(
-        y_stations, T_stations, kind="cubic", fill_value="extrapolate"
-    )
-    J_func = interpolate.interp1d(
-        y_stations, J_stations, kind=J_interp_kind, fill_value="extrapolate"
-    )
-    dtheta_dy_func = lambda y: float(T_func(y)) / (G * float(J_func(y)))
-
-    # 3. Integrate from root (theta(0) = 0) to each station (Appendix D.2)
-    theta_tot = np.zeros(n_stations)
-    if y_stations[0] > 0.0:
-        theta_tot[0], _ = integrate.quad(dtheta_dy_func, 0.0, y_stations[0])
-
-    for k in range(1, n_stations):
-        d_theta, _ = integrate.quad(
-            dtheta_dy_func, y_stations[k - 1], y_stations[k], limit=100
-        )
-        theta_tot[k] = theta_tot[k - 1] + d_theta
-
-    theta_deg = np.degrees(theta_tot)
-    return theta_tot, theta_deg, J_stations, q_cells_actual
+def dtheta_dy(y: float, T_func, G: float) -> float:
+    T_y = float(T_func(y))
+    J_y = float(J_func(y))
+    return T_y / (G * J_y)
