@@ -43,7 +43,7 @@ w_fuel = fuel_per_span(y, MASSES.fuel_kg*g, tolerance=.01)
 
 
 shape = chord * cl
-lift_half = n * MASSES.mtom_kg * g / 2.0
+lift_half = n * MASSES.mtom_kg * g / 2
 lift = shape * lift_half / np.trapezoid(shape, y)
 q = lift-n*w_fuel
 
@@ -64,4 +64,9 @@ ax[0].plot(y, lift);  ax[0].set_ylabel("lift [N/m]")
 ax[1].plot(y, shear_dist); ax[1].set_ylabel("shear [N]")
 ax[2].plot(y, moment); ax[2].set_ylabel("M [Nm]")
 ax[2].set_xlabel("y [m]")
-plt.show()
+#plt.show()
+
+out_path = Path(__file__).resolve().parents[1] / "out" / "wp41" / "internal_moment_distribution.txt"
+with open(out_path, "w") as f:
+    for i in range(len(y)):
+        f.write(f"{y[i]} {moment[i]}\n")
