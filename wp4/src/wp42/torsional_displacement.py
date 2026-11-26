@@ -239,7 +239,7 @@ def theta(
     t_spars_list,
     t_top_arr,
     t_bot_arr,
-    G=shear_modulus,
+    G,
     J_interp_kind="previous",
 ):
     """
