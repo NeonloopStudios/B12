@@ -1,0 +1,4 @@
+# schema: wp41.point_loads.v1
+# case: LC-2
+name,y_m,w_n,d_ahead_of_sc_m
+engine,4.4000000000000004,18959.980976999999,2.1510435484873942
