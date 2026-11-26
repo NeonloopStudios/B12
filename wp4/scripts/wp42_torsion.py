@@ -11,15 +11,17 @@ sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
 
 import numpy as np
 from configs.mat_props import MATERIAL
+from configs.wp42.wingbox import WINGBOX_GEOM
 from src.wp42.chord import chord
 from src.wp42.torsional_displacement import compute_J_distribution
 
+import configs.wp42.wingbox
 y_stations = np.linspace(0.0, 24.37 / 2.0, 120)
 
 torsion_data = compute_J_distribution(
     y_stations=y_stations,
     chord_func=chord,
-    x_spars_norm=[0.20, 0.45, 0.70],
+    x_spars_norm=WINGBOX_GEOM.vertical_stiffeners_chordwise_pos,
     t_spars=[0.006, 0.004, 0.005],
     t_top=0.004,
     t_bot=0.0035,
@@ -29,8 +31,4 @@ torsion_data = compute_J_distribution(
     z_rear_bot_norm=0.0280,
     G=MATERIAL.shear_modulus_pa,
 )
-
-J_y = torsion_data["J"]            # 120-element NumPy array J[y] [m^4]
-GJ_func = torsion_data["GJ_func"]  # Exact callable GJ(y) [N*m^2] for scipy.integrate.quad
-
-print(GJ_func)
+J_func = torsion_data["J_func"]  # Exact callable J(y) [N*m^2] for scipy.integrate.quad
