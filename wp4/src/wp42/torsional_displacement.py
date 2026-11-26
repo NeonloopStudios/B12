@@ -5,13 +5,13 @@
 
 from scipy import interpolate, integrate
 import numpy as np
-from src.wp42 import chord
+# from src.wp42 import chord
 from typing import Callable, Sequence, Union
 
 
-def Am_per_chord (Am, y_pos):
-    Am_y = Am*chord.chord(y = y_pos)**2
-    return Am_y
+# def Am_per_chord (Am, y_pos):
+#     Am_y = Am*chord.chord(y = y_pos)**2
+#     return Am_y
 
 def perimeter_per_chord (y_pos, x1, y1, y2, x2, y3, y4):
     
