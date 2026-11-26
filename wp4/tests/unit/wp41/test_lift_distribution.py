@@ -106,12 +106,35 @@ def test_read_aero_database_full_grid_returns_sorted_arrays(
     np.testing.assert_allclose(database.mach, MACHS)
     np.testing.assert_allclose(database.alpha_deg, ALPHAS)
     assert database.cl.shape == database.cm_c4.shape == (N_STRIP, len(MACHS), 2)
-    assert database.cl_wing.shape == (len(MACHS), 2)
+    assert database.cl_wing.shape == database.cm_wing.shape == (len(MACHS), 2)
     assert database.cl.dtype == database.cm_c4.dtype == np.float64
     assert database.s_ref_m2 == pytest.approx(WING.area_m2)
     np.testing.assert_allclose(
         database.cm_c4[:, 2, 1], _cm(database.y, 0.6, 10.0, pf.half_span_m), atol=1e-6
     )
+
+
+def test_read_aero_database_cm_wing_equals_strip_sum_of_cm(
+    database: ld.AeroDatabase,
+) -> None:
+    """cm_wing is the moment-file total: 2 sum(cm_c4 dA) / S, as written above."""
+    pf = al.planform(WING)
+    dy = pf.half_span_m / N_STRIP
+    area = pf.chord_at(database.y) * dy
+
+    expected = np.array(
+        [
+            [
+                2.0 * float(np.sum(_cm(database.y, m, a, pf.half_span_m) * area))
+                / WING.area_m2
+                for a in ALPHAS
+            ]
+            for m in MACHS
+        ],
+        dtype=np.float64,
+    )
+
+    np.testing.assert_allclose(database.cm_wing, expected, rtol=1e-5)
 
 
 def test_read_aero_database_missing_alpha_case_raises(tmp_path: Path) -> None:
