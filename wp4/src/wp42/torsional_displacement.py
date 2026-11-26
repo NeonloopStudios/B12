@@ -21,6 +21,7 @@ Z_FRONT_BOT = -5.46 / 100
 X_REAR = 70 / 100
 Z_REAR_TOP = 4.51 / 100
 Z_REAR_BOT = -2.80 / 100
+
 def Am_per_chord (Am, y_pos):
     Am_y = Am*chord.chord(y = y_pos)**2
     return Am_y
@@ -172,6 +173,8 @@ def solve_multicell_trapezoid_torsion(
         "GJ": GJ,
     }
 
+def dtheta_dy(y, T_func, G):
+    return float(T_func(y)) / (G * float(J(y)))
 
 def theta(
     y_stations,
