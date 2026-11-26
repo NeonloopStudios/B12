@@ -6,7 +6,7 @@
 import math as m
 import numpy as np
 import scipy as sp
-#from src.wp42 import chord
+from src.wp42 import chord
 
 def M_x(y: float, b: np.array(), m: np.array()):
     s = sp.interpolate.interp1d(b, m, kind="quadratic", fill_value="extrapolate")

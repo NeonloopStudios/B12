@@ -3,7 +3,7 @@
 # Created: 2026-11-19
 """WP4.1 load cases. WP4.3 defines them; WP4.1 reads them as input.
 
-LOAD_CASES is empty until WP4.3 gives the cases. Add one LoadCase per case.
+LOAD_CASES holds the two critical cases of the V-n diagrams (see below).
 """
 
 from __future__ import annotations
@@ -48,7 +48,27 @@ class LoadCase:
             raise ValueError(f"thrust_n must be >= 0 and finite, got {self.thrust_n}")
 
 
-LOAD_CASES: Final[tuple[LoadCase, ...]] = ()
+# The two critical cases of the V-n diagrams (wp4/out/wp43, configs/wp43).
+# Both use MZFM (OEM + maximum payload, no fuel): the fuel in the wing relieves
+# the root loads, so the aircraft without fuel is the worst case.
+# LC-1: n_max = 2.5 at V_D at sea level. The dynamic pressure is the highest of
+#   the envelope, so the nose-down torque of the pitching moment is the highest.
+#   Thrust 0: thrust gives a nose-up torque, so zero thrust is conservative.
+# LC-2: n_min = -1 at V_C at FL350 (M = 0.77), the highest speed with n = -1.
+#   Thrust = drag of the clean aircraft, D = q S (CD0 + K CL^2), per engine D/2:
+#   CD0 = 0.02172 (wp3/results/drag/cd0_summary.csv, cruise), K = 0.05357
+#   (wp3/results/iteration/oswald_configurations.csv, clean, e = 0.5593),
+#   CL = -0.3987, q = 9903.5 Pa, S = 62.52 m^2: D = 18.72 kN, 9.36 kN per engine.
+LOAD_CASES: Final[tuple[LoadCase, ...]] = (
+    LoadCase(
+        name="LC-1", n=2.5, v_eas=158.946, altitude_m=0.0,
+        mass_case="no_fuel", thrust_n=0.0,
+    ),
+    LoadCase(
+        name="LC-2", n=-1.0, v_eas=127.157, altitude_m=10_668.0,
+        mass_case="no_fuel", thrust_n=9_360.0,
+    ),
+)
 
 
 def get_case(name: str, cases: tuple[LoadCase, ...] = LOAD_CASES) -> LoadCase:
