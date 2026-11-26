@@ -14,19 +14,21 @@ sys.path[:0] = [str(_WP4_DIR), str(_WP4_DIR / "src")]
 
 from configs.wp42.wingbox import WINGBOX_GEOM
 from configs.aircraft import WING
+from configs.mat_props import AL2024_T81
 from src.wp42 import chord
 from src.wp42 import centroid
 from src.wp42 import bending_stiffness
 from src.wp42 import bending_displacement
 
 span = m.sqrt(WING.aspect_ratio * WING.area_m2)
+E = AL2024_T81.youngs_modulus_pa
+moment_path = Path(__file__).resolve().parents[1] / "out" / "wp41" / "internal_moment_distribution.txt"  
 
 ctr_out = centroid.centroid_quad(
     points = WINGBOX_GEOM.points,
     tmax_ul = WINGBOX_GEOM.airfoil_tmax_dat,
     tmax_c = WINGBOX_GEOM.airfoil_tmax_c
 )
-print(ctr_out)
 
 def I_xx(y):
     return bending_stiffness.I_xx(
@@ -42,6 +44,36 @@ def I_xx(y):
     )
 print(I_xx(0))
 
-E = 1
-dvdy, dvdy_error = sp.integrate.quad(lambda y: bending_displacement.M_x(y, np.array([0, 5, 10]), np.array([100, 50, 0])) / (E * I_xx(y)), 0, span/4)
-#print(dvdy)
+def load_moment(path):
+    data = np.loadtxt(path, comments="#")
+    return (data[:,0], data[:,1])
+
+b_station = load_moment(moment_path)[0] #np.array([0, 3, 7, 12]) #m, half-span position
+m_station = load_moment(moment_path)[1] #np.array([2*10e6, 10e6, 0.4*10e6, 0]) #internal moment, half-span direction
+v = [float] * b_station.size #vertical wing displacement at a given half-span position
+v[0] = 0
+theta = [float] * b_station.size #slope of the wing at a given half-span position
+theta[0] = 0
+
+for i in range(b_station.size - 1):
+    y0, y1 = b_station[i], b_station[i + 1]
+
+    #slope change
+    dtheta, _ = sp.integrate.quad(
+        lambda y: bending_displacement.M_x(y, b_station, m_station) / (E * I_xx(y)),
+        y0,
+        y1,
+    )
+    theta[i+1] = theta[i] + dtheta
+
+    #beam rise
+    dv, _ = sp.integrate.quad(
+        lambda y: theta[i] + (theta[i+1] - theta[i]) * ((y - y0) / (y1 - y0)),
+        y0,
+        y1,
+    )
+
+    v[i+1] = v[i] - dv
+
+print(f"v {v[b_station.size-1]}")
+print(f"theta {theta[b_station.size-1]}")
